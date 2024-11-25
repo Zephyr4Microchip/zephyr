@@ -443,6 +443,7 @@ def test_binaryhandler_create_command(
     options = SimpleNamespace()
     options.enable_valgrind = enable_valgrind
     options.coverage_basedir = "coverage_basedir"
+    options.sim_name = None
     handler = BinaryHandler(mocked_instance, 'build', options, 'generator', False)
     handler.binary = 'bin'
     handler.call_make_run = call_make_run
@@ -1275,6 +1276,7 @@ def test_devicehandler_create_serial_connection(
     dut = DUT()
     dut.available = 0
     dut.failures = 0
+    handler.duts = [dut]
 
     hardware_baud = 14400
     flash_timeout = 60

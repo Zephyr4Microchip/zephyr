@@ -8,15 +8,15 @@ import argparse
 import ipaddress
 import logging
 import os
-from pathlib import Path
 import shlex
+import socket
 import subprocess
 import sys
-import socket
-import time
 import tempfile
+import time
+from pathlib import Path
 
-from runners.core import ZephyrBinaryRunner, RunnerCaps, FileType
+from runners.core import FileType, RunnerCaps, ZephyrBinaryRunner
 
 try:
     import pylink
@@ -30,11 +30,16 @@ DEFAULT_JLINK_GDB_PORT = 2331
 DEFAULT_JLINK_RTT_PORT = 19021
 
 def is_ip(ip):
+    if not ip:
+        return False
     try:
-        ipaddress.ip_address(ip)
+        ipaddress.ip_address(ip.split(':')[0])
     except ValueError:
         return False
     return True
+
+def is_tunnel(tunnel):
+    return tunnel.startswith("tunnel:") if tunnel else False
 
 class ToggleAction(argparse.Action):
 
@@ -53,7 +58,7 @@ class JLinkBinaryRunner(ZephyrBinaryRunner):
                  gdb_host='',
                  gdb_port=DEFAULT_JLINK_GDB_PORT,
                  rtt_port=DEFAULT_JLINK_RTT_PORT,
-                 tui=False, tool_opt=[]):
+                 tui=False, tool_opt=None):
         super().__init__(cfg)
         self.file = cfg.file
         self.file_type = cfg.file_type
@@ -77,8 +82,9 @@ class JLinkBinaryRunner(ZephyrBinaryRunner):
         self.rtt_port = rtt_port
 
         self.tool_opt = []
-        for opts in [shlex.split(opt) for opt in tool_opt]:
-            self.tool_opt += opts
+        if tool_opt is not None:
+            for opts in [shlex.split(opt) for opt in tool_opt]:
+                self.tool_opt += opts
 
     @classmethod
     def name(cls):
@@ -122,8 +128,7 @@ class JLinkBinaryRunner(ZephyrBinaryRunner):
                             help='custom gdb host, defaults to the empty string '
                             'and runs a gdb server')
         parser.add_argument('--gdb-port', default=DEFAULT_JLINK_GDB_PORT,
-                            help='pyocd gdb port, defaults to {}'.format(
-                                DEFAULT_JLINK_GDB_PORT))
+                            help=f'pyocd gdb port, defaults to {DEFAULT_JLINK_GDB_PORT}')
         parser.add_argument('--commander', default=DEFAULT_JLINK_EXE,
                             help=f'''J-Link Commander, default is
                             {DEFAULT_JLINK_EXE}''')
@@ -163,6 +168,9 @@ class JLinkBinaryRunner(ZephyrBinaryRunner):
             thread_msg = '; update J-Link software for thread info'
         self.logger.info('J-Link GDB server running on port '
                          f'{self.gdb_port}{thread_msg}')
+
+    def print_rttserver_message(self):
+        self.logger.info(f'J-Link RTT server running on port {self.rtt_port}')
 
     @property
     def jlink_version(self):
@@ -245,21 +253,25 @@ class JLinkBinaryRunner(ZephyrBinaryRunner):
                                'RTOSPlugin_Zephyr')
         big_endian = self.build_conf.getboolean('CONFIG_BIG_ENDIAN')
 
-        server_cmd = ([self.gdbserver] +
-                      ['-select',
-                                           ('ip' if is_ip(self.dev_id) else 'usb') +
-                                           (f'={self.dev_id}' if self.dev_id else ''),
-                       '-port', str(self.gdb_port),
-                       '-if', self.iface,
-                       '-speed', self.speed,
-                       '-device', self.device,
-                       '-silent',
-                       '-endian', 'big' if big_endian else 'little',
-                       '-singlerun'] +
-                      (['-nogui'] if self.supports_nogui else []) +
-                      (['-rtos', plugin_dir] if rtos else []) +
-                      ['-rtttelnetport', str(self.rtt_port)] +
-                      self.tool_opt)
+        server_cmd = (
+            [self.gdbserver]
+            + [
+                '-select',
+                ('ip' if (is_ip(self.dev_id) or is_tunnel(self.dev_id)) else 'usb')
+                + (f'={self.dev_id}' if self.dev_id else ''),
+            ]
+            + ['-port', str(self.gdb_port)]
+            + ['-if', self.iface]
+            + ['-speed', self.speed]
+            + ['-device', self.device]
+            + ['-silent']
+            + ['-endian' 'big' if big_endian else 'little']
+            + ['-singlerun']
+            + (['-nogui'] if self.supports_nogui else [])
+            + (['-rtos', plugin_dir] if rtos else [])
+            + ['-rtttelnetport', str(self.rtt_port)]
+            + self.tool_opt
+        )
 
         if command == 'flash':
             self.flash(**kwargs)
@@ -271,6 +283,7 @@ class JLinkBinaryRunner(ZephyrBinaryRunner):
             self.check_call(server_cmd)
         elif command == 'rtt':
             self.print_gdbserver_message()
+            self.print_rttserver_message()
             server_cmd += ['-nohalt']
             server_proc = self.popen_ignore_int(server_cmd)
             try:
@@ -304,7 +317,7 @@ class JLinkBinaryRunner(ZephyrBinaryRunner):
             client_cmd = (self.gdb_cmd +
                           self.tui_arg +
                           [elf_name] +
-                          ['-ex', 'target remote {}:{}'.format(self.gdb_host, self.gdb_port)])
+                          ['-ex', f'target remote {self.gdb_host}:{self.gdb_port}'])
             if command == 'debug':
                 client_cmd += ['-ex', 'monitor halt',
                                '-ex', 'monitor reset',
@@ -403,17 +416,23 @@ class JLinkBinaryRunner(ZephyrBinaryRunner):
             if self.supports_loader and self.loader:
                 loader_details = "?" + self.loader
 
-            cmd = ([self.commander] +
-                   (['-IP', f'{self.dev_id}'] if is_ip(self.dev_id) else (['-USB', f'{self.dev_id}'] if self.dev_id else [])) +
-                   (['-nogui', '1'] if self.supports_nogui else []) +
-                   ['-if', self.iface,
-                    '-speed', self.speed,
-                    '-device', self.device + loader_details,
-                    '-CommanderScript', fname] +
-                   (['-nogui', '1'] if self.supports_nogui else []) +
-                   self.tool_opt)
+            cmd = (
+                [self.commander]
+                + (
+                    ['-IP', f'{self.dev_id}']
+                    if (is_ip(self.dev_id) or is_tunnel(self.dev_id))
+                    else (['-USB', f'{self.dev_id}'] if self.dev_id else [])
+                )
+                + (['-nogui', '1'] if self.supports_nogui else [])
+                + ['-if', self.iface]
+                + ['-speed', self.speed]
+                + ['-device', self.device + loader_details]
+                + ['-CommanderScript', fname]
+                + (['-nogui', '1'] if self.supports_nogui else [])
+                + self.tool_opt
+            )
 
-            self.logger.info('Flashing file: {}'.format(flash_file))
+            self.logger.info(f'Flashing file: {flash_file}')
             kwargs = {}
             if not self.logger.isEnabledFor(logging.DEBUG):
                 kwargs['stdout'] = subprocess.DEVNULL

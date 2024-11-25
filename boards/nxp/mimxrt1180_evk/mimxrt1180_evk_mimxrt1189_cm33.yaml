@@ -20,4 +20,7 @@ supported:
   - i2c
   - counter
   - adc
+  - netif:eth
+  - can
+  - pwm
 vendor: nxp

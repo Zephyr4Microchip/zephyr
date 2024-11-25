@@ -2,8 +2,8 @@
 
 .. _migration_4.0:
 
-Migration guide to Zephyr v4.0.0 (Working Draft)
-################################################
+Migration guide to Zephyr v4.0.0
+################################
 
 This document describes the changes required when migrating your application from Zephyr v3.7.0 to
 Zephyr v4.0.0.
@@ -58,6 +58,7 @@ STM32
 * On all official STM32 boards, ``west flash`` selects STM32CubeProgrammer as the default west runner.
   If you want to enforce the selection of another runner like OpenOCD or pyOCD for flashing, you should
   specify it using the west ``--runner`` or ``-r`` option. (:github:`75284`)
+* ADC: Domain clock needs to be explicitly defined if property st,adc-clock-source = <ASYNC> is used.
 
 Modules
 *******
@@ -74,6 +75,12 @@ Mbed TLS
 * The Kconfig option ``CONFIG_MBEDTLS_SSL_EXPORT_KEYS`` was removed because the
   corresponding build symbol was removed in Mbed TLS 3.1.0 and is now assumed to
   be enabled. (:github:`77657`)
+
+TinyCrypt
+=========
+
+Albeit the formal deprecation of TinyCrypt is not started yet, its removal from
+the Zephyr codebase is. Formal deprecation will happen in the next release.
 
 Trusted Firmware-M
 ==================
@@ -123,6 +130,12 @@ Device Drivers and Devicetree
   Chip variants with open-drain outputs (``mcp23x09``, ``mcp23x18``) now correctly reflect this in
   their driver API, users of these devices should ensure they pass appropriate values to
   :c:func:`gpio_pin_set`. (:github:`65797`)
+
+* The ``power-domain`` property has been removed in favor of ``power-domains``.
+  The new property allows to add more than one power domain.
+  ``power-domain-names`` is also available to optionally name each entry in
+  ``power-domains``. The number of cells in the ``power-domains`` property need
+  to be defined using ``#power-domain-cells``.
 
 Analog Digital Converter (ADC)
 ==============================
@@ -177,11 +190,27 @@ Clock control
            load-capacitance-femtofarad = <...>;
      };
 
-Controller Area Network (CAN)
-=============================
+Crypto
+======
 
-Display
-=======
+* Following the deprecation of the TinyCrypt library (:github:`79566`), the
+  TinyCrypt-based shim driver was marked as deprecated (:github:`79653`).
+
+Disk
+====
+
+* The SDMMC subsystem driver now requires a ``disk-name`` property be supplied
+  with the definition of the disk, which is used when registering the
+  SD device with the disk subsystem. This permits multiple SD devices to be
+  registered simultaneously. If unsure, ``disk-name = "SD"`` may be used
+  as a sane default.
+
+* The MMC subsystem driver now requires a ``disk-name`` property be supplied
+  with the definition of the disk, which is used when registering the
+  MMC device with the disk subsystem. This permits multiple MMC devices to be
+  registered simultaneously. If unsure, ``disk-name = "SD2"`` may be used
+  as a sane default.
+
 
 Enhanced Serial Peripheral Interface (eSPI)
 ===========================================
@@ -207,11 +236,18 @@ Input
 * The :dtcompatible:`analog-axis` ``invert`` property has been renamed to
   ``invert-input`` (there's now an ``invert-output`` available as well).
 
-Interrupt Controller
-====================
+PWM
+===
 
-LED Strip
-=========
+* The Raspberry Pi Pico PWM driver now configures frequency adaptively.
+  This has resulted in a change in how device tree parameters are handled.
+  If the :dtcompatible:`raspberry,pico-pwm`'s ``divider-int-0`` or variations
+  for each channel are specified, or if these are set to 0,
+  the driver dynamically configures the division ratio by specified cycles.
+  The driver will operate at the specified division ratio if a non-zero value is
+  specified for ``divider-int-0``.
+  This is unchanged from previous behavior.
+  Please specify ``divider-int-0`` explicitly to make the same behavior as before.
 
 SDHC
 ====
@@ -227,6 +263,17 @@ Sensors
 * The existing driver for the Microchip MCP9808 temperature sensor transformed and renamed
   to support all JEDEC JC 42.4 compatible temperature sensors. It now uses the
   :dtcompatible:`jedec,jc-42.4-temp` compatible string instead to the ``microchip,mcp9808`` string.
+* The :dtcompatible:`current-sense-amplifier` sense resistor is now specified in milli-ohms
+  (``sense-resistor-milli-ohms``) instead of micro-ohms in order to increase the maximum representable
+  resistor from 4.2k to 4.2M.
+* The :dtcompatible:`current-sense-amplifier` properties ``sense-gain-mult`` and ``sense-gain-div``
+  are now limited to a maximum value of ``UINT16_MAX`` to enable smaller rounding errors in internal
+  calculations.
+
+* The ``nxp,`` prefixed properties in :dtcompatible:`nxp,kinetis-acmp` have been deprecated in favor
+  of properties without the prefix. The sensor based driver for the :dtcompatible:`nxp,kinetis-acmp`
+  has been updated to support both the new and deprecated property names. Uses of the deprecated
+  property names should be updated to the new property names.
 
 Serial
 ======
@@ -234,6 +281,8 @@ Serial
  * Users of :c:func:`uart_irq_tx_ready` now need to check for ``ret > 0`` to ensure that the FIFO
    can accept data bytes, instead of ``ret == 1``. The function now returns a lower bound on the
    number of bytes that can be provided to :c:func:`uart_fifo_fill` without truncation.
+
+ * LiteX: ``CONFIG_UART_LITEUART`` has been renamed to :kconfig:option:`CONFIG_UART_LITEX`.
 
 Regulator
 =========
@@ -285,8 +334,10 @@ Bluetooth
 Bluetooth HCI
 =============
 
-Bluetooth Mesh
-==============
+* The ``bt-hci-bus`` and ``bt-hci-quirks`` devicetree properties for HCI bindings have been changed
+  to use lower-case strings without the ``BT_HCI_QUIRK_`` and ``BT_HCI_BUS_`` prefixes.
+* The Kconfig option :kconfig:option:`BT_SPI` is now automatically selected based on devicetree
+  compatibles and can be removed from board ``.defconfig`` files.
 
 Bluetooth Audio
 ===============
@@ -305,7 +356,7 @@ Bluetooth Audio
   :kconfig:option:`CONFIG_BT_ASCS_MAX_ASE_SNK_COUNT` to reflect that they now serve as a
   compile-time maximum configuration of ASEs to be used.
   :c:func:`bt_bap_unicast_server_register` needs to be called once before using the Unicast Server,
-  and more specfically prior to calling :c:func:`bt_bap_unicast_server_register_cb` for the first
+  and more specifically prior to calling :c:func:`bt_bap_unicast_server_register_cb` for the first
   time. It does not need to be called again until the new function
   :c:func:`bt_bap_unicast_server_unregister` has been called.
   (:github:`76632`)
@@ -314,6 +365,10 @@ Bluetooth Audio
   :c:func:`bt_csip_set_coordinator_release` now require that :kconfig:option:`CONFIG_BT_BONDABLE`
   is enabled and that all members are bonded, to comply with the requirements from the CSIP spec.
   (:github:`78877`)
+
+* The callback structure provided to :c:func:`bt_bap_unicast_client_register_cb` is no longer
+  :code:`const`, and now multiple callback structures can be registered.
+  (:github:`78999`)
 
 * The Broadcast Audio Scan Service (BASS) shall now be registered and unregistered dynamically
   at runtime within the scan delegator. Two new APIs, :c:func:`bt_bap_scan_delegator_register()`
@@ -336,8 +391,15 @@ Bluetooth Audio
   do a search-and-replace for ``bt_audio_codec_qos`` to ``bt_bap_qos_cfg`` and
   ``BT_AUDIO_CODEC_QOS`` to ``BT_BAP_QOS_CFG``. (:github:`76633`)
 
-Bluetooth Classic
-=================
+* The generation of broadcast ID inside of zephyr stack has been removed, it is now up the
+  application to generate a broadcast ID. This means that the application can now fully decide
+  whether to use a static or random broadcast ID. Reusing and statically defining a broadcast ID was
+  added to the Basic Audio Profile in version 1.0.2, which is the basis for this change. All
+  instances of :c:func:`bt_cap_initiator_broadcast_get_id` and
+  :c:func:`bt_bap_broadcast_source_get_id` has been removed(:github:`80228`)
+
+* ``BT_AUDIO_BROADCAST_CODE_SIZE`` has been removed and ``BT_ISO_BROADCAST_CODE_SIZE`` should be
+  used instead. (:github:`80217`)
 
 Bluetooth Host
 ==============
@@ -414,9 +476,6 @@ Refer to the extended advertising sample for an example
 implementation of advertiser restarting. The same technique can
 be used for legacy advertising.
 
-Bluetooth Crypto
-================
-
 Networking
 **********
 
@@ -449,6 +508,16 @@ Networking
   from :zephyr_file:`include/zephyr/net/buf.h` to :zephyr_file:`include/zephyr/net_buf.h` and the
   implementation moved to :zephyr_file:`lib/net_buf/`. (:github:`78009`)
 
+* The ``work_q`` parameter to ``NET_SOCKET_SERVICE_SYNC_DEFINE`` and
+  ``NET_SOCKET_SERVICE_SYNC_DEFINE_STATIC`` has been removed as it was always ignored. (:github:`79446`)
+
+* The callback function for the socket service has changed. The
+  ``struct k_work *work`` parameter has been replaced with a pointer to the
+  ``struct net_socket_service_event *pev`` parameter. (:github:`80041`)
+
+* Deprecated the :kconfig:option:`CONFIG_NET_SOCKETS_POLL_MAX` option in favour of
+  :kconfig:option:`CONFIG_ZVFS_POLL_MAX`.
+
 Other Subsystems
 ****************
 
@@ -463,6 +532,14 @@ Flash map
 hawkBit
 =======
 
+* :c:func:`hawkbit_autohandler` now takes one argument. This argument has to be set to
+  ``true`` for the same behavior as before the change. (:github:`71037`)
+
+* ``<zephyr/mgmt/hawkbit.h>`` is deprecated in favor of ``<zephyr/mgmt/hawkbit/hawkbit.h>``.
+  The old header will be removed in future releases and its usage should be avoided.
+  The hawkbit autohandler has been separated into ``<zephyr/mgmt/hawkbit/autohandler.h>``.
+  The configuration part of hawkbit is now in ``<zephyr/mgmt/hawkbit/config.h>``. (:github:`71037`)
+
 MCUmgr
 ======
 
@@ -470,8 +547,13 @@ MCUmgr
   The requirement for Bluetooth authentication is now indicated by the :kconfig:option:`CONFIG_MCUMGR_TRANSPORT_BT_PERM_RW_AUTHEN` Kconfig option.
   To remove the default requirement for Bluetooth authentication it is necessary to enable the :kconfig:option:`CONFIG_MCUMGR_TRANSPORT_BT_PERM_RW` Kconfig option in the project configuration.
 
-Modem
-=====
+Random
+======
+
+* Following the deprecation of the TinyCrypt library (:github:`79566`), usage
+  of TinyCrypt in the CTR-DRBG random number generator was removed. From now on
+  Mbed TLS is required to enable :kconfig:option:`CONFIG_CTR_DRBG_CSPRNG_GENERATOR`.
+  (:github:`79653`)
 
 Shell
 =====
@@ -482,11 +564,18 @@ Shell
 JWT (JSON Web Token)
 ====================
 
-* By default, the signature is now computed through PSA Crypto API for both RSA and ECDSA.
-  The newly-added :kconfig:option:`CONFIG_JWT_USE_LEGACY` can be used to switch
-  back to previous libraries (TinyCrypt for ECDSA and Mbed TLS for RSA).
-  The conversion to the PSA Crypto API is being done in preparation for the
-  deprecation of TinyCrypt. (:github:`78243` and :github:`43712`)
+* By default, the signature is now computed using the PSA Crypto API for both RSA and ECDSA
+  (:github:`78243`). The conversion to the PSA Crypto API is part of the adoption
+  of a standard interface for crypto operations (:github:`43712`). Moreover,
+  following the deprecation of the TinyCrypt library (:github:`79566`), usage
+  of TinyCrypt was removed from the JWT subsystem (:github:`79653`).
 
-Architectures
-*************
+* The following new symbols were added to allow specifying both the signature
+  algorithm and crypto library:
+
+  * :kconfig:option:`CONFIG_JWT_SIGN_RSA_PSA` (default) RSA signature using the PSA Crypto API;
+  * :kconfig:option:`CONFIG_JWT_SIGN_RSA_LEGACY` RSA signature using Mbed TLS;
+  * :kconfig:option:`CONFIG_JWT_SIGN_ECDSA_PSA` ECDSA signature using the PSA Crypto API.
+
+  They replace the previously-existing Kconfigs ``CONFIG_JWT_SIGN_RSA`` and
+  ``CONFIG_JWT_SIGN_ECDSA``. (:github:`79653`)

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Xiaomi Coopration
+ * Copyright (c) 2024 Xiaomi Corporation
  * Copyright (c) 2015-2016 Intel Corporation
  *
  * SPDX-License-Identifier: Apache-2.0
@@ -28,7 +28,6 @@
 #include <zephyr/bluetooth/hci.h>
 #include <zephyr/bluetooth/buf.h>
 #include <zephyr/bluetooth/hci_raw.h>
-#include <zephyr/drivers/bluetooth/hci_driver.h>
 
 #define LOG_MODULE_NAME hci_uart_3wire
 LOG_MODULE_REGISTER(LOG_MODULE_NAME);
@@ -182,6 +181,7 @@ static void process_unack(void)
 {
 	uint8_t next_seq = h5.tx_seq;
 	uint8_t number_removed = unack_queue_len;
+	bool acked = false;
 
 	if (!unack_queue_len) {
 		return;
@@ -224,6 +224,12 @@ static void process_unack(void)
 		net_buf_unref(buf);
 		unack_queue_len--;
 		number_removed--;
+
+		acked = true;
+	}
+
+	if (acked) {
+		k_poll_signal_raise(&tx_queue_change, 0);
 	}
 }
 

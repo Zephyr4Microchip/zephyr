@@ -44,14 +44,13 @@
  * required to place the AUX_ADV_IND PDUs in a non-overlapping interval with the
  * Broadcast ISO radio events.
  */
-#define BT_LE_EXT_ADV_CUSTOM \
-		BT_LE_ADV_PARAM(BT_LE_ADV_OPT_EXT_ADV, \
-				0x0080, 0x0080, NULL)
+#define BT_LE_EXT_ADV_CUSTOM                                                                       \
+	BT_LE_ADV_PARAM(BT_LE_ADV_OPT_EXT_ADV, BT_GAP_MS_TO_ADV_INTERVAL(80),                      \
+			BT_GAP_MS_TO_ADV_INTERVAL(80), NULL)
 
-#define BT_LE_PER_ADV_CUSTOM \
-		BT_LE_PER_ADV_PARAM(0x0048, \
-				    0x0048, \
-				    BT_LE_PER_ADV_OPT_NONE)
+#define BT_LE_PER_ADV_CUSTOM                                                                       \
+	BT_LE_PER_ADV_PARAM(BT_GAP_MS_TO_PER_ADV_INTERVAL(90), BT_GAP_MS_TO_PER_ADV_INTERVAL(90),  \
+			    BT_LE_PER_ADV_OPT_NONE)
 
 #define UNICAST_SINK_SUPPORTED (CONFIG_BT_BAP_UNICAST_CLIENT_ASE_SNK_COUNT > 0)
 #define UNICAST_SRC_SUPPORTED  (CONFIG_BT_BAP_UNICAST_CLIENT_ASE_SRC_COUNT > 0)
@@ -546,10 +545,10 @@ static void gmap_device_found(const bt_addr_le_t *addr, int8_t rssi, uint8_t typ
 		return;
 	}
 
-	err = bt_conn_le_create(
-		addr, BT_CONN_LE_CREATE_CONN,
-		BT_LE_CONN_PARAM(BT_GAP_INIT_CONN_INT_MIN, BT_GAP_INIT_CONN_INT_MIN, 0, 400),
-		&connected_conns[connected_conn_cnt]);
+	err = bt_conn_le_create(addr, BT_CONN_LE_CREATE_CONN,
+				BT_LE_CONN_PARAM(BT_GAP_INIT_CONN_INT_MIN, BT_GAP_INIT_CONN_INT_MIN,
+						 0, BT_GAP_MS_TO_CONN_TIMEOUT(4000)),
+				&connected_conns[connected_conn_cnt]);
 	if (err) {
 		FAIL("Could not connect to peer: %d", err);
 	}
@@ -1055,9 +1054,9 @@ static void setup_extended_adv_data(struct bt_cap_broadcast_source *source,
 	uint32_t broadcast_id;
 	int err;
 
-	err = bt_cap_initiator_broadcast_get_id(source, &broadcast_id);
-	if (err != 0) {
-		FAIL("Unable to get broadcast ID: %d\n", err);
+	err = bt_rand(&broadcast_id, BT_AUDIO_BROADCAST_ID_SIZE);
+	if (err) {
+		FAIL("Unable to generate broadcast ID: %d\n", err);
 		return;
 	}
 

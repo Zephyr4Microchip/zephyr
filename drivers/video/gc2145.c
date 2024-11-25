@@ -9,6 +9,7 @@
 #include <zephyr/device.h>
 
 #include <zephyr/drivers/video.h>
+#include <zephyr/drivers/video-controls.h>
 #include <zephyr/drivers/i2c.h>
 #include <zephyr/drivers/gpio.h>
 
@@ -1038,7 +1039,7 @@ static int gc2145_set_fmt(const struct device *dev, enum video_endpoint_id ep,
 	}
 
 	/* Check if camera is capable of handling given format */
-	for (int i = 0; i == ARRAY_SIZE(fmts); i++) {
+	for (int i = 0; i < RESOLUTIONS_MAX; i++) {
 		if (fmts[i].width_min == fmt->width && fmts[i].height_min == fmt->height &&
 		    fmts[i].pixelformat == fmt->pixelformat) {
 			res = (enum resolutions)i;

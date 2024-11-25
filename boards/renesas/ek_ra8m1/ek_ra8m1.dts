@@ -21,6 +21,7 @@
 		zephyr,console = &uart9;
 		zephyr,shell-uart = &uart9;
 		zephyr,entropy = &trng;
+		zephyr,canbus = &canfd0;
 	};
 
 	leds {
@@ -62,8 +63,45 @@
 							/* GND */
 	};
 
+	pmod1_header: pmod-connector-1 {
+		compatible = "digilent,pmod";
+		#gpio-cells = <2>;
+		gpio-map-mask = <0xffffffff 0xffffffc0>;
+		gpio-map-pass-thru = <0 0x3f>;
+		gpio-map = <0 0 &ioport6 12 0>,	/* IO1 */
+			   <1 0 &ioport6 9 0>,	/* IO2 */
+			   <2 0 &ioport6 10 0>,	/* IO3 */
+			   <3 0 &ioport6 11 0>,	/* IO4 */
+			   <4 0 &ioport0 6 0>,	/* IO5 */
+			   <5 0 &ioporta 8 0>,	/* IO6 */
+			   <6 0 &ioport6 14 0>,	/* IO7 */
+			   <7 0 &ioport6 15 0>;	/* IO8 */
+	};
+
+	pmod2_header: pmod-connector-2 {
+		compatible = "digilent,pmod";
+		#gpio-cells = <2>;
+		gpio-map-mask = <0xffffffff 0xffffffc0>;
+		gpio-map-pass-thru = <0 0x3f>;
+		gpio-map = <0 0 &ioporta 5 0>,	/* IO1 */
+			   <1 0 &ioporta 3 0>,	/* IO2 */
+			   <2 0 &ioporta 2 0>,	/* IO3 */
+			   <3 0 &ioporta 4 0>,	/* IO4 */
+			   <4 0 &ioport5 8 0>,	/* IO5 */
+			   <5 0 &ioport8 9 0>,	/* IO6 */
+			   <6 0 &ioport8 10 0>,	/* IO7 */
+			   <7 0 &ioport8 11 0>;	/* IO8 */
+	};
+
 	aliases {
 		led0 = &led1;
+	};
+
+	transceiver0: can-phy0 {
+		compatible = "nxp,tja1040t", "can-transceiver-gpio";
+		standby-gpios = <&ioport2 7 GPIO_ACTIVE_HIGH>;
+		max-bitrate = <5000000>;
+		#phy-cells = <0>;
 	};
 };
 
@@ -79,21 +117,30 @@
 };
 
 &pll {
-	clocks = <&xtal>;
-	div = <2>;
-	mul = <96 0>;
-	divp = <2>;
-	freqp = <DT_FREQ_M(480)>;
-	divq = <2>;
-	freqq = <DT_FREQ_M(480)>;
-	divr = <2>;
-	freqr = <DT_FREQ_M(480)>;
+	status = "okay";
+	pllp {
+		status = "okay";
+	};
+
+	pllq {
+		status = "okay";
+	};
+
+	pllr {
+		status = "okay";
+	};
+};
+
+
+&sciclk {
+	clocks = <&pllp>;
+	div = <4>;
 	status = "okay";
 };
 
-&sciclk {
+&canfdclk {
 	clocks = <&pll>;
-	div = <4>;
+	div = <5>;
 	status = "okay";
 };
 
@@ -102,6 +149,10 @@
 };
 
 &ioport1 {
+	status = "okay";
+};
+
+&ioport2 {
 	status = "okay";
 };
 
@@ -121,8 +172,36 @@
 	status = "okay";
 };
 
+&ioport8 {
+	status = "okay";
+};
+
 &ioport9 {
 	status = "okay";
+};
+
+&ioporta {
+	status = "okay";
+};
+
+&sci0 {
+	pinctrl-0 = <&sci0_default>;
+	pinctrl-names = "default";
+	status = "okay";
+	uart0: uart {
+		current-speed = <115200>;
+		status = "okay";
+	};
+};
+
+&sci2 {
+	pinctrl-0 = <&sci2_default>;
+	pinctrl-names = "default";
+	status = "okay";
+	uart2: uart {
+		current-speed = <115200>;
+		status = "okay";
+	};
 };
 
 &sci3 {
@@ -167,6 +246,12 @@ mikrobus_serial: &uart3 {};
 
 &spi1 {
 	pinctrl-0 = <&spi1_default>;
+};
+
+&pwm7 {
+	pinctrl-0 = <&pwm7_default>;
+	interrupts = <40 1>, <41 1>;
+	interrupt-names = "gtioca", "overflow";
 	pinctrl-names = "default";
 	status = "okay";
 };
@@ -183,3 +268,20 @@ mikrobus_serial: &uart3 {};
 		};
 	};
 };
+
+&canfd_global {
+	status = "okay";
+	canfd0 {
+		pinctrl-0 = <&canfd0_default>;
+		pinctrl-names = "default";
+		phys = <&transceiver0>;
+		rx-max-filters = <16>;
+		status = "okay";
+	};
+};
+
+pmod1_serial: &uart0 {};
+pmod2_serial: &uart2 {};
+
+pmod_serial: &pmod1_serial {};
+pmod_header: &pmod1_header {};

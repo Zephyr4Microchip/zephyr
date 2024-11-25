@@ -29,9 +29,14 @@ zephyr_include_directories_ifdef(CONFIG_NRF70_RADIO_TEST
   ${OS_AGNOSTIC_BASE}/fw_if/umac_if/inc/radio_test
 )
 
-zephyr_include_directories_ifndef(CONFIG_NRF70_RADIO_TEST
-  ${OS_AGNOSTIC_BASE}/fw_if/umac_if/inc/default
+zephyr_include_directories_ifdef(CONFIG_NRF70_OFFLOADED_RAW_TX
+  ${OS_AGNOSTIC_BASE}/fw_if/umac_if/inc/offload_raw_tx
+  off_raw_tx/inc
 )
+
+if(NOT CONFIG_NRF70_RADIO_TEST AND NOT CONFIG_NRF70_OFFLOADED_RAW_TX)
+  zephyr_include_directories(${OS_AGNOSTIC_BASE}/fw_if/umac_if/inc/default)
+endif()
 
 zephyr_library_sources_ifdef(CONFIG_NRF70_SR_COEX
   src/coex.c
@@ -57,23 +62,28 @@ zephyr_library_sources(
   src/shim.c
   src/work.c
   src/timer.c
-  src/fmac_main.c
   src/qspi/src/device.c
   src/qspi/src/rpu_hw_if.c
   src/qspi/src/ficr_prog.c
+)
+
+zephyr_library_sources_ifndef(CONFIG_NRF70_OFFLOADED_RAW_TX
+  src/fmac_main.c
 )
 
 zephyr_library_sources_ifdef(CONFIG_NRF_WIFI_PATCHES_BUILTIN
   src/fw_load.c
 )
 
-zephyr_library_sources_ifndef(CONFIG_NRF70_RADIO_TEST
+if(NOT CONFIG_NRF70_RADIO_TEST AND NOT CONFIG_NRF70_OFFLOADED_RAW_TX)
+  zephyr_library_sources(
   ${OS_AGNOSTIC_BASE}/fw_if/umac_if/src/rx.c
   ${OS_AGNOSTIC_BASE}/fw_if/umac_if/src/fmac_vif.c
   ${OS_AGNOSTIC_BASE}/fw_if/umac_if/src/fmac_util.c
   src/net_if.c
   ${OS_AGNOSTIC_BASE}/fw_if/umac_if/src/default/fmac_api.c
 )
+endif()
 
 zephyr_library_sources_ifdef(CONFIG_NET_L2_WIFI_MGMT
   src/wifi_mgmt_scan.c
@@ -86,6 +96,12 @@ zephyr_library_sources_ifdef(CONFIG_NRF70_SYSTEM_MODE_COMMON
 zephyr_library_sources_ifdef(CONFIG_NRF70_RADIO_TEST
   ${OS_AGNOSTIC_BASE}/fw_if/umac_if/src/radio_test/fmac_api.c
   ${OS_AGNOSTIC_BASE}/fw_if/umac_if/src/fmac_util.c
+)
+
+zephyr_library_sources_ifdef(CONFIG_NRF70_OFFLOADED_RAW_TX
+  ${OS_AGNOSTIC_BASE}/fw_if/umac_if/src/offload_raw_tx/fmac_api.c
+  ${OS_AGNOSTIC_BASE}/fw_if/umac_if/src/fmac_util.c
+  off_raw_tx/src/off_raw_tx_api.c
 )
 
 zephyr_library_sources_ifdef(CONFIG_NRF70_DATA_TX
@@ -110,6 +126,10 @@ zephyr_library_sources_ifdef(CONFIG_NRF70_STA_MODE
   src/wpa_supp_if.c
   ${OS_AGNOSTIC_BASE}/fw_if/umac_if/src/fmac_peer.c
   ${OS_AGNOSTIC_BASE}/fw_if/umac_if/src/fmac_util.c
+)
+
+zephyr_library_sources_ifdef(CONFIG_NRF70_PROMISC_DATA_RX
+  ${OS_AGNOSTIC_BASE}/fw_if/umac_if/src/fmac_promisc.c
 )
 
 zephyr_library_sources_ifdef(CONFIG_NRF70_ON_QSPI
@@ -142,7 +162,7 @@ if (CONFIG_NRF_WIFI_BUILD_ONLY_MODE)
   This is only for building (CI) purposes and will not work on a real device.
   ------------------------------------------------------------------------
   ")
-else()
+elseif(CONFIG_NRF_WIFI_PATCHES_BUILTIN)
   # RPU FW patch binaries based on the selected configuration
   if(CONFIG_NRF70_SYSTEM_MODE)
     set(NRF70_PATCH ${FW_BINS_BASE}/default/nrf70.bin)
@@ -152,6 +172,8 @@ else()
     set(NRF70_PATCH ${FW_BINS_BASE}/scan_only/nrf70.bin)
   elseif (CONFIG_NRF70_SYSTEM_WITH_RAW_MODES)
     set(NRF70_PATCH ${FW_BINS_BASE}/system_with_raw/nrf70.bin)
+  elseif(CONFIG_NRF70_OFFLOADED_RAW_TX)
+    set(NRF70_PATCH ${FW_BINS_BASE}/offloaded_raw_tx/nrf70.bin)
   else()
     # Error
     message(FATAL_ERROR "Unsupported nRF70 patch configuration")
@@ -166,25 +188,14 @@ else()
       ------------------------------------------------------------------------")
   endif()
 
-  zephyr_compile_definitions(
-    -DCONFIG_NRF_WIFI_FW_BIN=${NRF70_PATCH}
+  set(gen_inc_dir ${ZEPHYR_BINARY_DIR}/misc/generated)
+  zephyr_include_directories(${gen_inc_dir})
+  set(gen_dir ${gen_inc_dir}/nrf70_fw_patch)
+  generate_inc_file_for_target(
+    nrfwifi
+    ${NRF70_PATCH}
+    ${gen_dir}/nrf70.bin.inc
   )
-
-  # Rebuild fw_load.c whenever the firmware binary changes
-  # a bit crude way to do it, but it works
-  add_custom_command(
-    OUTPUT ${CMAKE_SOURCE_DIR}/src/fw_load.c
-    COMMAND ${CMAKE_COMMAND} -E touch ${CMAKE_SOURCE_DIR}/src/fw_load.c
-    DEPENDS ${NRF70_PATCH}
-    COMMENT "Checking firmware blobs ${NRF70_PATCH}"
-  )
-
-  add_custom_target(
-    check_firmware_blobs ALL
-    DEPENDS ${CMAKE_SOURCE_DIR}/src/fw_load.c
-  )
-
-  add_dependencies(nrfwifi check_firmware_blobs)
 endif()
 
 
@@ -242,6 +253,10 @@ zephyr_compile_definitions_ifdef(CONFIG_NRF70_RADIO_TEST
   -DNRF70_RADIO_TEST
 )
 
+zephyr_compile_definitions_ifdef(CONFIG_NRF70_OFFLOADED_RAW_TX
+  -DNRF70_OFFLOADED_RAW_TX
+)
+
 zephyr_compile_definitions_ifdef(CONFIG_NRF70_TCP_IP_CHECKSUM_OFFLOAD
   -DNRF70_TCP_IP_CHECKSUM_OFFLOAD
 )
@@ -274,13 +289,36 @@ zephyr_compile_definitions_ifdef(CONFIG_NRF70_AP_MODE
   -DNRF70_AP_MODE
 )
 
+zephyr_compile_definitions_ifdef(CONFIG_NRF_WIFI_MGMT_BUFF_OFFLOAD
+  -DNRF_WIFI_MGMT_BUFF_OFFLOAD
+)
+
+zephyr_compile_definitions_ifdef(CONFIG_NRF_WIFI_FEAT_KEEPALIVE
+  -DNRF_WIFI_FEAT_KEEPALIVE
+)
+
+zephyr_compile_definitions_ifdef(CONFIG_NRF_WIFI_FEAT_KEEPALIVE
+  -DNRF_WIFI_KEEPALIVE_PERIOD_S=${CONFIG_NRF_WIFI_KEEPALIVE_PERIOD_S}
+)
+
+zephyr_compile_definitions_ifdef(CONFIG_WIFI_MGMT_RAW_SCAN_RESULTS
+  -DWIFI_MGMT_RAW_SCAN_RESULTS=${CONFIG_WIFI_MGMT_RAW_SCAN_RESULTS}
+)
+
+zephyr_compile_definitions_ifdef(CONFIG_NRF70_OFFLOADED_RAW_TX
+  -DNRF_NRF70_OFFLOADED_RAW_TX
+)
+
+zephyr_compile_definitions_ifdef(CONFIG_NRF70_PASSIVE_SCAN_ONLY
+  -DNRF70_PASSIVE_SCAN_ONLY
+)
+
 zephyr_compile_definitions(
   -DNRF70_RX_NUM_BUFS=${CONFIG_NRF70_RX_NUM_BUFS}
   -DNRF70_MAX_TX_TOKENS=${CONFIG_NRF70_MAX_TX_TOKENS}
   -DNRF70_RX_MAX_DATA_SIZE=${CONFIG_NRF70_RX_MAX_DATA_SIZE}
   -DNRF70_MAX_TX_PENDING_QLEN=${CONFIG_NRF70_MAX_TX_PENDING_QLEN}
   -DNRF70_RPU_PS_IDLE_TIMEOUT_MS=${CONFIG_NRF70_RPU_PS_IDLE_TIMEOUT_MS}
-  -DNRF70_REG_DOMAIN=${CONFIG_NRF70_REG_DOMAIN}
   -DNRF70_BAND_2G_LOWER_EDGE_BACKOFF_DSSS=${CONFIG_NRF70_BAND_2G_LOWER_EDGE_BACKOFF_DSSS}
   -DNRF70_BAND_2G_LOWER_EDGE_BACKOFF_HT=${CONFIG_NRF70_BAND_2G_LOWER_EDGE_BACKOFF_HT}
   -DNRF70_BAND_2G_LOWER_EDGE_BACKOFF_HE=${CONFIG_NRF70_BAND_2G_LOWER_EDGE_BACKOFF_HE}
@@ -315,4 +353,6 @@ zephyr_compile_definitions(
   -DNRF70_ANT_GAIN_5G_BAND1=${CONFIG_NRF70_ANT_GAIN_5G_BAND1}
   -DNRF70_ANT_GAIN_5G_BAND2=${CONFIG_NRF70_ANT_GAIN_5G_BAND2}
   -DNRF70_ANT_GAIN_5G_BAND3=${CONFIG_NRF70_ANT_GAIN_5G_BAND3}
+  -DNRF_WIFI_PS_INT_PS=${CONFIG_NRF_WIFI_PS_INT_PS}
+  -DNRF_WIFI_RPU_RECOVERY_PS_ACTIVE_TIMEOUT_MS=${CONFIG_NRF_WIFI_RPU_RECOVERY_PS_ACTIVE_TIMEOUT_MS}
 )

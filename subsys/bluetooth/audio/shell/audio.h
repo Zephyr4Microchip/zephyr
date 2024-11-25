@@ -37,9 +37,6 @@
 #define SHELL_PRINT_INDENT_LEVEL_SIZE 2
 #define MAX_CODEC_FRAMES_PER_SDU      4U
 
-/* BIS sync is a 32-bit bitfield where BIT(0) is not allowed */
-#define VALID_BIS_SYNC(_bis_sync) ((bis_sync & BIT(0)) == 0U && bis_sync < UINT32_MAX)
-
 extern struct bt_csip_set_member_svc_inst *svc_inst;
 
 ssize_t audio_ad_data_add(struct bt_data *data, const size_t data_size, const bool discoverable,
@@ -199,9 +196,9 @@ struct broadcast_sink {
 #if defined(CONFIG_BT_BAP_UNICAST)
 
 #define UNICAST_SERVER_STREAM_COUNT                                                                \
-	COND_CODE_1(CONFIG_BT_ASCS,                                                                \
-		    (CONFIG_BT_ASCS_MAX_ASE_SNK_COUNT + CONFIG_BT_ASCS_MAX_ASE_SRC_COUNT),         \
-		    (0))
+	COND_CODE_1(CONFIG_BT_ASCS_ASE_SRC, (CONFIG_BT_ASCS_MAX_ASE_SRC_COUNT), (0)) +             \
+	COND_CODE_1(CONFIG_BT_ASCS_ASE_SNK, (CONFIG_BT_ASCS_MAX_ASE_SNK_COUNT), (0))
+
 #define UNICAST_CLIENT_STREAM_COUNT                                                                \
 	COND_CODE_1(CONFIG_BT_BAP_UNICAST_CLIENT,                                                  \
 		    (CONFIG_BT_BAP_UNICAST_CLIENT_ASE_SNK_COUNT +                                  \
