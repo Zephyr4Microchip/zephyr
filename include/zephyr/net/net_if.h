@@ -331,6 +331,16 @@ struct net_if_ipv6 {
 	/** Retransmit timer (RFC 4861, page 52) */
 	uint32_t retrans_timer;
 
+#if defined(CONFIG_NET_IPV6_IID_STABLE)
+	/** IID (Interface Identifier) pointer used for link local address */
+	struct net_if_addr *iid;
+
+	/** Incremented when network interface goes down so that we can
+	 * generate new stable addresses when interface comes back up.
+	 */
+	uint32_t network_counter;
+#endif /* CONFIG_NET_IPV6_IID_STABLE */
+
 #if defined(CONFIG_NET_IPV6_PE)
 	/** Privacy extension DESYNC_FACTOR value from RFC 8981 ch 3.4.
 	 * "DESYNC_FACTOR is a random value within the range 0 - MAX_DESYNC_FACTOR.
@@ -2038,7 +2048,7 @@ static inline uint32_t net_if_ipv6_get_retrans_timer(struct net_if *iface)
  * @return Pointer to IPv6 address to use, NULL if no IPv6 address
  * could be found.
  */
-#if defined(CONFIG_NET_NATIVE_IPV6)
+#if defined(CONFIG_NET_IPV6)
 const struct in6_addr *net_if_ipv6_select_src_addr(struct net_if *iface,
 						   const struct in6_addr *dst);
 #else
@@ -2065,7 +2075,7 @@ static inline const struct in6_addr *net_if_ipv6_select_src_addr(
  * @return Pointer to IPv6 address to use, NULL if no IPv6 address
  * could be found.
  */
-#if defined(CONFIG_NET_NATIVE_IPV6)
+#if defined(CONFIG_NET_IPV6)
 const struct in6_addr *net_if_ipv6_select_src_addr_hint(struct net_if *iface,
 							const struct in6_addr *dst,
 							int flags);
@@ -2090,7 +2100,7 @@ static inline const struct in6_addr *net_if_ipv6_select_src_addr_hint(
  * @return Pointer to network interface to use, NULL if no suitable interface
  * could be found.
  */
-#if defined(CONFIG_NET_NATIVE_IPV6)
+#if defined(CONFIG_NET_IPV6)
 struct net_if *net_if_ipv6_select_src_iface(const struct in6_addr *dst);
 #else
 static inline struct net_if *net_if_ipv6_select_src_iface(

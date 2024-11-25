@@ -100,6 +100,43 @@ int supplicant_reset_stats(const struct device *dev);
  */
 int supplicant_pmksa_flush(const struct device *dev);
 
+/** Set or get 11K status
+ *
+ * @param dev Pointer to the device structure for the driver instance.
+ * @param params 11k parameters
+ *
+ * @return 0 if ok, < 0 if error
+ */
+int supplicant_11k_cfg(const struct device *dev, struct wifi_11k_params *params);
+
+/** Send 11k neighbor request
+ *
+ * @param dev Pointer to the device structure for the driver instance.
+ * @param params 11k parameters
+ *
+ * @return 0 if ok, < 0 if error
+ */
+int supplicant_11k_neighbor_request(const struct device *dev, struct wifi_11k_params *params);
+
+#ifdef CONFIG_WIFI_NM_WPA_SUPPLICANT_ROAMING
+/** Send candidate scan request
+ *
+ * @param dev Pointer to the device structure for the driver instance.
+ * @param params Scan parameters
+ *
+ * @return 0 if ok, < 0 if error
+ */
+int supplicant_candidate_scan(const struct device *dev, struct wifi_scan_params *params);
+
+/** Send 11r roaming request
+ *
+ * @param dev Pointer to the device structure for the driver instance.
+ *
+ * @return 0 if ok, < 0 if error
+ */
+int supplicant_11r_roaming(const struct device *dev);
+#endif
+
 /**
  * @brief Set Wi-Fi power save configuration
  *
@@ -146,7 +183,8 @@ int supplicant_reg_domain(const struct device *dev, struct wifi_reg_domain *reg_
  */
 int supplicant_mode(const struct device *dev, struct wifi_mode_info *mode);
 
-#ifdef CONFIG_WIFI_NM_WPA_SUPPLICANT_CRYPTO_ENTERPRISE
+#if defined CONFIG_WIFI_NM_WPA_SUPPLICANT_CRYPTO_ENTERPRISE || \
+	defined CONFIG_WIFI_NM_HOSTAPD_CRYPTO_ENTERPRISE
 /** Set Wi-Fi enterprise mode CA/client Cert and key
  *
  * @param dev Pointer to the device structure for the driver instance
@@ -250,6 +288,26 @@ static inline int hapd_state(const struct device *dev, int *state)
 }
 #endif
 
+#ifdef CONFIG_WIFI_NM_HOSTAPD_WPS
+/** Start AP WPS PBC/PIN
+ *
+ * @param dev Pointer to the device structure for the driver instance
+ * @param params wps operarion parameters
+ *
+ * @return 0 if ok, < 0 if error
+ */
+int supplicant_ap_wps_config(const struct device *dev, struct wifi_wps_config_params *params);
+#endif
+
+/**
+ * @brief Get Wi-Fi SAP status
+ *
+ * @param dev Wi-Fi device
+ * @param status SAP status
+ * @return 0 for OK; -1 for ERROR
+ */
+int supplicant_ap_status(const struct device *dev, struct wifi_iface_status *status);
+
 /**
  * @brief Set Wi-Fi AP configuration
  *
@@ -287,7 +345,6 @@ int supplicant_ap_sta_disconnect(const struct device *dev,
  * @return 0 for OK; -1 for ERROR
  */
 int supplicant_dpp_dispatch(const struct device *dev, struct wifi_dpp_params *params);
-#endif /* CONFIG_WIFI_NM_WPA_SUPPLICANT_DPP */
 
 #ifdef CONFIG_WIFI_NM_HOSTAPD_AP
 /**
@@ -299,4 +356,5 @@ int supplicant_dpp_dispatch(const struct device *dev, struct wifi_dpp_params *pa
  */
 int hapd_dpp_dispatch(const struct device *dev, struct wifi_dpp_params *params);
 #endif /* CONFIG_WIFI_NM_HOSTAPD_AP */
+#endif /* CONFIG_WIFI_NM_WPA_SUPPLICANT_DPP */
 #endif /* ZEPHYR_SUPP_MGMT_H */

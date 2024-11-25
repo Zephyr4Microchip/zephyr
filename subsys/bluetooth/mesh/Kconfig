@@ -103,14 +103,74 @@ menuconfig BT_MESH_ADV_EXT
 
 if BT_MESH_ADV_EXT
 
+choice BT_MESH_WORKQ_CONTEXT
+	prompt "Advertising thread selection"
+	default BT_MESH_WORKQ_MESH
+	help
+	  Defines a context for mesh messages transmission.
+
+config BT_MESH_WORKQ_MESH
+	bool "Mesh-specific workqueue"
+	help
+	  When this option is selected, the mesh sends messages from the
+	  mesh-specific workqueue. This will ensure that messages are always sent.
+	  The application needs to ensure the mesh-specific workqueue size is large
+	  enough. Refer to BT_MESH_ADV_STACK_SIZE for the recommended minimum.
+
+config BT_MESH_WORKQ_SYS
+	bool "System workqueue"
+	help
+	  When this option is selected, the mesh sends messages from
+	  the system work queue. The application needs to ensure the system
+	  workqueue stack size (SYSTEM_WORKQUEUE_STACK_SIZE) is large enough,
+	  refer to BT_MESH_ADV_STACK_SIZE for the recommended minimum.
+
+	  When this option is enabled and the mesh tries to send a message,
+	  and the host ran out the HCI command buffers controlled by
+	  CONFIG_BT_BUF_CMD_TX_COUNT, the host returns -ENOBUFS immediately
+	  and the mesh drops the message transmission. To mitigate this
+	  issue, make sure to have sufficient number of HCI command buffers.
+	  When this option is enabled, the latency of sending mesh messages
+	  will be affected by other users on the system work queue, resulting in
+	  reduced reliability for sending mesh messages.
+
+endchoice
+
+if BT_MESH_WORKQ_MESH
+
+config BT_MESH_ADV_STACK_SIZE
+	int "Mesh extended advertiser thread stack size"
+	default 1536 if BT_MESH_PROXY
+	default 1024 if BT_HOST_CRYPTO
+	default 776 if BT_MESH_PRIV_BEACONS
+	default 768
+	help
+	  Size of bt mesh adv thread stack.
+
+	  NOTE: This is an advanced setting and should not be changed unless
+	  absolutely necessary
+
+config BT_MESH_ADV_PRIO
+	int "Mesh advertiser thread priority"
+	default 7
+	help
+	  Priority of bt mesh adv thread.
+
+	  NOTE: This is an advanced setting and should not be changed unless
+	  absolutely necessary
+
+endif # BT_MESH_WORKQ_MESH
+
 config BT_MESH_RELAY_ADV_SETS
 	int "Maximum of simultaneous relay message support"
 	default 0
 	range 0 BT_EXT_ADV_MAX_ADV_SET
-	depends on BT_MESH_RELAY
+	depends on BT_MESH_RELAY || BT_MESH_BRG_CFG_SRV
 	help
 	  Maximum of simultaneous relay message support. Requires controller support
 	  multiple advertising sets.
+
+	  Note that: The Subnet Bridge feature uses the relay advertising sets.
 
 config BT_MESH_ADV_EXT_RELAY_USING_MAIN_ADV_SET
 	bool "Use the main advertising set to relay messages"
@@ -267,15 +327,6 @@ config BT_MESH_PB_GATT_CLIENT
 
 endif # BT_CONN
 
-config BT_MESH_PROV_DEVICE
-	bool "[DEPRECATED] Provisioning device role support"
-	select DEPRECATED
-	select BT_MESH_PROVISIONEE
-	help
-	  Enable this option to allow the device to be provisioned into a mesh network.
-	  The option is marked as deprecated and will be replaced by BT_MESH_PROVISIONEE
-	  option.
-
 config BT_MESH_PROVISIONEE
 	bool "Provisionee role support"
 	depends on BT_MESH_PB_ADV || BT_MESH_PB_GATT
@@ -422,8 +473,11 @@ config BT_MESH_RELAY_RETRANSMIT_INTERVAL
 	  messages, in milliseconds. Can be changed through runtime
 	  configuration.
 
+endif # BT_MESH_RELAY
+
 config BT_MESH_RELAY_BUF_COUNT
 	int "Number of advertising buffers for relayed messages"
+	depends on BT_MESH_RELAY || BT_MESH_BRG_CFG_SRV
 	default 32
 	range 1 256
 	help
@@ -437,7 +491,9 @@ config BT_MESH_RELAY_BUF_COUNT
 	  BT_MESH_RELAY_ADV_SETS allows the increase in the number of buffers
 	  while maintaining the latency.
 
-endif # BT_MESH_RELAY
+	  Note that: The Subnet Bridge feature uses the relay advertising buffers. If both the Relay
+	  feature and the Subnet Bridge feature is enabled, the added load should be taken into
+	  account.
 
 endmenu # Network layer
 
@@ -1420,7 +1476,6 @@ config BT_MESH_USES_MBEDTLS_PSA
 	select EXPERIMENTAL
 	select MBEDTLS
 	select MBEDTLS_ENTROPY_C
-	select MBEDTLS_ENTROPY_POLL_ZEPHYR
 	select MBEDTLS_PSA_CRYPTO_C
 	select MBEDTLS_USE_PSA_CRYPTO
 	select PSA_WANT_KEY_TYPE_ECC_KEY_PAIR_IMPORT

@@ -16,6 +16,21 @@
 			device_type = "cpu";
 			compatible = "arm,cortex-m33";
 			reg = <0>;
+			cpu-power-states = <&idle &suspend_to_ram>;
+		};
+
+		power-states {
+			idle: idle {
+				compatible = "zephyr,power-state";
+				power-state-name = "suspend-to-idle";
+				min-residency-us = <1000000>;
+			};
+
+			suspend_to_ram: suspend_to_ram {
+				compatible = "zephyr,power-state";
+				power-state-name = "suspend-to-ram";
+				min-residency-us = <2000000>;
+			};
 		};
 	};
 
@@ -138,6 +153,14 @@
 			status = "disabled";
 		};
 
+		rtc0: rtc@40220000 {
+			compatible = "infineon,cat1-rtc";
+			reg = <0x40220000 0x10000>;
+			interrupts = <10 6>;
+			alarms-count = <2>;
+			status = "disabled";
+		};
+
 		counter0_0: counter@404a0000 {
 			compatible = "infineon,cat1-counter";
 			reg = <0x404a0000 0x80>;
@@ -208,6 +231,7 @@
 			interrupts = <42 4>;
 			resolution = <32>;
 			status = "disabled";
+			#pwm-cells = <3>;
 		};
 		pwm0_1: pwm@404a0080 {
 			compatible = "infineon,cat1-pwm";
@@ -215,6 +239,7 @@
 			interrupts = <43 4>;
 			resolution = <32>;
 			status = "disabled";
+			#pwm-cells = <3>;
 		};
 		pwm1_0: pwm@404a8000 {
 			compatible = "infineon,cat1-pwm";
@@ -222,6 +247,7 @@
 			interrupts = <44 4>;
 			resolution = <16>;
 			status = "disabled";
+			#pwm-cells = <3>;
 		};
 		pwm1_1: pwm@404a8080 {
 			compatible = "infineon,cat1-pwm";
@@ -229,6 +255,7 @@
 			interrupts = <45 4>;
 			resolution = <16>;
 			status = "disabled";
+			#pwm-cells = <3>;
 		};
 		pwm1_2: pwm@404a8100 {
 			compatible = "infineon,cat1-pwm";
@@ -236,6 +263,7 @@
 			interrupts = <46 4>;
 			resolution = <16>;
 			status = "disabled";
+			#pwm-cells = <3>;
 		};
 		pwm1_3: pwm@404a8180 {
 			compatible = "infineon,cat1-pwm";
@@ -243,6 +271,7 @@
 			interrupts = <47 4>;
 			resolution = <16>;
 			status = "disabled";
+			#pwm-cells = <3>;
 		};
 		pwm1_4: pwm@404a8200 {
 			compatible = "infineon,cat1-pwm";
@@ -250,6 +279,7 @@
 			interrupts = <48 4>;
 			resolution = <16>;
 			status = "disabled";
+			#pwm-cells = <3>;
 		};
 		pwm1_5: pwm@404a8280 {
 			compatible = "infineon,cat1-pwm";
@@ -257,6 +287,7 @@
 			interrupts = <49 4>;
 			resolution = <16>;
 			status = "disabled";
+			#pwm-cells = <3>;
 		};
 		pwm1_6: pwm@404a8300 {
 			compatible = "infineon,cat1-pwm";
@@ -264,6 +295,7 @@
 			interrupts = <50 4>;
 			resolution = <16>;
 			status = "disabled";
+			#pwm-cells = <3>;
 		};
 
 		dma0: dw@40180000 {

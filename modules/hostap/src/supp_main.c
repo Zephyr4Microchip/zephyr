@@ -62,6 +62,12 @@ static const struct wifi_mgmt_ops mgmt_ops = {
 	.get_stats = supplicant_get_stats,
 	.reset_stats = supplicant_reset_stats,
 #endif
+	.cfg_11k = supplicant_11k_cfg,
+	.send_11k_neighbor_request = supplicant_11k_neighbor_request,
+#ifdef CONFIG_WIFI_NM_WPA_SUPPLICANT_ROAMING
+	.candidate_scan = supplicant_candidate_scan,
+	.start_11r_roaming = supplicant_11r_roaming,
+#endif
 	.set_power_save = supplicant_set_power_save,
 	.set_twt = supplicant_set_twt,
 	.get_power_save_config = supplicant_get_power_save_config,
@@ -94,15 +100,20 @@ DEFINE_WIFI_NM_INSTANCE(wifi_supplicant, &mgmt_ops);
 
 #ifdef CONFIG_WIFI_NM_HOSTAPD_AP
 static const struct wifi_mgmt_ops mgmt_ap_ops = {
-	.set_btwt = supplicant_set_btwt,
 	.ap_enable = supplicant_ap_enable,
 	.ap_disable = supplicant_ap_disable,
 	.ap_sta_disconnect = supplicant_ap_sta_disconnect,
-	.ap_bandwidth = supplicant_ap_bandwidth,
+	.iface_status = supplicant_ap_status,
+#ifdef CONFIG_WIFI_NM_HOSTAPD_WPS
+	.wps_config = supplicant_ap_wps_config,
+#endif
 #ifdef CONFIG_WIFI_NM_WPA_SUPPLICANT_DPP
 	.dpp_dispatch = hapd_dpp_dispatch,
 #endif /* CONFIG_WIFI_NM_WPA_SUPPLICANT_DPP */
 	.ap_config_params = supplicant_ap_config_params,
+#ifdef CONFIG_WIFI_NM_HOSTAPD_CRYPTO_ENTERPRISE
+	.enterprise_creds = supplicant_add_enterprise_creds,
+#endif
 };
 
 DEFINE_WIFI_NM_INSTANCE(hostapd, &mgmt_ap_ops);
@@ -382,7 +393,7 @@ static int del_interface(struct supplicant_context *ctx, struct net_if *iface)
 	supplicant_generate_state_event(ifname, NET_EVENT_SUPPLICANT_CMD_IFACE_REMOVING, 0);
 
 	if (sizeof(event->interface_status.ifname) < strlen(ifname)) {
-		wpa_printf(MSG_ERROR, "Interface name too long: %s (max: %d)",
+		wpa_printf(MSG_ERROR, "Interface name too long: %s (max: %zu)",
 			ifname, sizeof(event->interface_status.ifname));
 		goto free;
 	}
@@ -874,7 +885,7 @@ struct hostapd_config *hostapd_config_read2(const char *fname)
 
 	bss                 = conf->last_bss;
 	bss->start_disabled = 1;
-	bss->max_num_sta    = 8;
+	bss->max_num_sta    = CONFIG_WIFI_MGMT_AP_MAX_NUM_STA;
 	bss->dtim_period    = 1;
 	os_strlcpy(conf->bss[0]->iface, ifname, sizeof(conf->bss[0]->iface));
 	bss->logger_stdout_level = HOSTAPD_LEVEL_INFO;
@@ -904,6 +915,7 @@ struct hostapd_config *hostapd_config_read2(const char *fname)
 	conf->ieee80211ac       = 1;
 	conf->vht_oper_chwidth  = CHANWIDTH_USE_HT;
 	conf->vht_capab |= VHT_CAP_MAX_A_MPDU_LENGTH_EXPONENT_MAX;
+#ifdef CONFIG_WIFI_NM_WPA_SUPPLICANT_11AX
 	conf->ieee80211ax       = 1;
 	conf->he_oper_chwidth   = CHANWIDTH_USE_HT;
 	conf->he_phy_capab.he_su_beamformer = 0;
@@ -913,6 +925,7 @@ struct hostapd_config *hostapd_config_read2(const char *fname)
 	conf->he_op.he_default_pe_duration  = 0;
 	/* Set default basic MCS/NSS set to single stream MCS 0-7 */
 	conf->he_op.he_basic_mcs_nss_set    = 0xfffc;
+#endif
 
 	for (i = 0; i < conf->num_bss; i++) {
 		hostapd_set_security_params(conf->bss[i], 1);

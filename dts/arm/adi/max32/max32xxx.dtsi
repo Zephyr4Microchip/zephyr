@@ -80,7 +80,7 @@
 		};
 
 		flc0: flash_controller@40029000 {
-			compatible = "flash-controller";
+			compatible = "adi,max32-flash-controller";
 			reg = <0x40029000 0x400>;
 
 			#address-cells = <1>;
@@ -293,6 +293,13 @@
 				status = "disabled";
 				#pwm-cells = <3>;
 			};
+		};
+
+		rtc_counter: rtc_counter@40006000 {
+			compatible = "adi,max32-rtc-counter";
+			reg = <0x40006000 0x400>;
+			interrupts = <3 0>;
+			status = "disabled";
 		};
 	};
 };

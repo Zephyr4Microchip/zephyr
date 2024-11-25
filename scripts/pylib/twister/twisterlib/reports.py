@@ -46,12 +46,12 @@ class Reporting:
         self.instances = plan.instances
         self.platforms = plan.platforms
         self.selected_platforms = plan.selected_platforms
-        self.filtered_platforms = plan.filtered_platforms
         self.env = env
         self.timestamp = datetime.now().isoformat()
         self.outdir = os.path.abspath(env.options.outdir)
         self.instance_fail_count = plan.instance_fail_count
         self.footprint = None
+
 
     @staticmethod
     def process_log(log_file):
@@ -96,7 +96,9 @@ class Reporting:
             if log:
                 el.text = log
         elif status == TwisterStatus.PASS:
-            if not runnable and build_only_as_skip:
+            passes += 1
+        elif status == TwisterStatus.NOTRUN:
+            if build_only_as_skip:
                 ET.SubElement(eleTestcase, ReportStatus.SKIP, type="build", message="built only")
                 skips += 1
             else:
@@ -243,7 +245,7 @@ class Reporting:
                     classname = f"{platform}:{name}"
                     log = ts.get("log")
                     fails, passes, errors, skips = self.xunit_testcase(eleTestsuite,
-                        name, classname, ts_status, ts_status, reason, duration, runnable,
+                        name, classname, ts_status, ts_status, reason, handler_time, runnable,
                         (fails, passes, errors, skips), log, False)
 
             total = errors + passes + fails + skips
@@ -352,6 +354,12 @@ class Reporting:
             elif instance.status == TwisterStatus.SKIP:
                 suite["status"] = TwisterStatus.SKIP
                 suite["reason"] = instance.reason
+            elif instance.status == TwisterStatus.NOTRUN:
+                suite["status"] = TwisterStatus.NOTRUN
+                suite["reason"] = instance.reason
+            else:
+                suite["status"] = TwisterStatus.NONE
+                suite["reason"] = 'Unknown Instance status.'
 
             if instance.status != TwisterStatus.NONE:
                 suite["execution_time"] =  f"{float(handler_time):.2f}"
@@ -527,7 +535,7 @@ class Reporting:
         example_instance = None
         detailed_test_id = self.env.options.detailed_test_id
         for instance in self.instances.values():
-            if instance.status not in [TwisterStatus.PASS, TwisterStatus.FILTER, TwisterStatus.SKIP]:
+            if instance.status not in [TwisterStatus.PASS, TwisterStatus.FILTER, TwisterStatus.SKIP, TwisterStatus.NOTRUN]:
                 cnt += 1
                 if cnt == 1:
                     logger.info("-+" * 40)
@@ -576,44 +584,50 @@ class Reporting:
             if float(handler_time) > 0:
                 run += 1
 
-        if results.total and results.total != results.skipped_configs:
-            pass_rate = (float(results.passed) / float(results.total - results.skipped_configs))
+        if results.total and results.total != results.filtered_configs:
+            pass_rate = (float(results.passed) / float(results.total - results.filtered_configs))
         else:
             pass_rate = 0
 
         logger.info(
-            "{}{} of {}{} test configurations passed ({:.2%}), {}{}{} failed, {}{}{} errored, {} skipped with {}{}{} warnings in {:.2f} seconds".format(
-                Fore.RED if failed else Fore.GREEN,
-                results.passed,
-                results.total,
-                Fore.RESET,
-                pass_rate,
-                Fore.RED if results.failed else Fore.RESET,
-                results.failed,
-                Fore.RESET,
-                Fore.RED if results.error else Fore.RESET,
-                results.error,
-                Fore.RESET,
-                results.skipped_configs,
-                Fore.YELLOW if self.plan.warnings else Fore.RESET,
-                self.plan.warnings,
-                Fore.RESET,
-                duration))
+            f"{TwisterStatus.get_color(TwisterStatus.FAIL) if failed else TwisterStatus.get_color(TwisterStatus.PASS)}{results.passed}"
+            f" of {results.total - results.filtered_configs}{Fore.RESET}"
+            f" executed test configurations passed ({pass_rate:.2%}),"
+            f" {f'{TwisterStatus.get_color(TwisterStatus.NOTRUN)}{results.notrun}{Fore.RESET}' if results.notrun else f'{results.notrun}'} built (not run),"
+            f" {f'{TwisterStatus.get_color(TwisterStatus.FAIL)}{results.failed}{Fore.RESET}' if results.failed else f'{results.failed}'} failed,"
+            f" {f'{TwisterStatus.get_color(TwisterStatus.ERROR)}{results.error}{Fore.RESET}' if results.error else f'{results.error}'} errored,"
+            f" with {f'{Fore.YELLOW}{self.plan.warnings + results.warnings}{Fore.RESET}' if (self.plan.warnings + results.warnings) else 'no'} warnings"
+            f" in {duration:.2f} seconds."
+        )
 
         total_platforms = len(self.platforms)
+        filtered_platforms = set(instance.platform.name for instance in self.instances.values()
+                                  if instance.status not in[TwisterStatus.FILTER, TwisterStatus.NOTRUN, TwisterStatus.SKIP])
         # if we are only building, do not report about tests being executed.
         if self.platforms and not self.env.options.build_only:
-            logger.info("In total {} test cases were executed, {} skipped on {} out of total {} platforms ({:02.2f}%)".format(
-                results.cases - results.skipped_cases,
-                results.skipped_cases,
-                len(self.filtered_platforms),
-                total_platforms,
-                (100 * len(self.filtered_platforms) / len(self.platforms))
-            ))
+            executed_cases = results.cases - results.filtered_cases - results.skipped_cases - results.notrun_cases
+            pass_rate = 100 * (float(results.passed_cases) / float(executed_cases)) \
+                if executed_cases != 0 else 0
+            platform_rate = (100 * len(filtered_platforms) / len(self.platforms))
+            logger.info(
+                f'{results.passed_cases} of {executed_cases} executed test cases passed ({pass_rate:02.2f}%)'
+                f'{", " + str(results.blocked_cases) + " blocked" if results.blocked_cases else ""}'
+                f'{", " + str(results.failed_cases) + " failed" if results.failed_cases else ""}'
+                f'{", " + str(results.error_cases) + " errored" if results.error_cases else ""}'
+                f'{", " + str(results.none_cases) + " without a status" if results.none_cases else ""}'
+                f' on {len(filtered_platforms)} out of total {total_platforms} platforms ({platform_rate:02.2f}%).'
+            )
+            if results.skipped_cases or results.notrun_cases:
+                logger.info(
+                    f'{results.skipped_cases + results.notrun_cases} selected test cases not executed:' \
+                    f'{" " + str(results.skipped_cases) + " skipped" if results.skipped_cases else ""}' \
+                    f'{(", " if results.skipped_cases else " ") + str(results.notrun_cases) + " not run (built only)" if results.notrun_cases else ""}' \
+                    f'.'
+                )
 
-        built_only = results.total - run - results.skipped_configs
+        built_only = results.total - run - results.filtered_configs
         logger.info(f"{Fore.GREEN}{run}{Fore.RESET} test configurations executed on platforms, \
-{Fore.RED}{built_only}{Fore.RESET} test configurations were only built.")
+{TwisterStatus.get_color(TwisterStatus.NOTRUN)}{built_only}{Fore.RESET} test configurations were only built.")
 
     def save_reports(self, name, suffix, report_dir, no_update, platform_reports):
         if not self.instances:

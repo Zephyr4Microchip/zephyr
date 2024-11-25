@@ -18,7 +18,7 @@
 		sw1 = &user_button_2;
 		magn0 = &fxos8700;
 		accel0 = &fxos8700;
-		mcuboot-button0 = &user_button_3;
+		mcuboot-button0 = &user_button_2;
 	};
 
 	chosen {
@@ -163,6 +163,7 @@ arduino_spi: &spi0 {
 		status = "okay";
 		sdmmc {
 			compatible = "zephyr,sdmmc-disk";
+			disk-name = "SD";
 			status = "okay";
 		};
 		spi-max-frequency = <24000000>;

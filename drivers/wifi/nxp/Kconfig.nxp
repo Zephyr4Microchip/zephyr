@@ -20,6 +20,13 @@ module = WIFI_NXP
 config WIFI_MGMT_SCAN_CHAN_MAX_MANUAL
 	default 50
 
+config NXP_WIFI_BUILD_ONLY_MODE
+	bool "Build only mode (do not link wireless firmware blob)"
+	help
+	  Skip linking the firmware blob into the Wi-Fi build. This will
+	  not result in a functional application, but allows the Wi-Fi
+	  driver to be built without binary blobs
+
 config NXP_WIFI_CUSTOM
 	bool "Custom NXP Wi-Fi part"
 	help
@@ -479,7 +486,7 @@ config NXP_WIFI_MAX_PRIO
 config NXP_WIFI_SOFTAP_SUPPORT
 	bool "Wi-Fi SoftAP Support"
 	select NET_DHCPV4_SERVER
-	select WIFI_NM_WPA_SUPPLICANT_AP if WIFI_NM_WPA_SUPPLICANT
+	select WIFI_NM_HOSTAPD_AP if WIFI_NM_WPA_SUPPLICANT
 	default y
 	help
 	  Option to enable Wi-Fi SoftAP functions in the Wi-Fi driver.

@@ -32,6 +32,7 @@
 #include <zephyr/toolchain.h>
 
 #include "bap_common.h"
+#include "bap_stream_rx.h"
 #include "bstests.h"
 #include "common.h"
 
@@ -44,7 +45,6 @@ CREATE_FLAG(flag_base_metadata_updated);
 CREATE_FLAG(flag_pa_synced);
 CREATE_FLAG(flag_syncable);
 CREATE_FLAG(flag_pa_sync_lost);
-CREATE_FLAG(flag_received);
 CREATE_FLAG(flag_pa_request);
 CREATE_FLAG(flag_bis_sync_requested);
 CREATE_FLAG(flag_big_sync_mic_failure);
@@ -59,7 +59,7 @@ static struct bt_bap_stream *streams[ARRAY_SIZE(broadcast_sink_streams)];
 static uint32_t requested_bis_sync;
 static struct bt_le_ext_adv *ext_adv;
 static const struct bt_bap_scan_delegator_recv_state *req_recv_state;
-static uint8_t recv_state_broadcast_code[BT_AUDIO_BROADCAST_CODE_SIZE];
+static uint8_t recv_state_broadcast_code[BT_ISO_BROADCAST_CODE_SIZE];
 
 #define SUPPORTED_CHAN_COUNTS          BT_AUDIO_CODEC_CAP_CHAN_COUNT_SUPPORT(1, 2)
 #define SUPPORTED_MIN_OCTETS_PER_FRAME 30
@@ -403,14 +403,21 @@ static int bis_sync_req_cb(struct bt_conn *conn,
 
 static void broadcast_code_cb(struct bt_conn *conn,
 			      const struct bt_bap_scan_delegator_recv_state *recv_state,
-			      const uint8_t broadcast_code[BT_AUDIO_BROADCAST_CODE_SIZE])
+			      const uint8_t broadcast_code[BT_ISO_BROADCAST_CODE_SIZE])
 {
 	req_recv_state = recv_state;
 
-	memcpy(recv_state_broadcast_code, broadcast_code, BT_AUDIO_BROADCAST_CODE_SIZE);
+	memcpy(recv_state_broadcast_code, broadcast_code, BT_ISO_BROADCAST_CODE_SIZE);
+}
+
+static void scanning_state_cb(struct bt_conn *conn, bool is_scanning)
+{
+	printk("Assistant scanning %s\n", is_scanning ? "started" : "stopped");
+
 }
 
 static struct bt_bap_scan_delegator_cb scan_delegator_cbs = {
+	.scanning_state = scanning_state_cb,
 	.pa_sync_req = pa_sync_req_cb,
 	.pa_sync_term_req = pa_sync_term_req_cb,
 	.bis_sync_req = bis_sync_req_cb,
@@ -521,8 +528,12 @@ static void validate_stream_codec_cfg(const struct bt_bap_stream *stream)
 
 static void started_cb(struct bt_bap_stream *stream)
 {
+	struct audio_test_stream *test_stream = audio_test_stream_from_bap_stream(stream);
 	struct bt_bap_ep_info info;
 	int err;
+
+	memset(&test_stream->last_info, 0, sizeof(test_stream->last_info));
+	test_stream->rx_cnt = 0U;
 
 	err = bt_bap_ep_get_info(stream->ep, &info);
 	if (err != 0) {
@@ -571,57 +582,10 @@ static void stopped_cb(struct bt_bap_stream *stream, uint8_t reason)
 	}
 }
 
-static void recv_cb(struct bt_bap_stream *stream,
-		    const struct bt_iso_recv_info *info,
-		    struct net_buf *buf)
-{
-	struct audio_test_stream *test_stream = audio_test_stream_from_bap_stream(stream);
-
-	if ((test_stream->rx_cnt % 100U) == 0U) {
-		printk("[%zu]: Incoming audio on stream %p len %u and ts %u\n", test_stream->rx_cnt,
-		       stream, buf->len, info->ts);
-	}
-
-	if (test_stream->rx_cnt > 0U && info->ts == test_stream->last_info.ts) {
-		FAIL("Duplicated timestamp received: %u\n", test_stream->last_info.ts);
-		return;
-	}
-
-	if (test_stream->rx_cnt > 0U && info->seq_num == test_stream->last_info.seq_num) {
-		FAIL("Duplicated PSN received: %u\n", test_stream->last_info.seq_num);
-		return;
-	}
-
-	if (info->flags & BT_ISO_FLAGS_ERROR) {
-		/* Fail the test if we have not received what we expected */
-		if (!TEST_FLAG(flag_received)) {
-			FAIL("ISO receive error\n");
-		}
-
-		return;
-	}
-
-	if (info->flags & BT_ISO_FLAGS_LOST) {
-		FAIL("ISO receive lost\n");
-		return;
-	}
-
-	if (memcmp(buf->data, mock_iso_data, buf->len) == 0) {
-		test_stream->rx_cnt++;
-
-		if (test_stream->rx_cnt >= MIN_SEND_COUNT) {
-			/* We set the flag is just one stream has received the expected */
-			SET_FLAG(flag_received);
-		}
-	} else {
-		FAIL("Unexpected data received\n");
-	}
-}
-
 static struct bt_bap_stream_ops stream_ops = {
 	.started = started_cb,
 	.stopped = stopped_cb,
-	.recv = recv_cb
+	.recv = bap_stream_rx_recv_cb,
 };
 
 static int init(void)
@@ -755,7 +719,7 @@ static void test_broadcast_sink_create_inval(void)
 		return;
 	}
 
-	err = bt_bap_broadcast_sink_create(pa_sync, INVALID_BROADCAST_ID, &g_sink);
+	err = bt_bap_broadcast_sink_create(pa_sync, BT_BAP_INVALID_BROADCAST_ID, &g_sink);
 	if (err == 0) {
 		FAIL("bt_bap_broadcast_sink_create did not fail with invalid broadcast ID\n");
 		return;
@@ -768,7 +732,7 @@ static void test_broadcast_sink_create_inval(void)
 	}
 }
 
-static void test_broadcast_sync(const uint8_t broadcast_code[BT_AUDIO_BROADCAST_CODE_SIZE])
+static void test_broadcast_sync(const uint8_t broadcast_code[BT_ISO_BROADCAST_CODE_SIZE])
 {
 	int err;
 
@@ -957,7 +921,7 @@ static void test_common(void)
 	}
 
 	printk("Waiting for data\n");
-	WAIT_FOR_FLAG(flag_received);
+	WAIT_FOR_FLAG(flag_audio_received);
 	backchannel_sync_send_all(); /* let other devices know we have received what we wanted */
 
 	/* Ensure that we also see the metadata update */
@@ -1044,7 +1008,7 @@ static void test_sink_encrypted(void)
 	}
 
 	printk("Waiting for data\n");
-	WAIT_FOR_FLAG(flag_received);
+	WAIT_FOR_FLAG(flag_audio_received);
 
 	backchannel_sync_send_all(); /* let other devices know we have received data */
 
@@ -1133,7 +1097,7 @@ static void broadcast_sink_with_assistant(void)
 	}
 
 	printk("Waiting for data\n");
-	WAIT_FOR_FLAG(flag_received);
+	WAIT_FOR_FLAG(flag_audio_received);
 	backchannel_sync_send_all(); /* let other devices know we have received what we wanted */
 
 	/* Ensure that we also see the metadata update */

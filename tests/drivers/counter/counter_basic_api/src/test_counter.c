@@ -117,6 +117,9 @@ static const struct device *const devices[] = {
 #ifdef CONFIG_COUNTER_TIMER_RPI_PICO
 	DEVS_FOR_DT_COMPAT(raspberrypi_pico_timer)
 #endif
+#ifdef CONFIG_COUNTER_RTC_MAX32
+	DEVS_FOR_DT_COMPAT(adi_max32_rtc_counter)
+#endif
 #ifdef CONFIG_COUNTER_AMBIQ
 	DEVS_FOR_DT_COMPAT(ambiq_counter)
 #endif
@@ -134,6 +137,9 @@ static const struct device *const period_devs[] = {
 #endif
 #ifdef CONFIG_COUNTER_RTC_STM32
 	DEVS_FOR_DT_COMPAT(st_stm32_rtc)
+#endif
+#ifdef CONFIG_COUNTER_RTC_MAX32
+	DEVS_FOR_DT_COMPAT(adi_max32_rtc_counter)
 #endif
 };
 
@@ -684,6 +690,7 @@ static void test_valid_function_without_alarm(const struct device *dev)
 	int err;
 	uint32_t ticks;
 	uint32_t ticks_expected;
+	uint32_t tick_current;
 	uint32_t ticks_tol;
 	uint32_t wait_for_us;
 	uint32_t freq = counter_get_frequency(dev);
@@ -724,6 +731,10 @@ static void test_valid_function_without_alarm(const struct device *dev)
 
 	err = counter_start(dev);
 	zassert_equal(0, err, "%s: counter failed to start", dev->name);
+
+	/* counter might not start from 0, use current value as offset */
+	counter_get_value(dev, &tick_current);
+	ticks_expected += tick_current;
 
 	k_busy_wait(wait_for_us);
 
@@ -1083,6 +1094,11 @@ static bool reliable_cancel_capable(const struct device *dev)
 	}
 #endif
 #ifdef CONFIG_COUNTER_NXP_S32_SYS_TIMER
+	if (single_channel_alarm_capable(dev)) {
+		return true;
+	}
+#endif
+#ifdef CONFIG_COUNTER_MCUX_RTC
 	if (single_channel_alarm_capable(dev)) {
 		return true;
 	}

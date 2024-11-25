@@ -21,6 +21,7 @@ import sys
 import threading
 import time
 
+from contextlib import contextmanager
 from pathlib import Path
 from queue import Queue, Empty
 from twisterlib.environment import ZEPHYR_BASE, strip_ansi_sequences
@@ -47,9 +48,6 @@ except ImportError as capture_error:
 
 logger = logging.getLogger('twister')
 logger.setLevel(logging.DEBUG)
-
-SUPPORTED_SIMS = ["mdb-nsim", "nsim", "renode", "qemu", "tsim", "armfvp", "xt-sim", "native", "custom", "simics"]
-SUPPORTED_SIMS_IN_PYTEST = ['native', 'qemu']
 
 
 def terminate_process(proc):
@@ -241,6 +239,7 @@ class BinaryHandler(Handler):
                 self.terminate(proc)
 
     def _create_command(self, robot_test):
+
         if robot_test:
             keywords = os.path.join(self.options.coverage_basedir, 'tests/robot/common.robot')
             elf = os.path.join(self.build_dir, "zephyr/zephyr.elf")
@@ -262,8 +261,14 @@ class BinaryHandler(Handler):
                             "--variable", "RESC:@" + resc,
                             "--variable", "UART:" + uart]
         elif self.call_make_run:
-            command = [self.generator_cmd, "-C", self.get_default_domain_build_dir(), "run"]
+            if self.options.sim_name:
+                target = f"run_{self.options.sim_name}"
+            else:
+                target = "run"
+
+            command = [self.generator_cmd, "-C", self.get_default_domain_build_dir(), target]
         elif self.instance.testsuite.type == "unit":
+            assert self.binary, "Missing binary in unit testsuite."
             command = [self.binary]
         else:
             binary = os.path.join(self.get_default_domain_build_dir(), "zephyr", "zephyr.exe")
@@ -457,6 +462,17 @@ class DeviceHandler(Handler):
 
         log_out_fp.close()
 
+    @staticmethod
+    @contextmanager
+    def acquire_dut_locks(duts):
+        try:
+            for d in duts:
+                d.lock.acquire()
+            yield
+        finally:
+            for d in duts:
+                d.lock.release()
+
     def device_is_available(self, instance):
         device = instance.platform.name
         fixture = instance.testsuite.harness_config.get("fixture")
@@ -474,15 +490,16 @@ class DeviceHandler(Handler):
 
         # Select an available DUT with less failures
         for d in sorted(duts_found, key=lambda _dut: _dut.failures):
-            d.lock.acquire()
-            avail = False
-            if d.available:
-                d.available = 0
-                d.counter_increment()
-                avail = True
-                logger.debug(f"Retain DUT:{d.platform}, Id:{d.id}, "
-                             f"counter:{d.counter}, failures:{d.failures}")
-            d.lock.release()
+            duts_shared_hw = [_d for _d in self.duts if _d.id == d.id]  # get all DUTs with the same id
+            with self.acquire_dut_locks(duts_shared_hw):
+                avail = False
+                if d.available:
+                    for _d in duts_shared_hw:
+                        _d.available = 0
+                    d.counter_increment()
+                    avail = True
+                    logger.debug(f"Retain DUT:{d.platform}, Id:{d.id}, "
+                                f"counter:{d.counter}, failures:{d.failures}")
             if avail:
                 return d
 
@@ -493,7 +510,10 @@ class DeviceHandler(Handler):
             dut.failures_increment()
         logger.debug(f"Release DUT:{dut.platform}, Id:{dut.id}, "
                      f"counter:{dut.counter}, failures:{dut.failures}")
-        dut.available = 1
+        duts_shared_hw = [_d for _d in self.duts if _d.id == dut.id]  # get all DUTs with the same id
+        with self.acquire_dut_locks(duts_shared_hw):
+            for _d in duts_shared_hw:
+                _d.available = 1
 
     @staticmethod
     def run_custom_script(script, timeout):

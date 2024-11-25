@@ -402,8 +402,10 @@ static uint32_t espi_taf_parse(const struct device *dev)
 	taf_addr = inst->FLASHRXBUF[1];
 	taf_pckt.addr = sys_cpu_to_be32(taf_addr);
 
-	/* Get written data if eSPI TAF write */
-	if (taf_pckt.type == NPCX_ESPI_TAF_REQ_WRITE) {
+	/* Get written data if eSPI TAF write or RPMC OP1 */
+	if ((taf_pckt.type == NPCX_ESPI_TAF_REQ_WRITE) ||
+	    (IS_ENABLED(CONFIG_ESPI_TAF_NPCX_RPMC_SUPPORT) &&
+	     (taf_pckt.type == NPCX_ESPI_TAF_REQ_RPMC_OP1))) {
 		roundsize = DIV_ROUND_UP(taf_pckt.len, sizeof(uint32_t));
 		for (i = 0; i < roundsize; i++) {
 			taf_pckt.src[i] = inst->FLASHRXBUF[2 + i];
@@ -870,8 +872,11 @@ static int espi_npcx_receive_vwire(const struct device *dev,
 
 			val = GET_FIELD(inst->VWEVMS[reg_idx],
 							NPCX_VWEVMS_WIRE);
-			val &= GET_FIELD(inst->VWEVMS[reg_idx],
+
+			if (IS_ENABLED(CONFIG_ESPI_VWIRE_VALID_BIT_CHECK)) {
+				val &= GET_FIELD(inst->VWEVMS[reg_idx],
 							NPCX_VWEVMS_VALID);
+			}
 
 			*level = !!(val & bitmask);
 			return 0;
@@ -886,8 +891,12 @@ static int espi_npcx_receive_vwire(const struct device *dev,
 
 			val = GET_FIELD(inst->VWEVSM[reg_idx],
 							NPCX_VWEVSM_WIRE);
-			val &= GET_FIELD(inst->VWEVSM[reg_idx],
+
+			if (IS_ENABLED(CONFIG_ESPI_VWIRE_VALID_BIT_CHECK)) {
+				val &= GET_FIELD(inst->VWEVSM[reg_idx],
 							NPCX_VWEVSM_VALID);
+			}
+
 			*level = !!(val & bitmask);
 			return 0;
 		}
