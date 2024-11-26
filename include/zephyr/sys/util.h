@@ -30,7 +30,7 @@
 #include <stdint.h>
 
 /** @brief Number of bits that make up a type */
-#define NUM_BITS(t) (sizeof(t) * 8)
+#define NUM_BITS(t) (sizeof(t) * BITS_PER_BYTE)
 
 #ifdef __cplusplus
 extern "C" {
@@ -56,6 +56,15 @@ extern "C" {
 #if !(defined(__CHAR_BIT__) && defined(__SIZEOF_LONG__) && defined(__SIZEOF_LONG_LONG__))
 #	error Missing required predefined macros for BITS_PER_LONG calculation
 #endif
+
+/** Number of bits in a byte. */
+#define BITS_PER_BYTE (__CHAR_BIT__)
+
+/** Number of bits in a nibble. */
+#define BITS_PER_NIBBLE (__CHAR_BIT__ / 2)
+
+/** Number of nibbles in a byte. */
+#define NIBBLES_PER_BYTE (BITS_PER_BYTE / BITS_PER_NIBBLE)
 
 /** Number of bits in a long int. */
 #define BITS_PER_LONG	(__CHAR_BIT__ * __SIZEOF_LONG__)

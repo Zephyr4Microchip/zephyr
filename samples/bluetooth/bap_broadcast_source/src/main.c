@@ -27,8 +27,7 @@
 #include <zephyr/sys_clock.h>
 #include <zephyr/toolchain.h>
 
-BUILD_ASSERT(strlen(CONFIG_BROADCAST_CODE) <= BT_AUDIO_BROADCAST_CODE_SIZE,
-	     "Invalid broadcast code");
+BUILD_ASSERT(strlen(CONFIG_BROADCAST_CODE) <= BT_ISO_BROADCAST_CODE_SIZE, "Invalid broadcast code");
 
 /* Zephyr Controller works best while Extended Advertising interval to be a multiple
  * of the ISO Interval minus 10 ms (max. advertising random delay). This is
@@ -40,7 +39,9 @@ BUILD_ASSERT(strlen(CONFIG_BROADCAST_CODE) <= BT_AUDIO_BROADCAST_CODE_SIZE,
  * And, for 10 ms ISO interval, can use 90 ms minus 10 ms ==> 80 ms advertising
  * interval.
  */
-#define BT_LE_EXT_ADV_CUSTOM BT_LE_ADV_PARAM(BT_LE_ADV_OPT_EXT_ADV, 0x0080, 0x0080, NULL)
+#define BT_LE_EXT_ADV_CUSTOM                                                                       \
+	BT_LE_ADV_PARAM(BT_LE_ADV_OPT_EXT_ADV, BT_GAP_MS_TO_ADV_INTERVAL(80),                      \
+			BT_GAP_MS_TO_ADV_INTERVAL(80), NULL)
 
 /* When BROADCAST_ENQUEUE_COUNT > 1 we can enqueue enough buffers to ensure that
  * the controller is never idle
@@ -518,11 +519,15 @@ int main(void)
 			return 0;
 		}
 
-		err = bt_bap_broadcast_source_get_id(broadcast_source, &broadcast_id);
-		if (err != 0) {
-			printk("Unable to get broadcast ID: %d\n", err);
-			return 0;
+#if defined(CONFIG_STATIC_BROADCAST_ID)
+		broadcast_id = CONFIG_BROADCAST_ID;
+#else
+		err = bt_rand(&broadcast_id, BT_AUDIO_BROADCAST_ID_SIZE);
+		if (err) {
+			printk("Unable to generate broadcast ID: %d\n", err);
+			return err;
 		}
+#endif /* CONFIG_STATIC_BROADCAST_ID */
 
 		/* Setup extended advertising data */
 		net_buf_simple_add_le16(&ad_buf, BT_UUID_BROADCAST_AUDIO_VAL);

@@ -33,6 +33,7 @@
 #include <zephyr/sys/util.h>
 #include <zephyr/sys/util_macro.h>
 
+#include "bap_stream_rx.h"
 #include "bstests.h"
 #include "common.h"
 #include "bap_common.h"
@@ -50,7 +51,6 @@ CREATE_FLAG(flag_broadcast_code);
 CREATE_FLAG(flag_base_received);
 CREATE_FLAG(flag_pa_synced);
 CREATE_FLAG(flag_syncable);
-CREATE_FLAG(flag_received);
 CREATE_FLAG(flag_pa_sync_lost);
 CREATE_FLAG(flag_pa_request);
 CREATE_FLAG(flag_bis_sync_requested);
@@ -275,6 +275,13 @@ static struct bt_le_per_adv_sync_cb bap_pa_sync_cb = {
 
 static void started_cb(struct bt_bap_stream *stream)
 {
+	struct audio_test_stream *test_stream = audio_test_stream_from_bap_stream(stream);
+
+	memset(&test_stream->last_info, 0, sizeof(test_stream->last_info));
+	test_stream->rx_cnt = 0U;
+	test_stream->seq_num = 0U;
+	test_stream->tx_cnt = 0U;
+
 	printk("Stream %p started\n", stream);
 	k_sem_give(&sem_broadcast_started);
 }
@@ -285,54 +292,11 @@ static void stopped_cb(struct bt_bap_stream *stream, uint8_t reason)
 	k_sem_give(&sem_broadcast_stopped);
 }
 
-static void recv_cb(struct bt_bap_stream *stream, const struct bt_iso_recv_info *info,
-		    struct net_buf *buf)
-{
-	struct audio_test_stream *test_stream = audio_test_stream_from_bap_stream(stream);
-
-	if ((test_stream->rx_cnt % 50U) == 0U) {
-		printk("[%zu]: Incoming audio on stream %p len %u and ts %u\n", test_stream->rx_cnt,
-		       stream, buf->len, info->ts);
-	}
-
-	if (test_stream->rx_cnt > 0U && info->ts == test_stream->last_info.ts) {
-		FAIL("Duplicated timestamp received: %u\n", test_stream->last_info.ts);
-		return;
-	}
-
-	if (test_stream->rx_cnt > 0U && info->seq_num == test_stream->last_info.seq_num) {
-		FAIL("Duplicated PSN received: %u\n", test_stream->last_info.seq_num);
-		return;
-	}
-
-	if (info->flags & BT_ISO_FLAGS_ERROR) {
-		/* Fail the test if we have not received what we expected */
-		if (!TEST_FLAG(flag_received)) {
-			FAIL("ISO receive error\n");
-		}
-
-		return;
-	}
-
-	if (info->flags & BT_ISO_FLAGS_LOST) {
-		FAIL("ISO receive lost\n");
-		return;
-	}
-
-	if (memcmp(buf->data, mock_iso_data, buf->len) == 0) {
-		test_stream->rx_cnt++;
-
-		if (test_stream->rx_cnt >= MIN_SEND_COUNT) {
-			/* We set the flag is just one stream has received the expected */
-			SET_FLAG(flag_received);
-		}
-	} else {
-		FAIL("Unexpected data received\n");
-	}
-}
-
 static struct bt_bap_stream_ops broadcast_stream_ops = {
-	.started = started_cb, .stopped = stopped_cb, .recv = recv_cb};
+	.started = started_cb,
+	.stopped = stopped_cb,
+	.recv = bap_stream_rx_recv_cb,
+};
 
 static void unicast_stream_enabled_cb(struct bt_bap_stream *stream)
 {
@@ -401,9 +365,15 @@ static int bis_sync_req_cb(struct bt_conn *conn,
 			   const struct bt_bap_scan_delegator_recv_state *recv_state,
 			   const uint32_t bis_sync_req[CONFIG_BT_BAP_BASS_MAX_SUBGROUPS])
 {
-	/* We only care about a single subgroup in this test */
+	uint32_t total_bis = 0U;
+
 	broadcaster_broadcast_id = recv_state->broadcast_id;
-	if (bis_sync_req[0] != 0) {
+
+	for (int i = 0; i < recv_state->num_subgroups; i++) {
+		total_bis |= bis_sync_req[i];
+	}
+
+	if (total_bis != 0U) {
 		SET_FLAG(flag_bis_sync_requested);
 	} else {
 		UNSET_FLAG(flag_bis_sync_requested);
@@ -414,7 +384,7 @@ static int bis_sync_req_cb(struct bt_conn *conn,
 
 static void broadcast_code_cb(struct bt_conn *conn,
 			      const struct bt_bap_scan_delegator_recv_state *recv_state,
-			      const uint8_t broadcast_code[BT_AUDIO_BROADCAST_CODE_SIZE])
+			      const uint8_t broadcast_code[BT_ISO_BROADCAST_CODE_SIZE])
 {
 	printk("Broadcast code received for %p\n", recv_state);
 
@@ -503,21 +473,6 @@ static int unicast_server_qos(struct bt_bap_stream *stream, const struct bt_bap_
 	return 0;
 }
 
-static int unicast_server_enable(struct bt_bap_stream *stream, const uint8_t meta[],
-				 size_t meta_len, struct bt_bap_ascs_rsp *rsp)
-{
-	printk("Enable: stream %p meta_len %zu\n", stream, meta_len);
-
-	return 0;
-}
-
-static int unicast_server_start(struct bt_bap_stream *stream, struct bt_bap_ascs_rsp *rsp)
-{
-	printk("Start: stream %p\n", stream);
-
-	return 0;
-}
-
 static bool ascs_data_func_cb(struct bt_data *data, void *user_data)
 {
 	struct bt_bap_ascs_rsp *rsp = (struct bt_bap_ascs_rsp *)user_data;
@@ -529,6 +484,21 @@ static bool ascs_data_func_cb(struct bt_data *data, void *user_data)
 	}
 
 	return true;
+}
+
+static int unicast_server_enable(struct bt_bap_stream *stream, const uint8_t meta[],
+				 size_t meta_len, struct bt_bap_ascs_rsp *rsp)
+{
+	printk("Enable: stream %p meta_len %zu\n", stream, meta_len);
+
+	return bt_audio_data_parse(meta, meta_len, ascs_data_func_cb, rsp);
+}
+
+static int unicast_server_start(struct bt_bap_stream *stream, struct bt_bap_ascs_rsp *rsp)
+{
+	printk("Start: stream %p\n", stream);
+
+	return 0;
 }
 
 static int unicast_server_metadata(struct bt_bap_stream *stream, const uint8_t meta[],
@@ -790,8 +760,9 @@ static void init(void)
 		UNSET_FLAG(flag_base_received);
 		UNSET_FLAG(flag_pa_synced);
 		UNSET_FLAG(flag_pa_request);
-		UNSET_FLAG(flag_received);
+		UNSET_FLAG(flag_audio_received);
 		UNSET_FLAG(flag_base_metadata_updated);
+		UNSET_FLAG(flag_bis_sync_requested);
 
 		for (size_t i = 0U; i < ARRAY_SIZE(broadcast_sink_streams); i++) {
 			bt_cap_stream_ops_register(
@@ -991,7 +962,7 @@ static void create_and_sync_sink(struct bt_bap_stream *bap_streams[], size_t *st
 static void sink_wait_for_data(void)
 {
 	printk("Waiting for data\n");
-	WAIT_FOR_FLAG(flag_received);
+	WAIT_FOR_FLAG(flag_audio_received);
 	backchannel_sync_send_all(); /* let other devices know we have received what we wanted */
 }
 
@@ -1039,10 +1010,12 @@ static void test_cap_acceptor_broadcast_reception(void)
 {
 	static struct bt_bap_stream *bap_streams[ARRAY_SIZE(broadcast_sink_streams)];
 	size_t stream_count;
+	int err;
 
 	init();
 
 	WAIT_FOR_FLAG(flag_pa_request);
+	WAIT_FOR_FLAG(flag_bis_sync_requested);
 
 	pa_sync_create();
 
@@ -1051,12 +1024,23 @@ static void test_cap_acceptor_broadcast_reception(void)
 	sink_wait_for_data();
 
 	/* Since we are re-using the BAP broadcast source test
-	 * we get a metadata update, and we need to send an extra
-	 * backchannel sync
+	 * we get a metadata update
 	 */
 	base_wait_for_metadata_update();
 
-	backchannel_sync_send_all(); /* let broadcaster know we can stop the source */
+	/* when flag_bis_sync_requested is unset the bis_sync for all subgroups were set to 0 */
+	WAIT_FOR_UNSET_FLAG(flag_bis_sync_requested);
+
+	UNSET_FLAG(flag_syncable);
+	err = bt_bap_broadcast_sink_stop(g_broadcast_sink);
+	if (err != 0) {
+		FAIL("Unable to stop the sink: %d\n", err);
+		return;
+	}
+
+	WAIT_FOR_FLAG(flag_syncable);
+	/* Although in theory we can now sync, in practice we can not since all BIS-syncs are 0 */
+	backchannel_sync_send_all(); /* signal that we have stopped listening */
 
 	wait_for_streams_stop(stream_count);
 

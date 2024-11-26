@@ -530,7 +530,7 @@ static int gc9x01x_write(const struct device *dev, const uint16_t x, const uint1
 		write_h = 1U;
 		nbr_of_writes = desc->height;
 		mipi_desc.height = 1;
-		mipi_desc.buf_size = desc->pitch * data->bytes_per_pixel;
+		mipi_desc.buf_size = desc->width * data->bytes_per_pixel;
 	} else {
 		write_h = desc->height;
 		mipi_desc.height = desc->height;
@@ -541,6 +541,7 @@ static int gc9x01x_write(const struct device *dev, const uint16_t x, const uint1
 	mipi_desc.width = desc->width;
 	/* Per MIPI API, pitch must always match width */
 	mipi_desc.pitch = desc->width;
+	mipi_desc.frame_incomplete = desc->frame_incomplete;
 
 	ret = gc9x01x_transmit(dev, GC9X01X_CMD_MEMWR, NULL, 0);
 	if (ret < 0) {

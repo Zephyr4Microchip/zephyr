@@ -14,12 +14,12 @@
 
 	aliases {
 		usart-0 = &flexcomm3;
-		led0 = &green_led;
 		sw0 = &sw_4;
 		i2c-0 = &flexcomm2;
 		watchdog0 = &wwdt;
 		dmic-dev = &dmic0;
 		mcuboot-button0 = &sw_4;
+		pwm-0 = &sctimer;
 	};
 
 	chosen {
@@ -30,14 +30,6 @@
 		zephyr,flash-controller = &mx25u51245g;
 		zephyr,console = &flexcomm3;
 		zephyr,shell-uart = &flexcomm3;
-	};
-
-	leds {
-		compatible = "gpio-leds";
-		green_led: led_1 {
-			gpios = <&hsgpio1 20 0>;
-			label = "User LED_GREEN";
-		};
 	};
 
 	gpio_keys {
@@ -270,6 +262,12 @@ nxp_8080_touch_panel_i2c: &arduino_i2c {
 
 &ctimer0 {
 	status = "okay";
+};
+
+&sctimer {
+	status = "okay";
+	pinctrl-0 = <&pinmux_pwm0>;
+	pinctrl-names = "default";
 };
 
 &pmu {

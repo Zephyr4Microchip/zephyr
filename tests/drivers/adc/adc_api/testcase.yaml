@@ -16,7 +16,7 @@ tests:
       - b_u585i_iot02a
   drivers.adc.dma_st_stm32:
     extra_args:
-      - OVERLAY_CONFIG="overlay-dma-stm32.conf"
+      - EXTRA_CONF_FILE="overlay-dma-stm32.conf"
     depends_on:
       - adc
       - dma
@@ -43,9 +43,12 @@ tests:
       - stm32f3_disco
       - stm32h573i_dk
       - stm32u083c_dk
+    integration_platforms:
+      - disco_l475_iot1
+      - nucleo_l476rg
   drivers.adc.dma_nxp_kinetis:
     extra_args:
-      - OVERLAY_CONFIG="overlay-dma-kinetis.conf"
+      - EXTRA_CONF_FILE="overlay-dma-kinetis.conf"
     depends_on:
       - adc
       - dma
@@ -57,7 +60,7 @@ tests:
       - frdm_k82f
   drivers.adc.dma_espressif:
     extra_args:
-      - OVERLAY_CONFIG="overlay-dma-esp32.conf"
+      - EXTRA_CONF_FILE="overlay-dma-esp32.conf"
     depends_on:
       - adc
       - dma

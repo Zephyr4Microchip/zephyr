@@ -71,7 +71,7 @@ static void eth_enc28j60_set_bank(const struct device *dev, uint16_t reg_addr)
 
 	if (!spi_transceive_dt(&config->spi, &tx, &rx)) {
 		buf[0] = ENC28J60_SPI_WCR | ENC28J60_REG_ECON1;
-		buf[1] = (buf[1] & 0xFC) | ((reg_addr >> 8) & 0x0F);
+		buf[1] = (buf[1] & 0xFC) | ((reg_addr >> 8) & 0x03);
 
 		spi_write_dt(&config->spi, &tx);
 	} else {
@@ -713,7 +713,14 @@ static void eth_enc28j60_rx_thread(void *p1, void *p2, void *p3)
 			eth_enc28j60_read_phy(dev, ENC28J60_PHY_PHSTAT2, &phstat2);
 			if (phstat2 & ENC28J60_BIT_PHSTAT2_LSTAT) {
 				LOG_INF("%s: Link up", dev->name);
-				net_eth_carrier_on(context->iface);
+				/* We may have been interrupted before L2 init complete
+				 * If so flag that the carrier should be set on in init
+				 */
+				if (context->iface_initialized) {
+					net_eth_carrier_on(context->iface);
+				} else {
+					context->iface_carrier_on_init = true;
+				}
 			} else {
 				LOG_INF("%s: Link down", dev->name);
 
@@ -751,7 +758,12 @@ static void eth_enc28j60_iface_init(struct net_if *iface)
 
 	ethernet_init(iface);
 
-	net_if_carrier_off(iface);
+	/* The device may have already interrupted us to flag link UP */
+	if (context->iface_carrier_on_init) {
+		net_if_carrier_on(iface);
+	} else {
+		net_if_carrier_off(iface);
+	}
 	context->iface_initialized = true;
 }
 

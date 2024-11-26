@@ -1,7 +1,4 @@
-.. _frdm_mcxa156:
-
-NXP FRDM-MCXA156
-################
+.. zephyr:board:: frdm_mcxa156
 
 Overview
 ********
@@ -12,10 +9,6 @@ MCUs I/Os, integrated open-standard serial interfaces, external flash memory and
 an on-board MCU-Link debugger. MCX N Series are high-performance, low-power
 microcontrollers with intelligent peripherals and accelerators providing multi-tasking
 capabilities and performance efficiency.
-
-.. image:: frdm_mcxa156.webp
-   :align: center
-   :alt: FRDM-MCXA156
 
 Hardware
 ********
@@ -181,6 +174,12 @@ should see the following message in the terminal:
 
    *** Booting Zephyr OS build v3.6.0-4478-ge6c3a42f5f52 ***
    Hello World! frdm_mcxa156/mcxa156
+
+Troubleshooting
+===============
+
+.. include:: ../../common/segger-ecc-systemview.rst
+   :start-after: segger-ecc-systemview
 
 .. _MCX-A156 SoC Website:
    https://www.nxp.com/products/processors-and-microcontrollers/arm-microcontrollers/general-purpose-mcus/mcx-arm-cortex-m/mcx-a-series-microcontrollers/mcx-a13x-14x-15x-mcus-with-arm-cortex-m33-scalable-device-options-low-power-and-intelligent-peripherals:MCX-A13X-A14X-A15X

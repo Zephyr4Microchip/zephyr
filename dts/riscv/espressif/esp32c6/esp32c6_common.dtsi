@@ -56,6 +56,11 @@
 		status = "okay";
 	};
 
+	wifi: wifi {
+		compatible = "espressif,esp32-wifi";
+		status = "disabled";
+	};
+
 	soc {
 		#address-cells = <1>;
 		#size-cells = <1>;
@@ -149,6 +154,7 @@
 				compatible = "soc-nv-flash";
 				erase-block-size = <4096>;
 				write-block-size = <4>;
+				/* Flash size is specified in SOC/SIP dtsi */
 			};
 		};
 

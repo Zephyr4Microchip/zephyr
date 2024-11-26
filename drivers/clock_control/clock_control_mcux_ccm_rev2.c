@@ -111,10 +111,16 @@ static int mcux_ccm_get_subsys_rate(const struct device *dev,
 #endif
 
 #ifdef CONFIG_PWM_MCUX
+#if defined(CONFIG_SOC_SERIES_IMXRT118X)
+	case IMX_CCM_PWM_CLK:
+		clock_root = kCLOCK_Root_Bus_Aon;
+		break;
+#else
 	case IMX_CCM_PWM_CLK:
 		clock_root = kCLOCK_Root_Bus;
 		break;
-#endif
+#endif /* CONFIG_SOC_SERIES_IMXRT118X */
+#endif /* CONFIG_PWM_MCUX */
 
 #ifdef CONFIG_CAN_MCUX_FLEXCAN
 	case IMX_CCM_CAN1_CLK:
@@ -187,14 +193,20 @@ static int mcux_ccm_get_subsys_rate(const struct device *dev,
 		break;
 #endif
 
-#ifdef CONFIG_PWM_MCUX_QTMR
+#if defined(CONFIG_PWM_MCUX_QTMR) || defined(CONFIG_COUNTER_MCUX_QTMR)
+#if defined(CONFIG_SOC_SERIES_IMXRT118X)
+	case IMX_CCM_QTMR_CLK:
+		clock_root = kCLOCK_Root_Bus_Aon;
+		break;
+#else
 	case IMX_CCM_QTMR1_CLK:
 	case IMX_CCM_QTMR2_CLK:
 	case IMX_CCM_QTMR3_CLK:
 	case IMX_CCM_QTMR4_CLK:
 		clock_root = kCLOCK_Root_Bus;
 		break;
-#endif
+#endif /* CONFIG_SOC_SERIES_IMXRT118X */
+#endif /* CONFIG_PWM_MCUX_QTMR || CONFIG_COUNTER_MCUX_QTMR */
 
 #ifdef CONFIG_MEMC_MCUX_FLEXSPI
 	case IMX_CCM_FLEXSPI_CLK:
@@ -213,6 +225,25 @@ static int mcux_ccm_get_subsys_rate(const struct device *dev,
 		clock_root = kCLOCK_Root_Adc1 + instance;
 		break;
 #endif
+
+#if defined(CONFIG_ETH_NXP_IMX_NETC)
+	case IMX_CCM_NETC_CLK:
+		clock_root = kCLOCK_Root_Netc;
+		break;
+#endif
+
+#if defined(CONFIG_VIDEO_MCUX_MIPI_CSI2RX)
+	case IMX_CCM_MIPI_CSI2RX_ROOT_CLK:
+		clock_root = kCLOCK_Root_Csi2;
+		break;
+	case IMX_CCM_MIPI_CSI2RX_ESC_CLK:
+		clock_root = kCLOCK_Root_Csi2_Esc;
+		break;
+	case IMX_CCM_MIPI_CSI2RX_UI_CLK:
+		clock_root = kCLOCK_Root_Csi2_Ui;
+		break;
+#endif
+
 	default:
 		return -EINVAL;
 	}
@@ -245,13 +276,24 @@ static int CCM_SET_FUNC_ATTR mcux_ccm_set_subsys_rate(const struct device *dev,
 	case IMX_CCM_FLEXSPI_CLK:
 		__fallthrough;
 	case IMX_CCM_FLEXSPI2_CLK:
-#if defined(CONFIG_SOC_SERIES_IMXRT11XX) && defined(CONFIG_MEMC_MCUX_FLEXSPI)
+#if (defined(CONFIG_SOC_SERIES_IMXRT11XX) || defined(CONFIG_SOC_SERIES_IMXRT118X)) \
+		&& defined(CONFIG_MEMC_MCUX_FLEXSPI)
 		/* The SOC is using the FlexSPI for XIP. Therefore,
 		 * the FlexSPI itself must be managed within the function,
 		 * which is SOC specific.
 		 */
 		return flexspi_clock_set_freq(clock_name, clock_rate);
 #endif
+
+#if defined(CONFIG_VIDEO_MCUX_MIPI_CSI2RX)
+	case IMX_CCM_MIPI_CSI2RX_ROOT_CLK:
+		return mipi_csi2rx_clock_set_freq(kCLOCK_Root_Csi2, clock_rate);
+	case IMX_CCM_MIPI_CSI2RX_UI_CLK:
+		return mipi_csi2rx_clock_set_freq(kCLOCK_Root_Csi2_Ui, clock_rate);
+	case IMX_CCM_MIPI_CSI2RX_ESC_CLK:
+		return mipi_csi2rx_clock_set_freq(kCLOCK_Root_Csi2_Esc, clock_rate);
+#endif
+
 	default:
 		/* Silence unused variable warning */
 		ARG_UNUSED(clock_rate);

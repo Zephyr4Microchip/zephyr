@@ -50,6 +50,28 @@ struct net_context;
 
 /** @cond INTERNAL_HIDDEN */
 
+#if defined(CONFIG_NET_PKT_ALLOC_STATS)
+struct net_pkt_alloc_stats {
+	uint64_t alloc_sum;
+	uint64_t time_sum;
+	uint32_t count;
+};
+
+struct net_pkt_alloc_stats_slab {
+	struct net_pkt_alloc_stats ok;
+	struct net_pkt_alloc_stats fail;
+	struct k_mem_slab *slab;
+};
+
+#define NET_PKT_ALLOC_STATS_DEFINE(alloc_name, slab_name)		  \
+	STRUCT_SECTION_ITERABLE(net_pkt_alloc_stats_slab, alloc_name) = { \
+		.slab = &slab_name,					  \
+	}
+
+#else
+#define NET_PKT_ALLOC_STATS_DEFINE(name, slab)
+#endif /* CONFIG_NET_PKT_ALLOC_STATS */
+
 /* buffer cursor used in net_pkt */
 struct net_pkt_cursor {
 	/** Current net_buf pointer by the cursor */
@@ -144,6 +166,10 @@ struct net_pkt {
 	  CONFIG_NET_PKT_RXTIME_STATS_DETAIL */
 	};
 #endif /* CONFIG_NET_PKT_RXTIME_STATS || CONFIG_NET_PKT_TXTIME_STATS */
+
+#if defined(CONFIG_NET_PKT_ALLOC_STATS)
+	struct net_pkt_alloc_stats_slab *alloc_stats;
+#endif /* CONFIG_NET_PKT_ALLOC_STATS */
 
 	/** Reference counter */
 	atomic_t atomic_ref;
@@ -315,6 +341,11 @@ struct net_pkt {
 	/* Tell the capture api that this is a captured packet */
 	uint8_t cooked_mode_pkt : 1;
 #endif /* CONFIG_NET_CAPTURE_COOKED_MODE */
+
+#if defined(CONFIG_NET_IPV4_PMTU)
+	/* Path MTU needed for this destination address */
+	uint8_t ipv4_pmtu : 1;
+#endif /* CONFIG_NET_IPV4_PMTU */
 
 	/* @endcond */
 };
@@ -756,6 +787,31 @@ static inline uint16_t net_pkt_ip_opts_len(struct net_pkt *pkt)
 	return 0;
 #endif
 }
+
+#if defined(CONFIG_NET_IPV4_PMTU)
+static inline bool net_pkt_ipv4_pmtu(struct net_pkt *pkt)
+{
+	return !!pkt->ipv4_pmtu;
+}
+
+static inline void net_pkt_set_ipv4_pmtu(struct net_pkt *pkt, bool value)
+{
+	pkt->ipv4_pmtu = value;
+}
+#else
+static inline bool net_pkt_ipv4_pmtu(struct net_pkt *pkt)
+{
+	ARG_UNUSED(pkt);
+
+	return false;
+}
+
+static inline void net_pkt_set_ipv4_pmtu(struct net_pkt *pkt, bool value)
+{
+	ARG_UNUSED(pkt);
+	ARG_UNUSED(value);
+}
+#endif /* CONFIG_NET_IPV4_PMTU */
 
 #if defined(CONFIG_NET_IPV4_FRAGMENT)
 static inline uint16_t net_pkt_ipv4_fragment_offset(struct net_pkt *pkt)
@@ -1452,7 +1508,8 @@ static inline void net_pkt_set_remote_address(struct net_pkt *pkt,
  * @param count Number of net_pkt in this slab.
  */
 #define NET_PKT_SLAB_DEFINE(name, count)				\
-	K_MEM_SLAB_DEFINE(name, sizeof(struct net_pkt), count, 4)
+	K_MEM_SLAB_DEFINE(name, sizeof(struct net_pkt), count, 4);      \
+	NET_PKT_ALLOC_STATS_DEFINE(pkt_alloc_stats_##name, name)
 
 /** @cond INTERNAL_HIDDEN */
 

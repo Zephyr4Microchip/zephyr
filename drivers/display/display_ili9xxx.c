@@ -163,6 +163,7 @@ static int ili9xxx_write(const struct device *dev, const uint16_t x,
 	mipi_desc.width = desc->width;
 	/* Per MIPI API, pitch must always match width */
 	mipi_desc.pitch = desc->width;
+	mipi_desc.frame_incomplete = desc->frame_incomplete;
 
 	r = ili9xxx_transmit(dev, ILI9XXX_RAMWR, NULL, 0);
 	if (r < 0) {
@@ -520,7 +521,8 @@ static const struct ili9xxx_quirks ili9488_quirks = {
 		.quirks = &ili##t##_quirks,                                    \
 		.mipi_dev = DEVICE_DT_GET(DT_PARENT(INST_DT_ILI9XXX(n, t))),   \
 		.dbi_config = {                                                \
-			.mode = DT_PROP_OR(INST_DT_ILI9XXX(n, t),              \
+			.mode = DT_STRING_UPPER_TOKEN_OR(                      \
+				INST_DT_ILI9XXX(n, t),                         \
 				mipi_mode, MIPI_DBI_MODE_SPI_4WIRE),           \
 			.config = MIPI_DBI_SPI_CONFIG_DT(                      \
 						INST_DT_ILI9XXX(n, t),         \

@@ -20,7 +20,6 @@ tests:
       - frdm_ke17z512
       - rddrone_fmuk66
       - twr_ke18f
-      - twr_kv58f220m
       - frdm_mcxn947/mcxn947/cpu0
       - lpcxpresso55s06
       - lpcxpresso55s16
@@ -44,6 +43,7 @@ tests:
       - nrf52840dk/nrf52840
       - rd_rw612_bga
       - nucleo_wba55cg
+      - frdm_mcxw71
     integration_platforms:
       - frdm_k64f
       - nrf52840dk/nrf52840

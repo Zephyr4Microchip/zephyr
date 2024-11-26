@@ -21,6 +21,7 @@
 		zephyr,shell-uart = &uart9;
 		zephyr,entropy = &trng;
 		zephyr,flash-controller = &flash1;
+		zephyr,canbus = &canfd0;
 	};
 
 	leds {
@@ -56,21 +57,30 @@
 };
 
 &pll {
-	clocks = <&xtal>;
-	div = <2>;
-	mul = <96 0>;
-	divp = <2>;
-	freqp = <DT_FREQ_M(480)>;
-	divq = <2>;
-	freqq = <DT_FREQ_M(480)>;
-	divr = <2>;
-	freqr = <DT_FREQ_M(480)>;
+	status = "okay";
+	pllp {
+		status = "okay";
+	};
+
+	pllq {
+		status = "okay";
+	};
+
+	pllr {
+		status = "okay";
+	};
+};
+
+
+&sciclk {
+	clocks = <&pllp>;
+	div = <4>;
 	status = "okay";
 };
 
-&sciclk {
+&canfdclk {
 	clocks = <&pll>;
-	div = <4>;
+	div = <5>;
 	status = "okay";
 };
 
@@ -123,4 +133,30 @@
 			reg = <0X0 DT_SIZE_K(12)>;
 		};
 	};
+};
+
+&pwm7 {
+	pinctrl-0 = <&pwm7_default>;
+	interrupts = <40 1>, <41 1>;
+	interrupt-names = "gtioca", "overflow";
+	pinctrl-names = "default";
+	status = "okay";
+};
+
+&canfd_global {
+	status = "okay";
+	canfd0 {
+		pinctrl-0 = <&canfd0_default>;
+		pinctrl-names = "default";
+		rx-max-filters = <16>;
+		status = "okay";
+	};
+};
+
+&iic1 {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	clock-frequency = <DT_FREQ_M(1)>;
+	pinctrl-0 = <&iic1_default>;
+	pinctrl-names = "default";
 };
