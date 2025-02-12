@@ -1,0 +1,41 @@
+# Microchip SAM SPI
+
+# Copyright (c) 2025 Microchip Technology Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+config SPI_MCHP_V1
+	bool "Microchip MCHP V1 series SERCOM SPI driver"
+	default y
+	depends on DT_HAS_MICROCHIP_SERCOM_U2201_SPI_ENABLED
+	select DMA if SPI_ASYNC
+	help
+	  Enable support for the Microchip MCHP V1 series SERCOM SPI driver.
+
+config SPI_MCHP_INTERRUPT_DRIVEN
+	bool "Microchip MCHP V1 series SERCOM SPI driver (Interrupt Driven)"
+	depends on SPI_MCHP_V1 && !SPI_ASYNC
+	help
+	  Enable interrupt-driven support for the Microchip MCHP V1 series
+	  SERCOM SPI driver.
+
+menu "SPI ASYNC SELECTION"
+	depends on SPI_MCHP_V1 && SPI_ASYNC
+
+choice
+	prompt "Select Async Mode: Interrupt or DMA"
+	default SPI_MCHP_INTERRUPT_DRIVEN_ASYNC
+	help
+	  Choose between interrupt or DMA async mode for the MCHP SPI driver.
+
+config SPI_MCHP_INTERRUPT_DRIVEN_ASYNC
+	bool "MCHP Interrupt Async"
+	help
+	  Enables interrupt support for the MCHP SPI driver in async mode.
+
+config SPI_MCHP_DMA_DRIVEN
+	bool "MCHP DMA"
+	help
+	  Enables DMA support for the MCHP SPI driver.
+
+endchoice
+endmenu
