@@ -1,0 +1,15 @@
+description: Microchip SAME54 multi-protocol (UART, SPI, I2C) SERCOM unit
+
+compatible: "microchip,same54-sercom"
+
+include: base.yaml
+
+properties:
+  reg:
+    required: true
+
+  interrupts:
+    required: true
+
+  clocks:
+    required: true

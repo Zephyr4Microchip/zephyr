@@ -1,0 +1,11 @@
+description: Microchip SAME54 NVMC (Non-Volatile Memory Controller)
+
+compatible: "microchip,same54-nvmctrl"
+
+include: flash-controller.yaml
+
+properties:
+  lock-regions:
+    type: int
+    required: true
+    description: Number of lock regions
