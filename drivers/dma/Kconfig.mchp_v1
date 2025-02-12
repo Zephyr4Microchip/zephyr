@@ -1,0 +1,11 @@
+# Microchip MCHP_V1 DMA driver configuration options
+
+# Copyright (c) 2025 Microchip Technology Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+config DMA_MCHP_V1
+	bool "Microchip MCHP_V1 DMA driver"
+	default y
+	depends on DT_HAS_MICROCHIP_DMAC_U2503_ENABLED
+	help
+	  This Option enables the DMA driver support for Microchip SAM MCUs.
