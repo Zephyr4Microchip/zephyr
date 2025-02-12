@@ -1,0 +1,12 @@
+#
+# Copyright (c) [2025] [Microchip Technology Inc.]
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+
+config PINCTRL_MCHP_V1
+	bool "Microchip SAME54 pin controller driver"
+	default y
+	depends on DT_HAS_MICROCHIP_SAME54_PINCTRL_ENABLED
+	help
+	  Microchip pin controller driver is used on SAME54 SoC series
