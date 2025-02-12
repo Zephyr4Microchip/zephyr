@@ -1,0 +1,35 @@
+#
+# Copyright (c) [2025] [Microchip Technology Inc.]
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+
+description: Microchip SAME54 Generic Clock Controller (GCLK)
+
+compatible: "microchip,same54-gclk"
+
+include: [clock-controller.yaml, base.yaml]
+
+clock-cells:
+  - id
+
+properties:
+  reg:
+    required: true
+
+  "#clock-cells":
+    const: 1
+
+  in_frequency:
+    type: array
+    description: GCLK_IN 0-7 External clock
+      frequency for GCLK Controller
+    default:
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0

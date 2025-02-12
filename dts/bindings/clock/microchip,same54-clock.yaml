@@ -1,0 +1,19 @@
+#
+# Copyright (c) [2025] [Microchip Technology Inc.]
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+
+description: Microchip SAME54 Clock System (OSCCTRL, OSC32KCTRL, MCLK, GCLK)
+
+compatible: "microchip,same54-clock"
+
+include: [clock-controller.yaml, base.yaml]
+
+clock-cells:
+  - id
+
+properties:
+
+  "#clock-cells":
+    const: 1
