@@ -10,3 +10,12 @@ config HAS_MPFS_HAL
 
 config HAS_MEC5_HAL
 	bool "Microchip MEC5 HAL drivers support"
+
+config HAS_MCHP_HAL_DFP
+	bool "Microchip HAL Device Family Pack support"
+
+config HAS_MCHP_HAL_INCLUDE
+	bool "Microchip HAL include files support"
+
+config HAS_MCHP_HAL_PERIPHERALS
+	bool "Microchip HAL peripheral drivers support"

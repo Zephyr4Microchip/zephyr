@@ -1,0 +1,15 @@
+#
+# Copyright (c) [2025] [Microchip Technology Inc.]
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+
+family:
+- name: microchip_sam
+  series:
+  - name: same54
+    socs:
+    - name: atsame54n19a
+    - name: atsame54n20a
+    - name: atsame54p19a
+    - name: atsame54p20a
