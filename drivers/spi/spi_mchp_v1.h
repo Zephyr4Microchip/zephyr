@@ -4,6 +4,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+#ifndef _SPI_MCHP_V1_H_
+#define _SPI_MCHP_V1_H_
+
 #if defined(CONFIG_SOC_SERIES_MCHP_SAME54)
 
 /**
@@ -27,6 +30,7 @@
 #if CONFIG_SPI_ASYNC && CONFIG_SPI_MCHP_DMA_DRIVEN
 #define SPI_MCHP_HAL_DEFN(n)                                                                       \
 	.hal.regs = (sercom_spim_registers_t *)DT_INST_REG_ADDR(n),                                \
+	.hal.regs = (sercom_spim_registers_t *)DT_INST_REG_ADDR(n),                                \
 	.hal.pads = SPI_MCHP_SERCOM_PADS(n),                                                       \
 	.hal.mclk_sys = {.dev = DEVICE_DT_GET(DT_INST_CLOCKS_CTLR_BY_NAME(n, mclk)),               \
 			 .id = DT_INST_CLOCKS_CELL_BY_NAME(n, mclk, id)},                          \
@@ -38,7 +42,8 @@
 	.hal.rx_dma_channel = MICROCHIP_SAME54_DT_INST_DMA_CHANNEL(n, rx)
 #else
 #define SPI_MCHP_HAL_DEFN(n)                                                                       \
-	.hal.regs = (sercom_spim_registers_t *)DT_INST_REG_ADDR(n),                                \
+	.hal.mregs = (sercom_spim_registers_t *)DT_INST_REG_ADDR(n),                                \
+	.hal.sregs = (sercom_spis_registers_t *)DT_INST_REG_ADDR(n),                                \
 	.hal.pads = SPI_MCHP_SERCOM_PADS(n),                                                       \
 	.hal.mclk_sys = {.dev = DEVICE_DT_GET(DT_INST_CLOCKS_CTLR_BY_NAME(n, mclk)),               \
 			 .id = DT_INST_CLOCKS_CELL_BY_NAME(n, mclk, id)},                          \
@@ -89,7 +94,8 @@
  * Peripheral configuration structure
  */
 struct hal_mchp_spi_t {
-	sercom_spim_registers_t *regs;
+	sercom_spim_registers_t *mregs;
+	sercom_spis_registers_t *sregs;
 	uint32_t pads;
 
 	struct clock_control_mchp_subsys_t mclk_sys;
