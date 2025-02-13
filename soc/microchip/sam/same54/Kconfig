@@ -1,8 +1,5 @@
-#
 # Copyright (c) [2025] [Microchip Technology Inc.]
-#
 # SPDX-License-Identifier: Apache-2.0
-#
 
 config SOC_SERIES_MCHP_SAME54
 	select ARM
