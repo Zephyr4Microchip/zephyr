@@ -1,8 +1,7 @@
-#
-# Copyright (c) [2025] [Microchip Technology Inc.]
-#
+# Microchip MCHP_V1 clock control driver configuration
+
+# Copyright (c) 2025 Microchip Technology Inc.
 # SPDX-License-Identifier: Apache-2.0
-#
 
 config CLOCK_CONTROL_MCHP_V1
 	bool "Microchip MCHP_V1 CLOCK CONTROL driver"
