@@ -1,11 +1,10 @@
-# Copyright (c) 2020, Linaro Limited
-# Copyright (c) 2021-2022, Gerson Fernando Budke
+# Copyright (c) 2025 Microchip Technology Inc.
 # SPDX-License-Identifier: Apache-2.0
 
 description: |
-  Atmel SAM0 Pinctrl container node
+  Microchip SAM Pinctrl container node
 
-  The Atmel SAM0 pin controller is a singleton node responsible for controlling
+  The Microchip SAM pin controller is a singleton node responsible for controlling
   pin function selection and pin properties. For example, you can use this node
   to route SERCOM0 as UART were RX to pin PAD1 and enable the pull-up resistor
   on the pin.
@@ -25,7 +24,7 @@ description: |
       */
 
     /** include pre-defined combinations for the SoC variant used by the board */
-    #include <dt-bindings/pinctrl/samr21g-pinctrl.h>
+    #include <dt-bindings/pinctrl/sam/same54/atsame54p20a-pinctrl.h>
 
     &pinctrl {
       /* configuration for the usart0 "default" state */

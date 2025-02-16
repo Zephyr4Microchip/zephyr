@@ -1,8 +1,5 @@
-#
-# Copyright (c) [2025] [Microchip Technology Inc.]
-#
+# Copyright (c) 2025 Microchip Technology Inc.
 # SPDX-License-Identifier: Apache-2.0
-#
 
 config PINCTRL_MCHP_V1
 	bool "Microchip SAME54 pin controller driver"
