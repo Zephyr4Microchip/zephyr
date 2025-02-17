@@ -1,4 +1,4 @@
-# Copyright (c) [2025] [Microchip Technology Inc.]
+# Copyright (c) 2025 Microchip Technology Inc.
 # SPDX-License-Identifier: Apache-2.0
 
 description: Microchip SAME54 multi-protocol (UART, SPI, I2C) SERCOM unit
