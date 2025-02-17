@@ -19,7 +19,8 @@
 	.hal.dma_dev = DEVICE_DT_GET(MICROCHIP_SAME54_DT_INST_DMA_CTLR(n, tx)),                    \
 	.hal.write_dma_request = MICROCHIP_SAME54_DT_INST_DMA_TRIGSRC(n, tx),                      \
 	.hal.read_dma_request = MICROCHIP_SAME54_DT_INST_DMA_TRIGSRC(n, rx),                       \
-	.hal.dma_channel = MICROCHIP_SAME54_DT_INST_DMA_CHANNEL(n, rx)
+	.hal.tx_dma_channel = MICROCHIP_SAME54_DT_INST_DMA_CHANNEL(n, tx),                         \
+	.hal.rx_dma_channel = MICROCHIP_SAME54_DT_INST_DMA_CHANNEL(n, rx)
 #else
 #define I2C_MCHP_DMA_CHANNELS(n)
 #endif
@@ -73,15 +74,14 @@ enum i2c_mchp_intFlag {
 
 /* Do the peripheral clock related configuration */
 #define I2C_MCHP_GET_CLOCK_FREQ(dev, rate)                                                         \
-	clock_control_get_rate(((const struct i2c_mchp_dev_config *)(dev->config))->clock_dev,     \
-			       &(((struct i2c_mchp_dev_config *)(dev->config))->hal.gclk_sys),     \
-			       &rate);
+	clock_control_get_rate(((const i2c_mchp_dev_config_t *)(dev->config))->clock_dev,          \
+			       &(((i2c_mchp_dev_config_t *)(dev->config))->hal.gclk_sys), &rate);
 
 #define I2C_MCHP_ENABLE_CLOCK(dev)                                                                 \
-	clock_control_on(((const struct i2c_mchp_dev_config *)(dev->config))->clock_dev,           \
-			 &(((struct i2c_mchp_dev_config *)(dev->config))->hal.gclk_sys));          \
-	clock_control_on(((const struct i2c_mchp_dev_config *)(dev->config))->clock_dev,           \
-			 &(((struct i2c_mchp_dev_config *)(dev->config))->hal.mclk_sys))
+	clock_control_on(((const i2c_mchp_dev_config_t *)(dev->config))->clock_dev,                \
+			 &(((i2c_mchp_dev_config_t *)(dev->config))->hal.gclk_sys));               \
+	clock_control_on(((const i2c_mchp_dev_config_t *)(dev->config))->clock_dev,                \
+			 &(((i2c_mchp_dev_config_t *)(dev->config))->hal.mclk_sys))
 
 /* Hardware abstraction layer (HAL) structure for MCHP I2C peripheral */
 struct hal_mchp_i2c {
@@ -89,10 +89,10 @@ struct hal_mchp_i2c {
 	sercom_registers_t *regs;
 
 	/* Clock configuration for the main clock (MCLK) subsystem. */
-	struct clock_control_mchp_subsys_t mclk_sys;
+	clock_control_mchp_subsys_t mclk_sys;
 
 	/* Clock configuration for the generic clock (GCLK) subsystem. */
-	struct clock_control_mchp_subsys_t gclk_sys;
+	clock_control_mchp_subsys_t gclk_sys;
 
 #ifdef CONFIG_I2C_MCHP_DMA_DRIVEN
 	/* Pointer to the DMA controller device. */
@@ -105,7 +105,8 @@ struct hal_mchp_i2c {
 	uint8_t read_dma_request;
 
 	/* DMA channel used for I2C operations. */
-	uint8_t dma_channel;
+	uint8_t tx_dma_channel;
+	uint8_t rx_dma_channel;
 #endif
 };
 

@@ -1,33 +1,33 @@
 # Copyright (c) 2025 Microchip Technology Inc.
 # SPDX-License-Identifier: Apache-2.0
 
-menuconfig I2C_MCHP_V1
+config I2C_MCHP_V1
 	bool "MCHP SERCOM-U2201 I2C driver"
 	default y
 	depends on DT_HAS_MICROCHIP_SERCOM_U2201_I2C_ENABLED
 	select PINCTRL
 	help
-	  Enable the MCHP SERCOM-U2201 I2C driver.
+	  Enable the MCHP SERCOM-U2201 I2C drive.
 
 config I2C_MCHP_INTERRUPT_DRIVEN
 	bool "INTERRUPT support for MCHP I2C devices"
 	default y
-	depends on I2C_MCHP_V1
+	depends on I2C_MCHP_V1 || I2C_CALLBACK
 	depends on !I2C_MCHP_DMA_DRIVEN
 	help
 	  This enables INTERRUPT driven transactions for the I2C peripheral.
 	  INTERRUPT driven mode can be used in blocking & non blocking mode.
- 
+
 config I2C_MCHP_DMA_DRIVEN
 	bool "DMA support for MCHP I2C devices"
-	default y
+	default n
 	depends on I2C_MCHP_V1 && I2C_CALLBACK
 	select DMA
 	help
 	  This enables DMA driven transactions for the I2C peripheral.
 	  DMA driven mode requires fewer interrupts to handle the
 	  transaction and ensures that high speed modes are not delayed
-	  by data reloading.	  	  
+	  by data reloading.
 
 config I2C_MCHP_TARGET
 	bool "Target device support for MCHP I2C devices"
