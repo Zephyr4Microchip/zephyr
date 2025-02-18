@@ -25,7 +25,7 @@
  */
 #define MCHP_PORT_ADDR_OR_NONE(nodelabel)                                                          \
 	IF_ENABLED(DT_NODE_EXISTS(DT_NODELABEL(nodelabel)),            \
-		(DT_REG_ADDR(DT_NODELABEL(nodelabel)),))
+		(DT_REG_ADDR(DT_NODELABEL(nodelabel))))
 
 #if defined(CONFIG_SOC_SERIES_MCHP_SAME54)
 
