@@ -13,4 +13,5 @@ flash: 1024
 ram: 256
 supported:
   - uart
+  - gpio
 vendor: microchip

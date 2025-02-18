@@ -1,0 +1,26 @@
+description: SAME54 GPIO PORT node
+
+compatible: "microchip,same54-gpio"
+
+include: [gpio-controller.yaml, base.yaml]
+
+properties:
+  reg:
+    required: true
+
+  "#gpio-cells":
+    const: 2
+
+  "#microchip,pin-cells":
+    type: int
+    required: true
+    const: 2
+    description: Number of items to expect in a microchip,pins specifier
+
+gpio-cells:
+  - pin
+  - flags
+
+microchip,pin-cells:
+  - pin
+  - peripheral
