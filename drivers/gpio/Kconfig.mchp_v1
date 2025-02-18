@@ -2,8 +2,8 @@
 # SPDX-License-Identifier: Apache-2.0
 
 config GPIO_MCHP_V1
-	bool "Microchip  MCHP V1 series GPIO driver"
+	bool "Microchip MCHP V1 variant GPIO driver"
 	default y
 	depends on DT_HAS_MICROCHIP_SAME54_GPIO_ENABLED
 	help
-	  GPIO driver for Microchip MCHP V1 series MCUs.
+	  GPIO driver for Microchip MCHP V1 variant MCUs.

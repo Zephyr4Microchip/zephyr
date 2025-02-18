@@ -190,7 +190,7 @@ static int gpio_mchp_port_toggle_bits(const struct device *dev, gpio_port_pins_t
 /**
  * @brief GPIO driver API structure
  */
-static DEVICE_API(gpio, gpio_mchp_api) = {
+static const struct gpio_driver_api gpio_mchp_api = {
 	.pin_configure = gpio_mchp_config,
 	.port_get_raw = gpio_mchp_port_get_raw,
 	.port_set_masked_raw = gpio_mchp_port_set_masked_raw,
