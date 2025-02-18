@@ -149,9 +149,9 @@ typedef struct hal_mchp_uart {
 	bool collision_detect;
 
 	/* Main clock subsystem. */
-	struct clock_control_mchp_subsys_t mclk_sys;
+	clock_control_mchp_subsys_t mclk_sys;
 	/* Generic clock subsystem. */
-	struct clock_control_mchp_subsys_t gclk_sys;
+	clock_control_mchp_subsys_t gclk_sys;
 
 #if CONFIG_UART_MCHP_ASYNC
 	/* TX DMA request line. */
