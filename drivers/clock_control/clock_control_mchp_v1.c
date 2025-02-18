@@ -786,7 +786,7 @@ static int clock_control_mchp_set_rate(const struct device *dev, clock_control_s
  * @note The `clock_control_mchp_driver_api` API is implemented by the driver
  *       to allow external interactions with the device's clock control functions.
  */
-static DEVICE_API(clock_control, clock_control_mchp_driver_api) = {
+static const struct clock_control_driver_api clock_control_mchp_driver_api = {
 	/* Turn the clock on for the specified subsystem. */
 	.on = clock_control_mchp_on,
 
