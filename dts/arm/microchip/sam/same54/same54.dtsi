@@ -126,8 +126,8 @@
 			status = "disabled";
 			reg = <0x40003000 0x31>;
 			interrupts = <46 0>, <47 0>, <48 0>, <49 0>;
-			clocks = <&mclk CLOCK_MCHP_SAME54_APBA_SERCOM0>,
-					<&gclk CLOCK_MCHP_SAME54_PERIPH_SERCOM0_CORE>;
+			clocks = <&mclk CLOCK_MCHP_SAME54_MCLK_APBA_SERCOM0>,
+					<&gclk CLOCK_MCHP_SAME54_GCLK_SERCOM0_CORE>;
 			clock-names = "mclk", "gclk";
 		};
 		sercom1: sercom@40003400 {
@@ -135,8 +135,8 @@
 			status = "disabled";
 			reg = <0x40003400 0x31>;
 			interrupts = <50 0>, <51 0>, <52 0>, <53 0>;
-			clocks = <&mclk CLOCK_MCHP_SAME54_APBA_SERCOM1>,
-					<&gclk CLOCK_MCHP_SAME54_PERIPH_SERCOM1_CORE>;
+			clocks = <&mclk CLOCK_MCHP_SAME54_MCLK_APBA_SERCOM1>,
+					<&gclk CLOCK_MCHP_SAME54_GCLK_SERCOM1_CORE>;
 			clock-names = "mclk", "gclk";
 		};
 		sercom2: sercom@41012000 {
@@ -144,8 +144,8 @@
 			status = "disabled";
 			reg = <0x41012000 0x31>;
 			interrupts = <54 0>, <55 0>, <56 0>, <57 0>;
-			clocks = <&mclk CLOCK_MCHP_SAME54_APBB_SERCOM2>,
-					<&gclk CLOCK_MCHP_SAME54_PERIPH_SERCOM2_CORE>;
+			clocks = <&mclk CLOCK_MCHP_SAME54_MCLK_APBB_SERCOM2>,
+					<&gclk CLOCK_MCHP_SAME54_GCLK_SERCOM2_CORE>;
 			clock-names = "mclk", "gclk";
 		};
 		sercom3: sercom@41014000 {
@@ -153,8 +153,8 @@
 			status = "disabled";
 			reg = <0x41014000 0x31>;
 			interrupts = <58 0>, <59 0>, <60 0>, <61 0>;
-			clocks = <&mclk CLOCK_MCHP_SAME54_APBB_SERCOM3>,
-					<&gclk CLOCK_MCHP_SAME54_PERIPH_SERCOM3_CORE>;
+			clocks = <&mclk CLOCK_MCHP_SAME54_MCLK_APBB_SERCOM3>,
+					<&gclk CLOCK_MCHP_SAME54_GCLK_SERCOM3_CORE>;
 			clock-names = "mclk", "gclk";
 		};
 		sercom4: sercom@43000000 {
@@ -162,8 +162,8 @@
 			status = "disabled";
 			reg = <0x43000000 0x31>;
 			interrupts = <62 0>, <63 0>, <64 0>, <65 0>;
-			clocks = <&mclk CLOCK_MCHP_SAME54_APBD_SERCOM4>,
-					<&gclk CLOCK_MCHP_SAME54_PERIPH_SERCOM4_CORE>;
+			clocks = <&mclk CLOCK_MCHP_SAME54_MCLK_APBD_SERCOM4>,
+					<&gclk CLOCK_MCHP_SAME54_GCLK_SERCOM4_CORE>;
 			clock-names = "mclk", "gclk";
 		};
 		sercom5: sercom@43000400 {
@@ -171,8 +171,8 @@
 			status = "disabled";
 			reg = <0x43000400 0x31>;
 			interrupts = <66 0>, <67 0>, <68 0>, <69 0>;
-			clocks = <&mclk CLOCK_MCHP_SAME54_APBD_SERCOM5>,
-					<&gclk CLOCK_MCHP_SAME54_PERIPH_SERCOM5_CORE>;
+			clocks = <&mclk CLOCK_MCHP_SAME54_MCLK_APBD_SERCOM5>,
+					<&gclk CLOCK_MCHP_SAME54_GCLK_SERCOM5_CORE>;
 			clock-names = "mclk", "gclk";
 		};
 		sercom6: sercom@43000800 {
@@ -180,8 +180,8 @@
 			status = "disabled";
 			reg = <0x43000800 0x31>;
 			interrupts = <70 0>, <71 0>, <72 0>, <73 0>;
-			clocks = <&mclk CLOCK_MCHP_SAME54_APBD_SERCOM6>,
-					<&gclk CLOCK_MCHP_SAME54_PERIPH_SERCOM6_CORE>;
+			clocks = <&mclk CLOCK_MCHP_SAME54_MCLK_APBD_SERCOM6>,
+					<&gclk CLOCK_MCHP_SAME54_GCLK_SERCOM6_CORE>;
 			clock-names = "mclk", "gclk";
 		};
 		sercom7: sercom@43000c00 {
@@ -189,8 +189,8 @@
 			status = "disabled";
 			reg = <0x43000c00 0x31>;
 			interrupts = <74 0>, <75 0>, <76 0>, <77 0>;
-			clocks = <&mclk CLOCK_MCHP_SAME54_APBD_SERCOM7>,
-					<&gclk CLOCK_MCHP_SAME54_PERIPH_SERCOM7_CORE>;
+			clocks = <&mclk CLOCK_MCHP_SAME54_MCLK_APBD_SERCOM7>,
+					<&gclk CLOCK_MCHP_SAME54_GCLK_SERCOM7_CORE>;
 			clock-names = "mclk", "gclk";
 		};
 	};
