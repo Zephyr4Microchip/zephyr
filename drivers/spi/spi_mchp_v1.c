@@ -1123,7 +1123,7 @@ static int spi_mchp_init(const struct device *dev)
  * This structure defines the function pointers for SPI operations,
  * including synchronous and optional asynchronous transceive functions.
  */
-static DEVICE_API(spi, spi_mchp_driver_api) = {
+static const struct spi_driver_api spi_mchp_driver_api = {
 	/* Synchronous transceive function */
 	.transceive = spi_mchp_transceive_sync,
 
@@ -1216,7 +1216,7 @@ static DEVICE_API(spi, spi_mchp_driver_api) = {
 		SPI_CONTEXT_INIT_LOCK(spi_mchp_data_##n, ctx),                                     \
 		SPI_CONTEXT_INIT_SYNC(spi_mchp_data_##n, ctx),                                     \
 		SPI_CONTEXT_CS_GPIOS_INITIALIZE(DT_DRV_INST(n), ctx)};                             \
-	SPI_DEVICE_DT_INST_DEFINE(n, spi_mchp_init, NULL, &spi_mchp_data_##n,                      \
+		DEVICE_DT_INST_DEFINE(n, spi_mchp_init, NULL, &spi_mchp_data_##n,                      \
 				  &spi_mchp_config_##n, POST_KERNEL, CONFIG_SPI_INIT_PRIORITY,     \
 				  &spi_mchp_driver_api);
 
