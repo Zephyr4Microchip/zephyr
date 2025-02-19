@@ -9,8 +9,8 @@
  * @brief Microchip MCU family I/O Pin Controller (PORT)
  */
 
-#ifndef ZEPHYR_DRIVERS_PINCTRL_PINCTRL_MCHP_V1_H_
-#define ZEPHYR_DRIVERS_PINCTRL_PINCTRL_MCHP_V1_H_
+#ifndef MICROCHIP_PINCTRL_MCHP_V1_H_
+#define MICROCHIP_PINCTRL_MCHP_V1_H_
 
 #include <soc.h>
 
@@ -43,8 +43,8 @@ static const uint32_t mchp_port_addrs[] = {
 	MCHP_PORT_ADDR_OR_NONE(portd),
 };
 
-#include "port_u2210/hal_mchp_pinctrl.h"
+#include "port/hal_mchp_pinctrl_port_u2210.h"
 
 #endif
 
-#endif /* ZEPHYR_DRIVERS_PINCTRL_PINCTRL_MCHP_V1_H_ */
+#endif /* MICROCHIP_PINCTRL_MCHP_V1_H_ */
