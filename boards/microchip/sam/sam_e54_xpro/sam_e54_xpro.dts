@@ -36,7 +36,12 @@
 &sercom2 {
 	status = "okay";
 	compatible = "microchip,sercom-u2201-uart";
+
 	current-speed = <115200>;
+	data-bits = <8>;
+	parity = "none";
+	stop-bits = "1";
+
 	rxpo = <1>;
 	txpo = <0>;
 	#address-cells = <1>;

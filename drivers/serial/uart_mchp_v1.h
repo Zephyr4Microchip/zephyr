@@ -12,8 +12,8 @@
  * driver specific to the Microchip SAME54 series.
  */
 
-#ifndef _UART_MCHP_V1_H_
-#define _UART_MCHP_V1_H_
+#ifndef MICROCHIP_UART_MCHP_V1_H_
+#define MICROCHIP_UART_MCHP_V1_H_
 
 #if defined(CONFIG_SOC_SERIES_MCHP_SAME54)
 
@@ -166,8 +166,8 @@ typedef struct hal_mchp_uart {
 } hal_mchp_uart_t;
 
 /* Include HAL file, specific to the peripheral IP */
-#include "sercom_u2201/hal_mchp_uart.h"
+#include "sercom/hal_mchp_uart_sercom_u2201.h"
 
 #endif /* CONFIG_SOC_SERIES_MCHP_SAME54 */
 
-#endif /* _UART_MCHP_V1_H_ */
+#endif /* MICROCHIP_UART_MCHP_V1_H_ */
