@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef _I2C_MCHP_V1_H_
-#define _I2C_MCHP_V1_H_
+#ifndef MICROCHIP_I2C_MCHP_V1_H_
+#define MICROCHIP_I2C_MCHP_V1_H_
 
 #if defined(CONFIG_SOC_SERIES_MCHP_SAME54)
 /* Include rquired header files */
@@ -111,8 +111,8 @@ struct hal_mchp_i2c {
 };
 
 /* Include HAL file, specific to the peripheral IP */
-#include "sercom_u2201/hal_mchp_i2c.h"
+#include "sercom_u2201/hal_mchp_i2c_sercom_u2201.h"
 
 #endif
 
-#endif /* _I2C_MCHP_V1_H_ */
+#endif /* MICROCHIP_I2C_MCHP_V1_H_ */
