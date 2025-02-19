@@ -136,10 +136,10 @@ struct hal_mchp_spi {
 	uint32_t pads;
 
 	/* MCLK subsystem configuration */
-	struct clock_control_mchp_subsys_t mclk_sys;
+	clock_control_mchp_subsys_t mclk_sys;
 
 	/* GCLK subsystem configuration */
-	struct clock_control_mchp_subsys_t gclk_sys;
+	clock_control_mchp_subsys_t gclk_sys;
 
 #if SPI_MCHP_DMA_DRIVEN
 	/* TX DMA request line */
