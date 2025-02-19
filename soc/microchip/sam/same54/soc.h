@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef _SOC_MICROCHIP_SAME54_SOC_H_
-#define _SOC_MICROCHIP_SAME54_SOC_H_
+#ifndef MICROCHIP_SAME54_SOC_H_
+#define MICROCHIP_SAME54_SOC_H_
 
 #ifndef _ASMLANGUAGE
 
@@ -43,4 +43,4 @@
 				(DT_INST_DMAS_CTLR_BY_NAME(n, name)),			\
 				(DT_INVALID_NODE))
 
-#endif /* _SOC_MICROCHIP_SAME54_SOC_H_ */
+#endif /* MICROCHIP_SAME54_SOC_H_ */

@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef _ZEPHYR_SOC_MICROCHIP_SAM_PINCTRL_SOC_H_
-#define _ZEPHYR_SOC_MICROCHIP_SAM_PINCTRL_SOC_H_
+#ifndef MICROCHIP_SAM_PINCTRL_SOC_H_
+#define MICROCHIP_SAM_PINCTRL_SOC_H_
 
 #include <zephyr/devicetree.h>
 #include <zephyr/types.h>
@@ -83,4 +83,4 @@ typedef uint32_t pinctrl_soc_pin_t;
 }
 #endif
 
-#endif /* _ZEPHYR_SOC_MICROCHIP_SAM_PINCTRL_SOC_H_ */
+#endif /* MICROCHIP_SAM_PINCTRL_SOC_H_ */
