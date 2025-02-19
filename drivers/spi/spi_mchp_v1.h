@@ -159,7 +159,7 @@ struct hal_mchp_spi {
 /**
  * @brief Include HAL-specific implementation for the SPI peripheral.
  */
-#include "sercom_u2201/hal_mchp_spi_sercom_u2201.h"
+#include "sercom/hal_mchp_spi_sercom_u2201.h"
 
 #elif defined(CONFIG_SOC_SERIES_SAM71)
 /**
