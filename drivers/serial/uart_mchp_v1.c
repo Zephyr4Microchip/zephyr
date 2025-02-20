@@ -1447,13 +1447,6 @@ static const struct uart_driver_api uart_mchp_driver_api = {
 #define UART_MCHP_IRQ_HANDLER_FUNC(n)
 #endif
 
-#if CONFIG_UART_MCHP_ASYNC
-#define UART_MCHP_DMA_CHANNELS(n)                                                                  \
-	.dma_dev = DEVICE_DT_GET(MICROCHIP_SAME54_DT_INST_DMA_CTLR(n, tx)),
-#else
-#define UART_MCHP_DMA_CHANNELS(n)
-#endif
-
 #define UART_MCHP_CONFIG_DEFN(n)                                                                   \
 	static const uart_mchp_dev_cfg_t uart_mchp_config_##n = {                                  \
 		.baudrate = DT_INST_PROP(n, current_speed),                                        \

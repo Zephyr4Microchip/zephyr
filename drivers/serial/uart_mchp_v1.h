@@ -103,6 +103,28 @@
 #define UART_MCHP_IRQ_HANDLER(n)
 #endif
 
+#if CONFIG_UART_MCHP_ASYNC
+/**
+ * @brief Configure UART DMA channels.
+ *
+ * This macro sets the DMA device configuration for UART based on the provided instance number.
+ * It uses the DEVICE_DT_GET macro to get the DMA controller device from the device tree.
+ *
+ * @param n Instance number of the UART device.
+ */
+#define UART_MCHP_DMA_CHANNELS(n)                                                                  \
+	.dma_dev = DEVICE_DT_GET(MICROCHIP_SAME54_DT_INST_DMA_CTLR(n, tx)),
+#else
+/**
+ * @brief Macro to configure UART DMA channels.
+ *
+ * This macro is defined as empty when CONFIG_UART_MCHP_ASYNC is not defined.
+ *
+ * @param n Instance number of the UART device.
+ */
+#define UART_MCHP_DMA_CHANNELS(n)
+#endif
+
 /* Do the peripheral clock related configuration */
 /**
  * @brief Get the clock frequency for the UART peripheral.
