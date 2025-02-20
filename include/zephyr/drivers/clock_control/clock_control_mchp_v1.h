@@ -6,17 +6,36 @@
 
 /**
  * @file clock_control_mchp_v1.h
- * @brief Clock control header file for Microchip SAM devices.
+ * @brief Clock control header file for Microchip devices.
  *
  * This file provides definitions and structures for clock control functions
- * for Microchip-based SAM systems.
+ * for Microchip-based systems.
  */
 
-#ifndef ZEPHYR_INCLUDE_DRIVERS_CLOCK_CONTROL_CLOCK_CONTROL_MCHP_V1_H_
-#define ZEPHYR_INCLUDE_DRIVERS_CLOCK_CONTROL_CLOCK_CONTROL_MCHP_V1_H_
+#ifndef MICROCHIP_CLOCK_CONTROL_MCHP_V1_H_
+#define MICROCHIP_CLOCK_CONTROL_MCHP_V1_H_
 
 #include <zephyr/kernel.h>
 #include <zephyr/drivers/clock_control.h>
+
+/** @brief MCLK AHB clock count */
+#define CLOCK_CONTROL_MCHP_MCLK_AHB_COUNT     20
+/** @brief MCLK APBA clock count */
+#define CLOCK_CONTROL_MCHP_MCLK_APBA_COUNT    16
+/** @brief MCLK APBB clock count */
+#define CLOCK_CONTROL_MCHP_MCLK_APBB_COUNT    12
+/** @brief MCLK APBC clock count */
+#define CLOCK_CONTROL_MCHP_MCLK_APBC_COUNT    12
+/** @brief MCLK APBD clock count */
+#define CLOCK_CONTROL_MCHP_MCLK_APBD_COUNT    12
+/** @brief OSCCTRL XOSCCTRL count */
+#define CLOCK_CONTROL_MCHP_OSCCTRL_XOSC_COUNT 2
+/** @brief OSCCTRL DPLLCTRLA count */
+#define CLOCK_CONTROL_MCHP_OSCCTRL_DPLL_COUNT 2
+/** @brief GCLK GENCTRL count */
+#define CLOCK_CONTROL_MCHP_GCLK_GEN_COUNT     12
+/** @brief GCLK PCHCTRL count */
+#define CLOCK_CONTROL_MCHP_GCLK_PCH_COUNT     48
 
 /** @brief Clocks handled by the Clock controllers.
  *
@@ -375,16 +394,16 @@ typedef enum {
 typedef struct {
 	/** @brief MCLK CPU clock divider */
 	uint8_t cpu_div;
-	/** @brief MCLK AHB clock enables (20 peripherals) */
-	bool ahb[20];
-	/** @brief MCLK APBA clock enables (16 peripherals) */
-	bool apba[16];
-	/** @brief MCLK APBB clock enables (12 peripherals) */
-	bool apbb[12];
-	/** @brief MCLK APBC clock enables (12 peripherals) */
-	bool apbc[12];
-	/** @brief MCLK APBD clock enables (12 peripherals) */
-	bool apbd[12];
+	/** @brief MCLK AHB clock enables */
+	bool ahb[CLOCK_CONTROL_MCHP_MCLK_AHB_COUNT];
+	/** @brief MCLK APBA clock enables */
+	bool apba[CLOCK_CONTROL_MCHP_MCLK_APBA_COUNT];
+	/** @brief MCLK APBB clock enables */
+	bool apbb[CLOCK_CONTROL_MCHP_MCLK_APBB_COUNT];
+	/** @brief MCLK APBC clock enables */
+	bool apbc[CLOCK_CONTROL_MCHP_MCLK_APBC_COUNT];
+	/** @brief MCLK APBD clock enables */
+	bool apbd[CLOCK_CONTROL_MCHP_MCLK_APBD_COUNT];
 } clock_control_mchp_mclk_configuration_t;
 
 /** @brief OSCCTRL (Oscillator Control) configuration structure.
@@ -393,8 +412,8 @@ typedef struct {
  * OSCCTRL peripheral, including the XOSC, DFLL, and DPLL configurations.
  */
 typedef struct {
-	/** @brief OSCCTRL XOSCCTRL register values for 0-1 */
-	uint32_t xoscctrl[2];
+	/** @brief OSCCTRL XOSCCTRL register values */
+	uint32_t xoscctrl[CLOCK_CONTROL_MCHP_OSCCTRL_XOSC_COUNT];
 	/** @brief OSCCTRL DFLLCTRLA register value */
 	uint8_t dfllctrla;
 	/** @brief OSCCTRL DFLLCTRLB register value */
@@ -403,12 +422,12 @@ typedef struct {
 	uint32_t dfllval;
 	/** @brief OSCCTRL DFLLMUL register value */
 	uint32_t dfllmul;
-	/** @brief OSCCTRL DPLLCTRLA register values for 0-1 */
-	uint8_t dpllctrla[2];
-	/** @brief OSCCTRL DPLLRATIO register values for 0-1 */
-	uint32_t dpllratio[2];
-	/** @brief OSCCTRL DPLLCTRLB register values for 0-1 */
-	uint8_t dpllctrlb[2];
+	/** @brief OSCCTRL DPLLCTRLA register values */
+	uint8_t dpllctrla[CLOCK_CONTROL_MCHP_OSCCTRL_DPLL_COUNT];
+	/** @brief OSCCTRL DPLLRATIO register values */
+	uint32_t dpllratio[CLOCK_CONTROL_MCHP_OSCCTRL_DPLL_COUNT];
+	/** @brief OSCCTRL DPLLCTRLB register values */
+	uint8_t dpllctrlb[CLOCK_CONTROL_MCHP_OSCCTRL_DPLL_COUNT];
 } clock_control_mchp_oscctrl_configuration_t;
 
 /** @brief OSC32KCTRL (32kHz Oscillator Control) configuration structure.
@@ -434,10 +453,10 @@ typedef struct {
  * peripheral clock channels.
  */
 typedef struct {
-	/** @brief GCLK GENCTRL register values for 0-11 */
-	uint32_t genctrl[12];
-	/** @brief GCLK PCHCTRL register values for 0-47 */
-	uint32_t pchctrl[48];
+	/** @brief GCLK GENCTRL register values */
+	uint32_t genctrl[CLOCK_CONTROL_MCHP_GCLK_GEN_COUNT];
+	/** @brief GCLK PCHCTRL register values */
+	uint32_t pchctrl[CLOCK_CONTROL_MCHP_GCLK_PCH_COUNT];
 } clock_control_mchp_gclk_configuration_t;
 
 /** @brief Overall clock control configuration structure.
@@ -474,12 +493,12 @@ typedef struct {
 	uint16_t dfll_mul_factor;
 	/** @brief Indicates if OSCCTRL DFLL is in closed-loop mode. */
 	bool is_dfll_closed_loop;
-	/** @brief OSCCTRL DPLL XOSC division factors for two DPLLs. */
-	uint16_t dpll_xosc_div[2];
-	/** @brief OSCCTRL DPLL LDR (Loop Division Ratio) values for two DPLLs. */
-	uint16_t dpll_ldr[2];
-	/** @brief OSCCTRL DPLL LDR fractional values for two DPLLs. */
-	uint8_t dpll_ldrfrac[2];
+	/** @brief OSCCTRL DPLL XOSC division factors for DPLLs. */
+	uint16_t dpll_xosc_div[CLOCK_CONTROL_MCHP_OSCCTRL_DPLL_COUNT];
+	/** @brief OSCCTRL DPLL LDR (Loop Division Ratio) values for DPLLs. */
+	uint16_t dpll_ldr[CLOCK_CONTROL_MCHP_OSCCTRL_DPLL_COUNT];
+	/** @brief OSCCTRL DPLL LDR fractional values for DPLLs. */
+	uint8_t dpll_ldrfrac[CLOCK_CONTROL_MCHP_OSCCTRL_DPLL_COUNT];
 } clock_control_mchp_oscctrl_rate_t;
 
 /** @brief OSC32KCTRL rate configuration structure.
@@ -495,10 +514,10 @@ typedef struct {
  * dividers.
  */
 typedef struct {
-	/** @brief Division selection for each of the 12 GCLK generators. */
-	bool div_sel[12];
-	/** @brief GCLK generator division factor for each of the 12 generators. */
-	uint16_t gen_div[12];
+	/** @brief Division selection for each of the GCLK generators. */
+	bool div_sel[CLOCK_CONTROL_MCHP_GCLK_GEN_COUNT];
+	/** @brief GCLK generator division factor for each of the generators. */
+	uint16_t gen_div[CLOCK_CONTROL_MCHP_GCLK_GEN_COUNT];
 } clock_control_mchp_gclk_rate_t;
 
 /** @brief Clock rate configuration structure.
@@ -518,4 +537,4 @@ typedef struct {
 
 #endif /* CONFIG_SOC_SERIES_MCHP_SAME54 */
 
-#endif /* ZEPHYR_INCLUDE_DRIVERS_CLOCK_CONTROL_CLOCK_CONTROL_MCHP_V1_H_ */
+#endif /* MICROCHIP_CLOCK_CONTROL_MCHP_V1_H_ */

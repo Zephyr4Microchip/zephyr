@@ -5,22 +5,22 @@
  */
 
 /**
- * @file clock_control_mchp_v1.h
+ * @file clock_control_mchp_v1_priv.h
  * @brief Clock control mapping driver for Microchip devices.
  *
  * This file provides definitions and structures for clock control functions
  * for Microchip-based systems.
  */
 
-#ifndef DRIVERS_CLOCK_CONTROL_CLOCK_CONTROL_MCHP_V1_H_
-#define DRIVERS_CLOCK_CONTROL_CLOCK_CONTROL_MCHP_V1_H_
+#ifndef MICROCHIP_CLOCK_CONTROL_MCHP_V1_PRIV_H_
+#define MICROCHIP_CLOCK_CONTROL_MCHP_V1_PRIV_H_
 
 #include <zephyr/drivers/clock_control.h>
 
 /**
  * @brief Enum representing the states of the clock control.
  */
-enum clock_control_mchp_state {
+typedef enum {
 	/* Clock is in a valid and operational state */
 	CLOCK_CONTROL_MCHP_STATE_OK = 0,
 	/* Clock is turned off */
@@ -39,12 +39,12 @@ enum clock_control_mchp_state {
 	CLOCK_CONTROL_MCHP_STATE_NO_SUPPORT,
 	/* Clock is having a user-defined frequency */
 	CLOCK_CONTROL_MCHP_STATE_USER_FREQ,
-};
+} clock_control_mchp_state_t;
 
 /**
  * @brief Structure representing the source configuration for a clock control.
  */
-struct clock_control_mchp_source {
+typedef struct {
 	/* Division factor for the clock source */
 	uint32_t div;
 	/* Multiplication factor for the clock source */
@@ -61,7 +61,7 @@ struct clock_control_mchp_source {
 	uint32_t target_clk_addr;
 	/* Identifier for the user-defined frequency */
 	uint8_t user_freq_id;
-};
+} clock_control_mchp_source_t;
 
 /**
  * @brief Structure mapping the clock identifier to a mask.
@@ -137,6 +137,9 @@ struct clock_control_mchp_src_map {
 #include <dt-bindings/clock/sam/same54/mchp_same54_clock.h>
 
 /* Peripheral IP HAL specific features */
+/* Count of GCLK input frequencies */
+#define CLOCK_CONTROL_MCHP_GCLK_IN_COUNT 8
+
 /**
  * @brief Macro to set user frequencies from device tree properties
  */
@@ -179,7 +182,7 @@ enum clock_control_mchp_user_defined_frequency {
 };
 
 /* Do the peripheral interrupt related configuration */
-#define CLOCK_CONTROL_MCHP_IRQ_CONNECT_ENABLE_DEFN                                                 \
+#define CLOCK_CONTROL_MCHP_IRQ_CONNECT_ENABLE_DEFN()                                               \
 	CLOCK_CONTROL_MCHP_IRQ_CONNECT_ENABLE(DT_NODELABEL(mclk), 0);                              \
 	CLOCK_CONTROL_MCHP_IRQ_CONNECT_ENABLE(DT_NODELABEL(oscctrl), 0);                           \
 	CLOCK_CONTROL_MCHP_IRQ_CONNECT_ENABLE(DT_NODELABEL(oscctrl), 1);                           \
@@ -200,21 +203,21 @@ struct clock_control_mchp_user_frequency {
 	/* 32KHz External Oscillator frequency setting */
 	uint32_t xosc32k;
 	/* Array of GCLK input frequencies (up to 8 inputs) */
-	uint32_t gclk_in[8];
+	uint32_t gclk_in[CLOCK_CONTROL_MCHP_GCLK_IN_COUNT];
 };
 
 /* Include HAL file, specific to the peripheral IP */
 /* HAL for MCLK (Main Clock) */
-#include <mclk_u2408/hal_mchp_mclk.h>
+#include <mclk/hal_mchp_clock_mclk_u2408.h>
 /* HAL for OSCCTRL (Oscillator Control) */
-#include <oscctrl_u2401/hal_mchp_oscctrl.h>
+#include <oscctrl/hal_mchp_clock_oscctrl_u2401.h>
 /* HAL for OSC32KCTRL (32KHz Control) */
-#include <osc32kctrl_u2400/hal_mchp_osc32kctrl.h>
+#include <osc32kctrl/hal_mchp_clock_osc32kctrl_u2400.h>
 /* HAL for GCLK (Generic Clock) */
-#include <gclk_u2122/hal_mchp_gclk.h>
+#include <gclk/hal_mchp_clock_gclk_u2122.h>
 /* HAL for SAME54 Clock */
 #include <clock_same54/hal_mchp_clock.h>
 
 #endif /* CONFIG_SOC_SERIES_MCHP_SAME54 */
 
-#endif /* DRIVERS_CLOCK_CONTROL_CLOCK_CONTROL_MCHP_V1_H_ */
+#endif /* MICROCHIP_CLOCK_CONTROL_MCHP_V1_PRIV_H_ */
