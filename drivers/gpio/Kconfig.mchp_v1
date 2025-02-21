@@ -4,6 +4,6 @@
 config GPIO_MCHP_V1
 	bool "Microchip MCHP V1 variant GPIO driver"
 	default y
-	depends on DT_HAS_MICROCHIP_SAME54_GPIO_ENABLED
+	depends on DT_HAS_MICROCHIP_PORT_U2210_GPIO_ENABLED
 	help
 	  GPIO driver for Microchip MCHP V1 variant MCUs.

@@ -2,8 +2,8 @@
 # SPDX-License-Identifier: Apache-2.0
 
 config PINCTRL_MCHP_V1
-	bool "Microchip SAME54 pin controller driver"
+	bool "Microchip SAM D5x/E5x pin controller driver"
 	default y
-	depends on DT_HAS_MICROCHIP_SAME54_PINCTRL_ENABLED
+	depends on DT_HAS_MICROCHIP_SAM_D5X_E5X_PINCTRL_ENABLED
 	help
-	  Microchip pin controller driver is used on SAME54 SoC series
+	  Microchip pin controller driver is used on SAM D5x/E5x family

@@ -72,7 +72,7 @@ description: |
           pinctrl-names = "default";
     };
 
-compatible: "microchip,same54-pinctrl"
+compatible: "microchip,sam-d5x-e5x-pinctrl"
 
 include: base.yaml
 

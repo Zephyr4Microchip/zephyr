@@ -1,6 +1,6 @@
-description: SAME54 GPIO PORT node
+description: Microchip port-u2210 (GPIO)
 
-compatible: "microchip,same54-gpio"
+compatible: "microchip,port-u2210-gpio"
 
 include: [gpio-controller.yaml, base.yaml]
 
