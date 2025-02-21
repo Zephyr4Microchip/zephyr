@@ -3,6 +3,6 @@
 
 zephyr_include_directories(${ZEPHYR_BASE}/drivers)
 
-zephyr_include_directories(common)
+zephyr_include_directories(../common)
 
 add_subdirectory(${SOC_SERIES})

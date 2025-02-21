@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 family:
-- name: microchip_sam
+- name: microchip_sam_d5x_e5x
   series:
   - name: same54
     socs:

@@ -1,15 +1,15 @@
 # Copyright (c) 2025 Microchip Technology Inc.
 # SPDX-License-Identifier: Apache-2.0
 
-config SOC_FAMILY_MCHP_SAM
+config SOC_FAMILY_MCHP_SAM_D5X_E5X
 	select HAS_CMSIS_CORE
 	select HAS_SEGGER_RTT if ZEPHYR_SEGGER_MODULE
 	select HAS_MCHP_HAL_DFP
 	select HAS_MCHP_HAL_INCLUDE
 	select HAS_MCHP_HAL_PERIPHERALS
 
-if SOC_FAMILY_MCHP_SAM
+if SOC_FAMILY_MCHP_SAM_D5X_E5X
 
 rsource "*/Kconfig"
 
-endif # SOC_FAMILY_MCHP_SAM
+endif # SOC_FAMILY_MCHP_SAM_D5X_E5X

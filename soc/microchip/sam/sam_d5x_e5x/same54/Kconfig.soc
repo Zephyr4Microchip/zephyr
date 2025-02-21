@@ -3,7 +3,7 @@
 
 config SOC_SERIES_MCHP_SAME54
 	bool
-	select SOC_FAMILY_MCHP_SAM
+	select SOC_FAMILY_MCHP_SAM_D5X_E5X
 	help
 	  Enable support for Microchip SAME54 Cortex-M4F microcontrollers.
 
