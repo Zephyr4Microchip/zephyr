@@ -5,15 +5,15 @@
  */
 
 /**
- * @file clock_control_mchp_v1_priv.h
+ * @file clock_control_mchp_v1.h
  * @brief Clock control mapping driver for Microchip devices.
  *
  * This file provides definitions and structures for clock control functions
  * for Microchip-based systems.
  */
 
-#ifndef MICROCHIP_CLOCK_CONTROL_MCHP_V1_PRIV_H_
-#define MICROCHIP_CLOCK_CONTROL_MCHP_V1_PRIV_H_
+#ifndef MICROCHIP_CLOCK_CONTROL_MCHP_V1_H_
+#define MICROCHIP_CLOCK_CONTROL_MCHP_V1_H_
 
 #include <zephyr/drivers/clock_control.h>
 
@@ -66,12 +66,12 @@ typedef struct {
 /**
  * @brief Structure mapping the clock identifier to a mask.
  */
-struct clock_control_mchp_msk_map {
+typedef struct {
 	/* Clock identifier */
 	uint32_t clk;
 	/* Mask associated with the clock */
 	uint32_t msk;
-};
+} clock_control_mchp_msk_map_t;
 
 /**
  * @brief Structure mapping the clock identifier to a sync setting.
@@ -110,18 +110,6 @@ struct clock_control_mchp_id_int_map {
 };
 
 /**
- * @brief Structure mapping the clock identifier to registers and frequency.
- */
-struct clock_control_mchp_src_map {
-	/* Clock identifier */
-	uint32_t clk;
-	/* Registers associated with the clock */
-	uint32_t regs;
-	/* Frequency of the clock */
-	uint32_t frequency;
-};
-
-/**
  * @brief Macro to connect and enable interrupts for clock control.
  * @param node The device tree node representing the interrupt source
  * @param idx The index of the interrupt
@@ -131,10 +119,10 @@ struct clock_control_mchp_src_map {
 		    clock_control_mchp_isr, DEVICE_DT_GET(node), 0);                               \
 	irq_enable(DT_IRQ_BY_IDX(node, idx, irq))
 
-#if defined(CONFIG_SOC_SERIES_MCHP_SAME54)
+#if defined(SOC_FAMILY_MCHP_SAM_D5X_E5X)
 
 /* Include required header files */
-#include <dt-bindings/clock/sam/same54/mchp_same54_clock.h>
+#include <dt-bindings/clock/sam/sam_d5x_e5x/mchp_sam_d5x_e5x_clock.h>
 
 /* Peripheral IP HAL specific features */
 /* Count of GCLK input frequencies */
@@ -215,9 +203,9 @@ struct clock_control_mchp_user_frequency {
 #include <osc32kctrl/hal_mchp_clock_osc32kctrl_u2400.h>
 /* HAL for GCLK (Generic Clock) */
 #include <gclk/hal_mchp_clock_gclk_u2122.h>
-/* HAL for SAME54 Clock */
-#include <clock_same54/hal_mchp_clock.h>
+/* HAL for SAM_D5X_E5X Clock */
+#include <clock_sam_d5x_e5x/hal_mchp_clock_d5x_e5x.h>
 
-#endif /* CONFIG_SOC_SERIES_MCHP_SAME54 */
+#endif /* SOC_FAMILY_MCHP_SAM_D5X_E5X */
 
-#endif /* MICROCHIP_CLOCK_CONTROL_MCHP_V1_PRIV_H_ */
+#endif /* MICROCHIP_CLOCK_CONTROL_MCHP_V1_H_ */

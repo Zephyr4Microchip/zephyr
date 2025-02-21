@@ -1,9 +1,9 @@
 # Copyright (c) 2025 Microchip Technology Inc.
 # SPDX-License-Identifier: Apache-2.0
 
-description: Microchip SAME54 Clock System (OSCCTRL, OSC32KCTRL, MCLK, GCLK)
+description: Microchip SAM D5x/E5x Clock System (OSCCTRL, OSC32KCTRL, MCLK, GCLK)
 
-compatible: "microchip,same54-clock"
+compatible: "microchip,sam-d5x-e5x-clock"
 
 include: [clock-controller.yaml, base.yaml]
 

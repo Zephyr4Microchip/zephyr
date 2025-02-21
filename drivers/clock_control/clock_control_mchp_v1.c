@@ -12,8 +12,8 @@
  * for Microchip-based systems.
  */
 
-#include <zephyr/drivers/clock_control/clock_control_mchp_v1.h>
-#include "clock_control_mchp_v1_priv.h"
+#include <zephyr/drivers/clock_control/mchp_clock_control.h>
+#include "clock_control_mchp_v1.h"
 
 /**
  * @brief Get the subsys device for a given node_id.
@@ -69,7 +69,7 @@
  * the callback function, the device the callback is associated with, the subsystem
  * for the clock, and any user data that is passed with the callback.
  */
-struct clock_control_mchp_cb_work_data {
+typedef struct {
 	/* Work object for clock control callback processing. */
 	struct k_work work;
 	/* Callback function to be executed when the work is triggered. */
@@ -80,7 +80,7 @@ struct clock_control_mchp_cb_work_data {
 	clock_control_subsys_t sys;
 	/* User-specific data that will be passed to the callback function. */
 	void *user_data;
-};
+} clock_control_mchp_cb_work_data_t;
 
 /**
  * @brief Structure holding data for the clock control mechanism.
@@ -89,14 +89,14 @@ struct clock_control_mchp_cb_work_data {
  * operations, including the base address and identifier for asynchronous operations,
  * as well as the callback work data for clock control.
  */
-struct clock_control_mchp_data {
+typedef struct {
 	/* Base address for asynchronous operations related to clock control. */
 	uint32_t async_base;
 	/* Identifier for the asynchronous clock control operation. */
 	uint32_t async_id;
 	/* Callback work data for clock control operations. */
-	struct clock_control_mchp_cb_work_data cb_work_data;
-};
+	clock_control_mchp_cb_work_data_t cb_work_data;
+} clock_control_mchp_data_t;
 
 /**
  * @brief Structure holding the configuration for clock control.
@@ -105,7 +105,7 @@ struct clock_control_mchp_data {
  * subsystems, devices and registers associated with each subsystem, and user-defined
  * frequency settings.
  */
-struct clock_control_mchp_config {
+typedef struct {
 	/* The number of subsystems. */
 	uint32_t subsys_count;
 	/* Array of pointers to subsystem devices. */
@@ -114,7 +114,7 @@ struct clock_control_mchp_config {
 	const uint32_t subsys_regs[CLOCK_CONTROL_MCHP_SUBSYS_COUNT];
 	/* User-defined frequency configuration. */
 	struct clock_control_mchp_user_frequency user_frequency;
-};
+} clock_control_mchp_config_t;
 
 /**
  * @brief Invoke the clock control callback function.
@@ -128,8 +128,8 @@ struct clock_control_mchp_config {
 static void clock_control_mchp_invoke_cb(struct k_work *async_work)
 {
 	/* Retrieve the callback work data from the work structure. */
-	struct clock_control_mchp_cb_work_data *cb_work_data =
-		CONTAINER_OF(async_work, struct clock_control_mchp_cb_work_data, work);
+	clock_control_mchp_cb_work_data_t *cb_work_data =
+		CONTAINER_OF(async_work, clock_control_mchp_cb_work_data_t, work);
 
 	/* Invoke the callback function with the device, subsystem, and user data. */
 	cb_work_data->cb(cb_work_data->dev, cb_work_data->sys, cb_work_data->user_data);
@@ -151,7 +151,7 @@ static int clock_control_mchp_get_idx(const struct device *dev, const struct dev
 	/* Initialize the subsystem index to -1 (not found). */
 	int subsys_idx = -1;
 	/* Pointer to the clock control configuration structure. */
-	const struct clock_control_mchp_config *config = dev->config;
+	const clock_control_mchp_config_t *config = dev->config;
 	/* Index variable for looping through the subsystem devices. */
 	uint8_t index;
 
@@ -179,7 +179,7 @@ static int clock_control_mchp_get_idx(const struct device *dev, const struct dev
 static void clock_control_mchp_isr(const struct device *dev)
 {
 	/* Pointer to the clock control data associated with the device. */
-	struct clock_control_mchp_data *data = dev->data;
+	clock_control_mchp_data_t *data = dev->data;
 
 	/* Clear the interrupt for the specified async base and ID. */
 	hal_mchp_clock_clear_interrupt(data->async_base, data->async_id);
@@ -221,9 +221,9 @@ static int clock_control_mchp_async_on(const struct device *dev, clock_control_s
 	/* Subsystem index for identifying the clock device. */
 	int subsys_idx;
 	/* Pointer to the clock control configuration data. */
-	const struct clock_control_mchp_config *config = dev->config;
+	const clock_control_mchp_config_t *config = dev->config;
 	/* Pointer to the clock control data associated with the device. */
-	struct clock_control_mchp_data *data = dev->data;
+	clock_control_mchp_data_t *data = dev->data;
 
 	/* Check if the clock control for all subsystems is requested. */
 	if (sys == CLOCK_CONTROL_SUBSYS_ALL) {
@@ -318,7 +318,7 @@ static int clock_control_mchp_configure(const struct device *dev, clock_control_
 	/* Subsystem index for identifying the clock device. */
 	int subsys_idx;
 	/* Pointer to the clock control configuration data. */
-	const struct clock_control_mchp_config *config = dev->config;
+	const clock_control_mchp_config_t *config = dev->config;
 
 	/* Check if requested configuration is NULL. */
 	if (req_configuration == NULL) {
@@ -375,18 +375,18 @@ static int clock_control_mchp_configure(const struct device *dev, clock_control_
 /**
  * @brief Get the rate of the clock for a specified subsystem.
  *
- * This function retrieves the clock rate for the given subsystem. If `CLOCK_CONTROL_SUBSYS_ALL`
- * is specified, this operation is not supported. The function returns 0 if the rate is successfully
- * retrieved, or an error code otherwise.
+ * This function retrieves the clock frequency (Hz) for the given subsystem. If
+ * `CLOCK_CONTROL_SUBSYS_ALL` is specified, this operation is not supported. The function returns 0
+ * if the rate is successfully retrieved, or an error code otherwise.
  *
  * @param dev Pointer to the device structure representing the clock control.
  * @param sys The subsystem for which the clock rate is to be retrieved.
- * @param rate Pointer to store the retrieved clock rate.
+ * @param frequency Pointer to store the retrieved clock rate.
  *
  * @return 0 if the rate is successfully retrieved, otherwise an error code.
  */
 static int clock_control_mchp_get_rate(const struct device *dev, clock_control_subsys_t sys,
-				       uint32_t *rate)
+				       uint32_t *frequency)
 {
 	/* Return value for the operation status. */
 	int ret_val;
@@ -397,7 +397,7 @@ static int clock_control_mchp_get_rate(const struct device *dev, clock_control_s
 	/* Subsystem index for identifying the clock device. */
 	int subsys_idx;
 	/* Pointer to the clock control configuration data. */
-	const struct clock_control_mchp_config *config = dev->config;
+	const clock_control_mchp_config_t *config = dev->config;
 
 	/* Check if retrieving rate for all subsystems is requested. */
 	if (sys == CLOCK_CONTROL_SUBSYS_ALL) {
@@ -420,7 +420,7 @@ static int clock_control_mchp_get_rate(const struct device *dev, clock_control_s
 		} else {
 			/* Get the rate of the clock for the specified subsystem. */
 			state = hal_mchp_clock_get_rate(config->subsys_regs[subsys_idx], subsys->id,
-							rate, config->user_frequency);
+							frequency, config->user_frequency);
 
 			/* Check if the rate retrieval was successful. */
 			if (state == CLOCK_CONTROL_MCHP_STATE_OK) {
@@ -463,7 +463,7 @@ static enum clock_control_status clock_control_mchp_get_status(const struct devi
 	/* Subsystem index for identifying the clock device. */
 	int subsys_idx;
 	/* Pointer to the clock control configuration data. */
-	const struct clock_control_mchp_config *config = dev->config;
+	const clock_control_mchp_config_t *config = dev->config;
 
 	/* Check if clock status for all subsystems is not requested. */
 	if (sys != CLOCK_CONTROL_SUBSYS_ALL) {
@@ -526,7 +526,7 @@ static int clock_control_mchp_off(const struct device *dev, clock_control_subsys
 	/* Subsystem index for identifying the clock device. */
 	int subsys_idx;
 	/* Pointer to the clock control configuration data. */
-	const struct clock_control_mchp_config *config = dev->config;
+	const clock_control_mchp_config_t *config = dev->config;
 
 	/* Check if turning off all clocks is requested. */
 	if (sys == CLOCK_CONTROL_SUBSYS_ALL) {
@@ -597,7 +597,7 @@ static int clock_control_mchp_on(const struct device *dev, clock_control_subsys_
 	/* Subsystem index for identifying the clock device. */
 	int subsys_idx;
 	/* Pointer to the clock control configuration data. */
-	const struct clock_control_mchp_config *config = dev->config;
+	const clock_control_mchp_config_t *config = dev->config;
 	/* Whether to wait or not if clock is supported */
 	bool is_wait = false;
 
@@ -691,7 +691,7 @@ static int clock_control_mchp_set_rate(const struct device *dev, clock_control_s
 	/* Subsystem index for identifying the clock device. */
 	int subsys_idx;
 	/* Pointer to the clock control configuration data. */
-	const struct clock_control_mchp_config *config = dev->config;
+	const clock_control_mchp_config_t *config = dev->config;
 
 	/* Check if setting rate for all clocks is requested. */
 	if (sys == CLOCK_CONTROL_SUBSYS_ALL) {
@@ -789,7 +789,7 @@ static int clock_control_mchp_init(const struct device *dev)
  * subsystem of the Microchip driver, including the base address and ID
  * for asynchronous operations. It is initialized with default values.
  */
-static struct clock_control_mchp_data clock_control_mchp_data_instance = {
+static clock_control_mchp_data_t clock_control_mchp_data = {
 	/* Base address for asynchronous clock operations. */
 	.async_base = 0,
 	/* ID for the asynchronous clock operation. */
@@ -805,7 +805,7 @@ static struct clock_control_mchp_data clock_control_mchp_data_instance = {
  * for the clock control system. It is initialized with values retrieved
  * from device tree properties or defaults.
  */
-static const struct clock_control_mchp_config clock_control_mchp_config_instance = {
+static const clock_control_mchp_config_t clock_control_mchp_config = {
 	/* Number of clock subsystems. */
 	.subsys_count = CLOCK_CONTROL_MCHP_SUBSYS_COUNT,
 	/* Array of devices for each clock subsystem. */
@@ -834,9 +834,9 @@ DEVICE_DT_DEFINE(
 	/* Optional device power management function (not used here) */
 	NULL,
 	/* Pointer to the device data structure */
-	&clock_control_mchp_data_instance,
+	&clock_control_mchp_data,
 	/* Pointer to the device configuration structure */
-	&clock_control_mchp_config_instance,
+	&clock_control_mchp_config,
 	/* Initialization phase (before kernel starts) */
 	PRE_KERNEL_1,
 	/* Initialization priority */

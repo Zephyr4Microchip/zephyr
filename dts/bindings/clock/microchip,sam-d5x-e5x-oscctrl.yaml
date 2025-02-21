@@ -1,9 +1,9 @@
 # Copyright (c) 2025 Microchip Technology Inc.
 # SPDX-License-Identifier: Apache-2.0
 
-description: Microchip SAME54 OSCCTRL Clock Controller (OSCCTRL)
+description: Microchip SAM D5x/E5x OSCCTRL Clock Controller (OSCCTRL)
 
-compatible: "microchip,same54-oscctrl"
+compatible: "microchip,sam-d5x-e5x-oscctrl"
 
 include: [clock-controller.yaml, base.yaml]
 
