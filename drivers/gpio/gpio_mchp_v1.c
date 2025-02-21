@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#define DT_DRV_COMPAT microchip_same54_gpio
+#define DT_DRV_COMPAT microchip_port_u2210_gpio
 
 #include <errno.h>
 #include <zephyr/device.h>
