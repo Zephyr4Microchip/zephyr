@@ -119,10 +119,10 @@ struct clock_control_mchp_id_int_map {
 		    clock_control_mchp_isr, DEVICE_DT_GET(node), 0);                               \
 	irq_enable(DT_IRQ_BY_IDX(node, idx, irq))
 
-#if defined(SOC_FAMILY_MCHP_SAM_D5X_E5X)
+#if defined(CONFIG_SOC_FAMILY_MCHP_SAM_D5X_E5X)
 
 /* Include required header files */
-#include <dt-bindings/clock/sam/sam_d5x_e5x/mchp_sam_d5x_e5x_clock.h>
+#include <dt-bindings/clock/sam/sam_d5x_e5x/mchp_clock_sam_d5x_e5x.h>
 
 /* Peripheral IP HAL specific features */
 /* Count of GCLK input frequencies */
@@ -204,8 +204,8 @@ struct clock_control_mchp_user_frequency {
 /* HAL for GCLK (Generic Clock) */
 #include <gclk/hal_mchp_clock_gclk_u2122.h>
 /* HAL for SAM_D5X_E5X Clock */
-#include <clock_sam_d5x_e5x/hal_mchp_clock_d5x_e5x.h>
+#include <clock_sam_d5x_e5x/hal_mchp_clock_sam_d5x_e5x.h>
 
-#endif /* SOC_FAMILY_MCHP_SAM_D5X_E5X */
+#endif /* CONFIG_SOC_FAMILY_MCHP_SAM_D5X_E5X */
 
 #endif /* MICROCHIP_CLOCK_CONTROL_MCHP_V1_H_ */

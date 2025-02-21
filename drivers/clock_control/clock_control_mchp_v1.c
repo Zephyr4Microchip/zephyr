@@ -403,7 +403,7 @@ static int clock_control_mchp_get_rate(const struct device *dev, clock_control_s
 	if (sys == CLOCK_CONTROL_SUBSYS_ALL) {
 		/* Getting rate for all clocks is not supported. */
 		ret_val = -ENOTSUP;
-	} else if (rate == NULL) {
+	} else if (frequency == NULL) {
 		/* Getting rate pointer is NULL. */
 		ret_val = -ENOTSUP;
 	} else {
