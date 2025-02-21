@@ -28,10 +28,10 @@ static void pinctrl_configure_pin(pinctrl_soc_pin_t pin)
 {
 	uint8_t port_func;
 
-	port_func = SAM_PINMUX_FUNC_GET(pin);
+	port_func = MCHP_PINMUX_FUNC_GET(pin);
 
 	/* call pinmux hal function if alternate function is configured */
-	if (port_func == SAM_PINMUX_FUNC_periph) {
+	if (port_func == MCHP_PINMUX_FUNC_periph) {
 		hal_mchp_pinctrl_pinmux(&pin, mchp_port_addrs);
 	}
 	/* set all other pin configurations */

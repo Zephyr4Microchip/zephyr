@@ -27,13 +27,13 @@
 	IF_ENABLED(DT_NODE_EXISTS(DT_NODELABEL(nodelabel)),            \
 		(DT_REG_ADDR(DT_NODELABEL(nodelabel))))
 
-#if defined(CONFIG_SOC_SERIES_MCHP_SAME54)
+#if defined(CONFIG_SOC_FAMILY_MCHP_SAM_D5X_E5X)
 
 /**
- * @brief Array of port addresses for the MCHP SAME54 series.
+ * @brief Array of port addresses for the MCHP SAMD5x_E5x series.
  *
  * This array contains the register addresses of the ports (PORTA, PORTB, PORTC, and PORTD)
- * for the MCHP SAME54 series microcontrollers. The addresses are obtained using the
+ * for the MCHP SAMD5x_E5x series microcontrollers. The addresses are obtained using the
  * MCHP_PORT_ADDR_OR_NONE macro, which ensures that only existing ports are included.
  */
 static const uint32_t mchp_port_addrs[] = {
