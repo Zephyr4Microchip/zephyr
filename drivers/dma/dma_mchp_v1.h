@@ -15,7 +15,7 @@
 #ifndef _DMA_MCHP_V1_H_
 #define _DMA_MCHP_V1_H_
 
-#if defined(CONFIG_SOC_SERIES_MCHP_SAME54)
+#if defined(CONFIG_SOC_FAMILY_MCHP_SAM_D5X_E5X)
 /**
  * @file
  * @brief Include required header files
@@ -24,7 +24,7 @@
 /**
  * Include HAL file, Specific to the peripheral
  */
-#include "dmac_u2503/hal_mchp_dma.h"
+#include "dmac/hal_mchp_dma_dmac_u2503.h"
 
 #elif defined(CONFIG_SOC_SERIES_SAM71)
 /**
