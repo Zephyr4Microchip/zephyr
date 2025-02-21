@@ -36,16 +36,25 @@ typedef struct uart_mchp_dev_cfg {
 #if CONFIG_UART_MCHP_ASYNC
 	/* DMA driver for asynchronous operations */
 	const struct device *dma_dev;
+	/* TX DMA request line. */
+	uint8_t tx_dma_request;
+	/* TX DMA channel. */
+	uint8_t tx_dma_channel;
+	/* RX DMA request line. */
+	uint8_t rx_dma_request;
+	/* RX DMA channel. */
+	uint8_t rx_dma_channel;
 #endif
 
 #if CONFIG_UART_INTERRUPT_DRIVEN || CONFIG_UART_MCHP_ASYNC
 	/* IRQ configuration function */
 	void (*irq_config_func)(const struct device *dev);
 #endif
+	/* Clock configuration */
+	mchp_uart_clock_t uart_clock;
 	/* Pin control configuration */
 	const struct pinctrl_dev_config *pcfg;
-	/* Clock driver */
-	const struct device *clock_dev;
+
 } uart_mchp_dev_cfg_t;
 
 /**
@@ -218,7 +227,7 @@ static void uart_mchp_isr(const struct device *dev)
 		}
 
 		/* DMA will read the currently ready byte out */
-		dma_start(cfg->dma_dev, dev_data->hal.rx_dma_channel);
+		dma_start(cfg->dma_dev, cfg->rx_dma_channel);
 	}
 #endif
 }
@@ -292,7 +301,7 @@ static int uart_mchp_init(const struct device *dev)
 	k_work_init_delayable(&dev_data->tx_timeout_work, uart_mchp_tx_timeout);
 	k_work_init_delayable(&dev_data->rx_timeout_work, uart_mchp_rx_timeout);
 
-	if (dev_data->hal.tx_dma_channel != 0xFFU) {
+	if (cfg->tx_dma_channel != 0xFFU) {
 		struct dma_config dma_cfg = {0};
 		struct dma_block_config dma_blk = {0};
 
@@ -303,19 +312,19 @@ static int uart_mchp_init(const struct device *dev)
 		dma_cfg.dma_callback = uart_mchp_dma_tx_done;
 		dma_cfg.block_count = 1;
 		dma_cfg.head_block = &dma_blk;
-		dma_cfg.dma_slot = dev_data->hal.tx_dma_request;
+		dma_cfg.dma_slot = cfg->tx_dma_request;
 
 		dma_blk.block_size = 1;
 		dma_blk.dest_address = (uint32_t)(hal_mchp_uart_get_dma_dest_addr(hal));
 		dma_blk.dest_addr_adj = DMA_ADDR_ADJ_NO_CHANGE;
 
-		retval = dma_config(cfg->dma_dev, dev_data->hal.tx_dma_channel, &dma_cfg);
+		retval = dma_config(cfg->dma_dev, cfg->tx_dma_channel, &dma_cfg);
 		if (retval != 0) {
 			return retval;
 		}
 	}
 
-	if (dev_data->hal.rx_dma_channel != 0xFFU) {
+	if (cfg->rx_dma_channel != 0xFFU) {
 		struct dma_config dma_cfg = {0};
 		struct dma_block_config dma_blk = {0};
 
@@ -326,13 +335,13 @@ static int uart_mchp_init(const struct device *dev)
 		dma_cfg.dma_callback = uart_mchp_dma_rx_done;
 		dma_cfg.block_count = 1;
 		dma_cfg.head_block = &dma_blk;
-		dma_cfg.dma_slot = dev_data->hal.rx_dma_request;
+		dma_cfg.dma_slot = cfg->rx_dma_request;
 
 		dma_blk.block_size = 1;
 		dma_blk.source_address = (uint32_t)(hal_mchp_uart_get_dma_source_addr(hal));
 		dma_blk.source_addr_adj = DMA_ADDR_ADJ_NO_CHANGE;
 
-		retval = dma_config(cfg->dma_dev, dev_data->hal.rx_dma_channel, &dma_cfg);
+		retval = dma_config(cfg->dma_dev, cfg->rx_dma_channel, &dma_cfg);
 		if (retval != 0) {
 			return retval;
 		}
@@ -835,11 +844,11 @@ static int uart_mchp_tx_halt(uart_mchp_dev_data_t *dev_data)
 	dev_data->tx_buf = NULL;
 	dev_data->tx_len = 0U;
 
-	dma_stop(cfg->dma_dev, dev_data->hal.tx_dma_channel);
+	dma_stop(cfg->dma_dev, cfg->tx_dma_channel);
 
 	irq_unlock(key);
 
-	if (dma_get_status(cfg->dma_dev, dev_data->hal.tx_dma_channel, &st) == 0) {
+	if (dma_get_status(cfg->dma_dev, cfg->tx_dma_channel, &st) == 0) {
 		evt.data.tx.len = tx_active - st.pending_length;
 	}
 
@@ -930,8 +939,8 @@ static void uart_mchp_rx_timeout(struct k_work *work)
 	 * pending) that means the DMA ISR is already pending, so just let
 	 * it handle things instead when we re-enable IRQs.
 	 */
-	dma_stop(cfg->dma_dev, dev_data->hal.rx_dma_channel);
-	if ((dma_get_status(cfg->dma_dev, dev_data->hal.rx_dma_channel, &st) == 0) &&
+	dma_stop(cfg->dma_dev, cfg->rx_dma_channel);
+	if ((dma_get_status(cfg->dma_dev, cfg->rx_dma_channel, &st) == 0) &&
 	    (st.pending_length == 0U)) {
 		irq_unlock(key);
 		return;
@@ -944,7 +953,7 @@ static void uart_mchp_rx_timeout(struct k_work *work)
 	 * We know we still have space, since the above will catch the
 	 * empty buffer, so always restart the transfer.
 	 */
-	dma_reload(cfg->dma_dev, dev_data->hal.rx_dma_channel,
+	dma_reload(cfg->dma_dev, cfg->rx_dma_channel,
 		   (uint32_t)(hal_mchp_uart_get_dma_source_addr(hal)), (uint32_t)rx_dma_start,
 		   dev_data->rx_len - rx_processed);
 
@@ -1076,7 +1085,7 @@ static void uart_mchp_dma_rx_done(const struct device *dma_dev, void *arg, uint3
 	dev_data->rx_next_len = 0U;
 	dev_data->rx_processed_len = 0U;
 
-	dma_reload(cfg->dma_dev, dev_data->hal.rx_dma_channel,
+	dma_reload(cfg->dma_dev, cfg->rx_dma_channel,
 		   (uint32_t)(hal_mchp_uart_get_dma_source_addr(hal)), (uint32_t)dev_data->rx_buf,
 		   dev_data->rx_len);
 
@@ -1094,7 +1103,7 @@ static void uart_mchp_dma_rx_done(const struct device *dma_dev, void *arg, uint3
 	}
 
 	/* Otherwise, start the transfer immediately. */
-	dma_start(cfg->dma_dev, dev_data->hal.rx_dma_channel);
+	dma_start(cfg->dma_dev, cfg->rx_dma_channel);
 
 	struct uart_event evt = {
 		.type = UART_RX_BUF_REQUEST,
@@ -1151,7 +1160,7 @@ static int uart_mchp_tx(const struct device *dev, const uint8_t *buf, size_t len
 	const hal_mchp_uart_t *hal = &dev_data->hal;
 	int retval;
 
-	if (dev_data->hal.tx_dma_channel == 0xFFU) {
+	if (cfg->tx_dma_channel == 0xFFU) {
 		return -ENOTSUP;
 	}
 
@@ -1172,7 +1181,7 @@ static int uart_mchp_tx(const struct device *dev, const uint8_t *buf, size_t len
 
 	irq_unlock(key);
 
-	retval = dma_reload(cfg->dma_dev, dev_data->hal.tx_dma_channel, (uint32_t)buf,
+	retval = dma_reload(cfg->dma_dev, cfg->tx_dma_channel, (uint32_t)buf,
 			    (uint32_t)(hal_mchp_uart_get_dma_dest_addr(hal)), len);
 	if (retval != 0U) {
 		return retval;
@@ -1182,7 +1191,7 @@ static int uart_mchp_tx(const struct device *dev, const uint8_t *buf, size_t len
 		k_work_reschedule(&dev_data->tx_timeout_work, K_USEC(timeout));
 	}
 
-	retval = dma_start(cfg->dma_dev, dev_data->hal.tx_dma_channel);
+	retval = dma_start(cfg->dma_dev, cfg->tx_dma_channel);
 	if (retval != 0U) {
 		return retval;
 	}
@@ -1202,8 +1211,9 @@ static int uart_mchp_tx(const struct device *dev, const uint8_t *buf, size_t len
 static int uart_mchp_tx_abort(const struct device *dev)
 {
 	uart_mchp_dev_data_t *const dev_data = dev->data;
+	const uart_mchp_dev_cfg_t *const cfg = dev->config;
 
-	if (dev_data->hal.tx_dma_channel == 0xFFU) {
+	if (cfg->tx_dma_channel == 0xFFU) {
 		return -ENOTSUP;
 	}
 
@@ -1271,7 +1281,7 @@ static int uart_mchp_rx_enable(const struct device *dev, uint8_t *buf, size_t le
 	const hal_mchp_uart_t *hal = &dev_data->hal;
 	int retval;
 
-	if (dev_data->hal.rx_dma_channel == 0xFFU) {
+	if (cfg->rx_dma_channel == 0xFFU) {
 		return -ENOTSUP;
 	}
 
@@ -1293,7 +1303,7 @@ static int uart_mchp_rx_enable(const struct device *dev, uint8_t *buf, size_t le
 		(void)discard;
 	}
 
-	retval = dma_reload(cfg->dma_dev, dev_data->hal.rx_dma_channel,
+	retval = dma_reload(cfg->dma_dev, cfg->rx_dma_channel,
 			    (uint32_t)(hal_mchp_uart_get_dma_source_addr(hal)), (uint32_t)buf, len);
 	if (retval != 0) {
 		irq_unlock(key);
@@ -1340,9 +1350,9 @@ static int uart_mchp_rx_disable(const struct device *dev)
 	}
 
 	hal_mchp_uart_enable_rx_interrupt(hal, false);
-	dma_stop(cfg->dma_dev, dev_data->hal.rx_dma_channel);
+	dma_stop(cfg->dma_dev, cfg->rx_dma_channel);
 
-	if ((dma_get_status(cfg->dma_dev, dev_data->hal.rx_dma_channel, &st) == 0) &&
+	if ((dma_get_status(cfg->dma_dev, cfg->rx_dma_channel, &st) == 0) &&
 	    (st.pending_length != 0U)) {
 		size_t rx_processed = dev_data->rx_len - st.pending_length;
 
@@ -1447,6 +1457,17 @@ static const struct uart_driver_api uart_mchp_driver_api = {
 #define UART_MCHP_IRQ_HANDLER_FUNC(n)
 #endif
 
+#if CONFIG_UART_MCHP_ASYNC
+#define UART_MCHP_DMA_CHANNELS(n)                                                                  \
+	.dma_dev = DEVICE_DT_GET(MCHP_DT_INST_DMA_CTLR(n, tx)),                                    \
+	.tx_dma_request = MCHP_DT_INST_DMA_TRIGSRC(n, tx),                                         \
+	.tx_dma_channel = MCHP_DT_INST_DMA_CHANNEL(n, tx),                                         \
+	.rx_dma_request = MCHP_DT_INST_DMA_TRIGSRC(n, rx),                                         \
+	.rx_dma_channel = MCHP_DT_INST_DMA_CHANNEL(n, rx),
+#else
+#define UART_MCHP_DMA_CHANNELS(n)
+#endif /* CONFIG_UART_MCHP_ASYNC */
+
 #define UART_MCHP_CONFIG_DEFN(n)                                                                   \
 	static const uart_mchp_dev_cfg_t uart_mchp_config_##n = {                                  \
 		.baudrate = DT_INST_PROP(n, current_speed),                                        \
@@ -1454,13 +1475,10 @@ static const struct uart_driver_api uart_mchp_driver_api = {
 		.parity = DT_INST_ENUM_IDX_OR(n, parity, UART_CFG_PARITY_NONE),                    \
 		.stop_bits = DT_INST_ENUM_IDX_OR(n, stop_bits, UART_CFG_STOP_BITS_1),              \
 		.pcfg = PINCTRL_DT_INST_DEV_CONFIG_GET(n),                                         \
-		.clock_dev = DEVICE_DT_GET(DT_NODELABEL(clock)),                                   \
-		UART_MCHP_IRQ_HANDLER_FUNC(n) UART_MCHP_DMA_CHANNELS(n)}
+		UART_MCHP_IRQ_HANDLER_FUNC(n) UART_MCHP_DMA_CHANNELS(n) UART_MCHP_CLOCK_DEFN(n)}
 
 #define UART_MCHP_DATA_DEFN(n)                                                                     \
-	static uart_mchp_dev_data_t uart_mchp_data_##n = {                                         \
-		UART_MCHP_HAL_DEFN(n),                                                             \
-	}
+	static uart_mchp_dev_data_t uart_mchp_data_##n = {UART_MCHP_HAL_DEFN(n)}
 
 #define UART_MCHP_DEVICE_INIT(n)                                                                   \
 	PINCTRL_DT_INST_DEFINE(n);                                                                 \
