@@ -63,6 +63,9 @@ properties:
       |     3 | SERCOM_PAD[0] | SERCOM_PAD[2] |           N/A |
       +-------+---------------+---------------+---------------+
 
+  clock_external:
+    type: int
+    description: 1 select external clock for uart. 0 select internal clock.
 
   collision-detection:
     type: boolean

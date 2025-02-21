@@ -36,7 +36,7 @@ typedef struct hal_mchp_uart {
 	/* Pointer to the SERCOM registers. */
 	sercom_registers_t *regs;
 	/* Flag indicating if the clock is internal. */
-	bool is_clock_internal;
+	bool clock_external;
 	/* RX pinout configuration. */
 	uint32_t rxpo;
 	/* TX pinout configuration. */
@@ -51,8 +51,9 @@ typedef struct hal_mchp_uart {
  * @param n Instance number.
  */
 #define UART_MCHP_HAL_DEFN(n)                                                                      \
-	.hal.regs = (sercom_registers_t *)DT_INST_REG_ADDR(n), .hal.is_clock_internal = true,      \
-	.hal.rxpo = UART_MCHP_SERCOM_RXPO(n), .hal.txpo = UART_MCHP_SERCOM_TXPO(n)
+	.hal.regs = (sercom_registers_t *)DT_INST_REG_ADDR(n),                                     \
+	.hal.rxpo = UART_MCHP_SERCOM_RXPO(n), .hal.txpo = UART_MCHP_SERCOM_TXPO(n),                \
+	.hal.clock_external = DT_INST_PROP(n, clock_external),
 
 /* Do the peripheral interrupt related configuration */
 #if CONFIG_UART_INTERRUPT_DRIVEN || CONFIG_UART_MCHP_ASYNC
