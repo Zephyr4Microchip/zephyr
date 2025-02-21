@@ -15,7 +15,7 @@
 #ifndef MICROCHIP_UART_MCHP_V1_H_
 #define MICROCHIP_UART_MCHP_V1_H_
 
-#if defined(CONFIG_SOC_SERIES_MCHP_SAME54)
+#if defined(CONFIG_SOC_FAMILY_MCHP_SAM_D5X_E5X)
 
 /* Define compatible string */
 #define DT_DRV_COMPAT microchip_sercom_u2201_uart
@@ -145,6 +145,6 @@ typedef struct mchp_uart_clock {
 /* Include HAL file, specific to the peripheral IP */
 #include "sercom/hal_mchp_uart_sercom_u2201.h"
 
-#endif /* CONFIG_SOC_SERIES_MCHP_SAME54 */
+#endif /* CONFIG_SOC_FAMILY_MCHP_SAM_D5X_E5X */
 
 #endif /* MICROCHIP_UART_MCHP_V1_H_ */

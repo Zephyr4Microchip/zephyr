@@ -836,7 +836,7 @@ static void uart_mchp_irq_callback_set(const struct device *dev, uart_irq_callba
 static int uart_mchp_tx_halt(uart_mchp_dev_data_t *dev_data)
 {
 	size_t tx_active;
-	struct dma_status st;
+	struct dma_status dma_stat;
 	const uart_mchp_dev_cfg_t *const cfg = dev_data->cfg;
 
 	unsigned int key = irq_lock();
@@ -858,8 +858,8 @@ static int uart_mchp_tx_halt(uart_mchp_dev_data_t *dev_data)
 
 	irq_unlock(key);
 
-	if (dma_get_status(cfg->uart_dma.dma_dev, cfg->uart_dma.tx_dma_channel, &st) == 0) {
-		evt.data.tx.len = tx_active - st.pending_length;
+	if (dma_get_status(cfg->uart_dma.dma_dev, cfg->uart_dma.tx_dma_channel, &dma_stat) == 0) {
+		evt.data.tx.len = tx_active - dma_stat.pending_length;
 	}
 
 	if (tx_active) {
@@ -934,7 +934,7 @@ static void uart_mchp_rx_timeout(struct k_work *work)
 	uart_mchp_dev_data_t *dev_data = CONTAINER_OF(dwork, uart_mchp_dev_data_t, rx_timeout_work);
 	const uart_mchp_dev_cfg_t *const cfg = dev_data->cfg;
 	const hal_mchp_uart_t *hal = &dev_data->hal;
-	struct dma_status st;
+	struct dma_status dma_stat;
 	unsigned int key = irq_lock();
 
 	if (dev_data->rx_len == 0U) {
@@ -950,13 +950,13 @@ static void uart_mchp_rx_timeout(struct k_work *work)
 	 * it handle things instead when we re-enable IRQs.
 	 */
 	dma_stop(cfg->uart_dma.dma_dev, cfg->uart_dma.rx_dma_channel);
-	if ((dma_get_status(cfg->uart_dma.dma_dev, cfg->uart_dma.rx_dma_channel, &st) == 0) &&
-	    (st.pending_length == 0U)) {
+	if ((dma_get_status(cfg->uart_dma.dma_dev, cfg->uart_dma.rx_dma_channel, &dma_stat) == 0) &&
+	    (dma_stat.pending_length == 0U)) {
 		irq_unlock(key);
 		return;
 	}
 
-	uint8_t *rx_dma_start = dev_data->rx_buf + dev_data->rx_len - st.pending_length;
+	uint8_t *rx_dma_start = dev_data->rx_buf + dev_data->rx_len - dma_stat.pending_length;
 	size_t rx_processed = rx_dma_start - dev_data->rx_buf;
 
 	/*
@@ -1348,7 +1348,7 @@ static int uart_mchp_rx_disable(const struct device *dev)
 	uart_mchp_dev_data_t *const dev_data = dev->data;
 	const uart_mchp_dev_cfg_t *const cfg = dev->config;
 	const hal_mchp_uart_t *hal = &dev_data->hal;
-	struct dma_status st;
+	struct dma_status dma_stat;
 
 	k_work_cancel_delayable(&dev_data->rx_timeout_work);
 
@@ -1362,9 +1362,9 @@ static int uart_mchp_rx_disable(const struct device *dev)
 	hal_mchp_uart_enable_rx_interrupt(hal, false);
 	dma_stop(cfg->uart_dma.dma_dev, cfg->uart_dma.rx_dma_channel);
 
-	if ((dma_get_status(cfg->uart_dma.dma_dev, cfg->uart_dma.rx_dma_channel, &st) == 0) &&
-	    (st.pending_length != 0U)) {
-		size_t rx_processed = dev_data->rx_len - st.pending_length;
+	if ((dma_get_status(cfg->uart_dma.dma_dev, cfg->uart_dma.rx_dma_channel, &dma_stat) == 0) &&
+	    (dma_stat.pending_length != 0U)) {
+		size_t rx_processed = dev_data->rx_len - dma_stat.pending_length;
 
 		uart_mchp_notify_rx_processed(dev_data, rx_processed);
 	}

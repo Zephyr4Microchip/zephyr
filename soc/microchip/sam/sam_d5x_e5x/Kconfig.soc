@@ -5,7 +5,7 @@ config SOC_FAMILY_MCHP_SAM_D5X_E5X
 	bool
 
 config SOC_FAMILY
-	default "microchip_sam" if SOC_FAMILY_MCHP_SAM_D5X_E5X
+	default "microchip_sam_d5x_e5x" if SOC_FAMILY_MCHP_SAM_D5X_E5X
 
 config SOC_SERIES_REVISION_N
 	bool
