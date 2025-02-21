@@ -5,7 +5,7 @@
  */
 
 #include <mem.h>
-#include <microchip/sam/same54/same54.dtsi>
+#include <microchip/sam/sam_d5x_e5x/same54/same54.dtsi>
 
 / {
 	soc {

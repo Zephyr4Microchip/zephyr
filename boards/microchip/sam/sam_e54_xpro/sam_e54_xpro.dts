@@ -5,7 +5,7 @@
  */
 
 /dts-v1/;
-#include <microchip/sam/same54/atsame54p20a.dtsi>
+#include <microchip/sam/sam_d5x_e5x/same54/atsame54p20a.dtsi>
 #include "sam_e54_xpro-pinctrl.dtsi"
 #include <zephyr/dt-bindings/input/input-event-codes.h>
 
