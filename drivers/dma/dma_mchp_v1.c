@@ -456,7 +456,7 @@ static int dma_mchp_get_status(const struct device *dev, uint32_t channel, struc
  *
  * @param n Interrupt index.
  */
-#define DMA_mchp_IRQ_CONNECT(n)                                                                    \
+#define DMA_MCHP_IRQ_CONNECT(n)                                                                    \
 	do {                                                                                       \
 		IRQ_CONNECT(DT_INST_IRQ_BY_IDX(0, n, irq), DT_INST_IRQ_BY_IDX(0, n, priority),     \
 			    dma_mchp_isr, DEVICE_DT_INST_GET(0), 0);                               \
@@ -498,19 +498,19 @@ static int dma_mchp_init(const struct device *dev)
 	DMA_REGS->DMAC_CTRL = DMAC_CTRL_DMAENABLE_Msk | DMAC_CTRL_LVLEN(0x0F);
 
 #if DT_INST_IRQ_HAS_CELL(0, irq)
-	DMA_mchp_IRQ_CONNECT(0);
+	DMA_MCHP_IRQ_CONNECT(0);
 #endif
 #if DT_INST_IRQ_HAS_IDX(0, 1)
-	DMA_mchp_IRQ_CONNECT(1);
+	DMA_MCHP_IRQ_CONNECT(1);
 #endif
 #if DT_INST_IRQ_HAS_IDX(0, 2)
-	DMA_mchp_IRQ_CONNECT(2);
+	DMA_MCHP_IRQ_CONNECT(2);
 #endif
 #if DT_INST_IRQ_HAS_IDX(0, 3)
-	DMA_mchp_IRQ_CONNECT(3);
+	DMA_MCHP_IRQ_CONNECT(3);
 #endif
 #if DT_INST_IRQ_HAS_IDX(0, 4)
-	DMA_mchp_IRQ_CONNECT(4);
+	DMA_MCHP_IRQ_CONNECT(4);
 #endif
 
 	return 0;
@@ -521,7 +521,7 @@ static struct dma_mchp_data dmac_data;
 /**
  * @brief DMA driver API structure.
  */
-static DEVICE_API(dma, dma_mchp_api) = {
+static const struct dma_driver_api dma_mchp_api = {
 	.config = dma_mchp_config,
 	.start = dma_mchp_start,
 	.stop = dma_mchp_stop,
