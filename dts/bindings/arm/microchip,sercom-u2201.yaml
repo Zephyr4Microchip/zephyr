@@ -1,7 +1,7 @@
 # Copyright (c) 2025 Microchip Technology Inc.
 # SPDX-License-Identifier: Apache-2.0
 
-description: Microchip sercom-u2201 multi-protocol (UART, SPI, I2C) SERCOM unit
+description: Microchip SERCOM-u2201 multi-protocol (UART, SPI, I2C) SERCOM unit
 
 compatible: "microchip,sercom-u2201"
 

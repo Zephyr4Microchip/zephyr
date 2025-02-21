@@ -1,4 +1,4 @@
-description: Microchip port-u2210 (GPIO)
+description: Microchip PORT-u2210 (GPIO)
 
 compatible: "microchip,port-u2210-gpio"
 

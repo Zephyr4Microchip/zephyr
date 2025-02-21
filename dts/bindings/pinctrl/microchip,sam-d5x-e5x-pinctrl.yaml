@@ -2,9 +2,9 @@
 # SPDX-License-Identifier: Apache-2.0
 
 description: |
-  Microchip SAM Pinctrl container node
+  Microchip SAM D5x/E5x Pinctrl container node
 
-  The Microchip SAM pin controller is a singleton node responsible for controlling
+  The Microchip SAM D5x/E5x pin controller is a singleton node responsible for controlling
   pin function selection and pin properties. For example, you can use this node
   to route SERCOM0 as UART were RX to pin PAD1 and enable the pull-up resistor
   on the pin.
