@@ -44,7 +44,7 @@
 
 	rxpo = <1>;
 	txpo = <0>;
-	clock_external = <0>;
+	//clock_external;
 	#address-cells = <1>;
 	#size-cells = <0>;
 

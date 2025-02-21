@@ -277,7 +277,7 @@ static int uart_mchp_init(const struct device *dev)
 
 	hal_mchp_uart_config_pinout(hal);
 	hal_mchp_uart_set_clock_polarity(hal, false);
-	hal_mchp_uart_set_clock_internal(hal, true);
+	hal_mchp_uart_set_clock_source(hal);
 	hal_mchp_uart_set_lsb_first(hal, true);
 
 	/* Enable PINMUX based on PINCTRL */

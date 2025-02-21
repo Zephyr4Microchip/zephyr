@@ -35,7 +35,7 @@
 typedef struct hal_mchp_uart {
 	/* Pointer to the SERCOM registers. */
 	sercom_registers_t *regs;
-	/* Flag indicating if the clock is internal. */
+	/* Flag indicating if the clock is external. */
 	bool clock_external;
 	/* RX pinout configuration. */
 	uint32_t rxpo;

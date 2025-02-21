@@ -64,8 +64,8 @@ properties:
       +-------+---------------+---------------+---------------+
 
   clock_external:
-    type: int
-    description: 1 select external clock for uart. 0 select internal clock.
+    type: boolean
+    description: select external clock for uart (if true).
 
   collision-detection:
     type: boolean
