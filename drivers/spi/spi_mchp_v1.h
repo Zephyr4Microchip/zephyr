@@ -13,10 +13,12 @@
  * initializing the SPI peripheral on Microchip devices.
  */
 
-#ifndef _SPI_MCHP_V1_H_
-#define _SPI_MCHP_V1_H_
+#ifndef MICROCHIP_SPI_MCHP_V1_H_
+#define MICROCHIP_SPI_MCHP_V1_H_
 
-#if defined(CONFIG_SOC_SERIES_MCHP_SAME54)
+#if defined(CONFIG_SOC_FAMILY_MCHP_SAM_D5X_E5X)
+
+/* Peripheral IP specific features */
 
 /**
  * @brief Define compatible string for device tree.
@@ -34,6 +36,20 @@
 		SERCOM_SPIM_CTRLA_DOPO(DT_INST_PROP(n, dopo))
 
 /**
+ * @brief SPI HAL configuration structure.
+ *
+ * This structure contains register mappings, clock configurations, and
+ * optional DMA settings for the SPI peripheral.
+ */
+typedef struct hal_mchp_spi {
+	/* Pointer to SPI master registers */
+	sercom_registers_t *regs;
+
+	/* SPI pad configuration */
+	uint32_t pads;
+} hal_mchp_spi_t;
+
+/**
  * @brief Define peripheral IP-specific features
  * based on the selected configuration.
  *
@@ -42,29 +58,8 @@
  * Otherwise, only standard register addresses
  *  and clock configurations are defined.
  */
-#if CONFIG_SPI_ASYNC && CONFIG_SPI_MCHP_DMA_DRIVEN
 #define SPI_MCHP_HAL_DEFN(n)                                                                       \
-	.hal.mregs = (sercom_spim_registers_t *)DT_INST_REG_ADDR(n),                               \
-	.hal.sregs = (sercom_spis_registers_t *)DT_INST_REG_ADDR(n),                               \
-	.hal.pads = SPI_MCHP_SERCOM_PADS(n),                                                       \
-	.hal.mclk_sys = {.dev = DEVICE_DT_GET(DT_INST_CLOCKS_CTLR_BY_NAME(n, mclk)),               \
-			 .id = DT_INST_CLOCKS_CELL_BY_NAME(n, mclk, id)},                          \
-	.hal.gclk_sys = {.dev = DEVICE_DT_GET(DT_INST_CLOCKS_CTLR_BY_NAME(n, gclk)),               \
-			 .id = DT_INST_CLOCKS_CELL_BY_NAME(n, gclk, id)},                          \
-	.hal.tx_dma_request = MICROCHIP_SAME54_DT_INST_DMA_TRIGSRC(n, tx),                         \
-	.hal.tx_dma_channel = MICROCHIP_SAME54_DT_INST_DMA_CHANNEL(n, tx),                         \
-	.hal.rx_dma_request = MICROCHIP_SAME54_DT_INST_DMA_TRIGSRC(n, rx),                         \
-	.hal.rx_dma_channel = MICROCHIP_SAME54_DT_INST_DMA_CHANNEL(n, rx)
-#else
-#define SPI_MCHP_HAL_DEFN(n)                                                                       \
-	.hal.mregs = (sercom_spim_registers_t *)DT_INST_REG_ADDR(n),                               \
-	.hal.sregs = (sercom_spis_registers_t *)DT_INST_REG_ADDR(n),                               \
-	.hal.pads = SPI_MCHP_SERCOM_PADS(n),                                                       \
-	.hal.mclk_sys = {.dev = DEVICE_DT_GET(DT_INST_CLOCKS_CTLR_BY_NAME(n, mclk)),               \
-			 .id = DT_INST_CLOCKS_CELL_BY_NAME(n, mclk, id)},                          \
-	.hal.gclk_sys = {.dev = DEVICE_DT_GET(DT_INST_CLOCKS_CTLR_BY_NAME(n, gclk)),               \
-			 .id = DT_INST_CLOCKS_CELL_BY_NAME(n, gclk, id)}
-#endif
+	.hal.regs = (sercom_registers_t *)DT_INST_REG_ADDR(n), .hal.pads = SPI_MCHP_SERCOM_PADS(n),
 
 /**
  * @brief Define interrupt configuration macros based on device
@@ -102,6 +97,30 @@
 #define SPI_MCHP_IRQ_HANDLER(n)
 #endif
 
+/* Do the peripheral clock related configuration */
+
+/**
+ * @brief Clock configuration structure for the SPI.
+ *
+ * This structure contains the clock configuration parameters for the SPI
+ * peripheral.
+ */
+typedef struct mchp_spi_clock {
+	/* Clock driver */
+	const struct device *clock_dev;
+	/* Main clock subsystem. */
+	clock_control_mchp_subsys_t mclk_sys;
+	/* Generic clock subsystem. */
+	clock_control_mchp_subsys_t gclk_sys;
+} mchp_spi_clock_t;
+
+#define SPI_MCHP_CLOCK_DEFN(n)                                                                     \
+	.spi_clock.clock_dev = DEVICE_DT_GET(DT_NODELABEL(clock)),                                 \
+	.spi_clock.mclk_sys = {.dev = DEVICE_DT_GET(DT_INST_CLOCKS_CTLR_BY_NAME(n, mclk)),     \
+				   .id = DT_INST_CLOCKS_CELL_BY_NAME(n, mclk, id)},                \
+	.spi_clock.gclk_sys = {.dev = DEVICE_DT_GET(DT_INST_CLOCKS_CTLR_BY_NAME(n, gclk)),     \
+				   .id = DT_INST_CLOCKS_CELL_BY_NAME(n, gclk, id)}
+
 /**
  * @brief Macros for handling SPI peripheral clock configuration.
  *
@@ -109,64 +128,20 @@
  * clocks for the SPI peripheral.
  */
 #define SPI_MCHP_GET_CLOCK_FREQ(dev, rate)                                                         \
-	clock_control_get_rate(((const struct spi_mchp_dev_config *)(dev->config))->clock_dev,     \
-			       &(((struct spi_mchp_dev_config *)(dev->config))->hal.gclk_sys),     \
-			       &rate);
+	clock_control_get_rate(((const spi_mchp_dev_config_t *)(dev->config))->spi_clock.clock_dev,              \
+		&(((spi_mchp_dev_config_t *)(dev->config))->spi_clock.gclk_sys), &rate);
 
 #define SPI_MCHP_ENABLE_CLOCK(dev)                                                                 \
-	clock_control_on(((const struct spi_mchp_dev_config *)(dev->config))->clock_dev,           \
-			 &(((struct spi_mchp_dev_config *)(dev->config))->hal.gclk_sys));          \
-	clock_control_on(((const struct spi_mchp_dev_config *)(dev->config))->clock_dev,           \
-			 &(((struct spi_mchp_dev_config *)(dev->config))->hal.mclk_sys))
-
-/**
- * @brief SPI HAL configuration structure.
- *
- * This structure contains register mappings, clock configurations, and
- * optional DMA settings for the SPI peripheral.
- */
-struct hal_mchp_spi {
-	/* Pointer to SPI master registers */
-	sercom_spim_registers_t *mregs;
-
-	/* Pointer to SPI slave registers */
-	sercom_spis_registers_t *sregs;
-
-	/* SPI pad configuration */
-	uint32_t pads;
-
-	/* MCLK subsystem configuration */
-	clock_control_mchp_subsys_t mclk_sys;
-
-	/* GCLK subsystem configuration */
-	clock_control_mchp_subsys_t gclk_sys;
-
-#if SPI_MCHP_DMA_DRIVEN
-	/* TX DMA request line */
-	uint8_t tx_dma_request;
-
-	/* TX DMA channel */
-	uint8_t tx_dma_channel;
-
-	/* RX DMA request line */
-	uint8_t rx_dma_request;
-
-	/* RX DMA channel */
-	uint8_t rx_dma_channel;
-#endif
-};
+	clock_control_on(((const spi_mchp_dev_config_t *)(dev->config))->spi_clock.clock_dev,     \
+			 &(((spi_mchp_dev_config_t *)(dev->config))->spi_clock.gclk_sys));    \
+	clock_control_on(((const spi_mchp_dev_config_t *)(dev->config))->spi_clock.clock_dev,     \
+			 &(((spi_mchp_dev_config_t *)(dev->config))->spi_clock.mclk_sys))
 
 /**
  * @brief Include HAL-specific implementation for the SPI peripheral.
  */
 #include "sercom/hal_mchp_spi_sercom_u2201.h"
 
-#elif defined(CONFIG_SOC_SERIES_SAM71)
-/**
- * @brief Add SAMV71 related SPI configuration here.
- */
-#else
-#define SPI_MCHP_HAL_DEFN(n)
-#endif
+#endif /* CONFIG_SOC_FAMILY_MCHP_SAM_D5X_E5X */
 
-#endif /* MICROCHIP_HAL_SPI_SERCOM_U2201_H_ */
+#endif /* MICROCHIP_PI_MCHP_V1_H_ */

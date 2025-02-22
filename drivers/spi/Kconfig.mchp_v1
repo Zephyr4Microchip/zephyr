@@ -7,6 +7,8 @@ config SPI_MCHP_V1
 	bool "Microchip MCHP V1 series SERCOM SPI driver"
 	default y
 	depends on DT_HAS_MICROCHIP_SERCOM_U2201_SPI_ENABLED
+	select PINCTRL
+	select GPIO
 	select DMA if SPI_ASYNC
 	help
 	  Enable support for the Microchip MCHP V1 series SERCOM SPI driver.
