@@ -25,10 +25,29 @@ LOG_MODULE_REGISTER(spi_mchp_v1);
 #include <zephyr/drivers/dma.h>
 #include <zephyr/drivers/pinctrl.h>
 #include <zephyr/drivers/clock_control.h>
-#include <zephyr/drivers/clock_control/clock_control_mchp_v1.h>
+#include <zephyr/drivers/clock_control/mchp_clock_control.h>
 #include <zephyr/irq.h>
 #include <soc.h>
 #include "spi_mchp_v1.h"
+
+/**
+ * @brief DMA configuration structure for the SPI
+ *
+ * This structure containes the DMA configuration parameters for the SPI
+ * peripheral.
+ */
+typedef struct mchp_spi_dma {
+	/* DMA driver for asynchronous operations */
+	const struct device *dma_dev;
+	/* TX DMA request line. */
+	uint8_t tx_dma_request;
+	/* TX DMA channel. */
+	uint8_t tx_dma_channel;
+	/* RX DMA request line. */
+	uint8_t rx_dma_request;
+	/* RX DMA channel. */
+	uint8_t rx_dma_channel;
+} mchp_spi_dma_t;
 
 /**
  * @brief Device constant configuration parameters
@@ -36,9 +55,9 @@ LOG_MODULE_REGISTER(spi_mchp_v1);
  * This structure holds the constant configuration parameters for the SPI
  * device.
  */
-struct spi_mchp_dev_config {
+typedef struct spi_mchp_dev_config {
 	/* HAL layer for SPI */
-	struct hal_mchp_spi hal;
+	hal_mchp_spi_t hal;
 
 	/* Pin control device configuration */
 	const struct pinctrl_dev_config *pcfg;
@@ -49,26 +68,24 @@ struct spi_mchp_dev_config {
 #ifdef CONFIG_SPI_MCHP_DMA_DRIVEN
 	/* DMA device */
 	const struct device *dma_dev;
+	mchp_spi_dma_t spi_dma;
 #endif
 
-#if CONFIG_SPI_MCHP_INTERRUPT_DRIVEN_ASYNC || CONFIG_SPI_MCHP_DMA_DRIVEN
-	/**
-	 * @brief IRQ configuration function
-	 *
-	 * This function configures the IRQ for the SPI device.
-	 *
-	 * @param dev Pointer to the device structure
-	 */
+#if CONFIG_SPI_ASYNC
+	/*IRQ configuration function */
 	void (*irq_config_func)(const struct device *dev);
 #endif
-};
+	/* Clock configuration */
+	mchp_spi_clock_t spi_clock;
+
+} spi_mchp_dev_config_t;
 
 /**
  * @brief SPI run time data structure.
  *
  * This structure holds the runtime data for the SPI driver.
  */
-struct spi_mchp_dev_data {
+typedef struct spi_mchp_dev_data {
 	/* SPI context structure. */
 	struct spi_context ctx;
 #if defined(CONFIG_SPI_ASYNC) || defined(CONFIG_SPI_MCHP_INTERRUPT_DRIVEN)
@@ -81,7 +98,7 @@ struct spi_mchp_dev_data {
 	/* Length of the DMA segment. */
 	uint32_t dma_segment_len;
 #endif
-};
+} spi_mchp_dev_data_t;
 
 /**
  * @brief Configure the SPI peripheral.
@@ -100,9 +117,9 @@ struct spi_mchp_dev_data {
  */
 static int spi_mchp_configure(const struct device *dev, const struct spi_config *config)
 {
-	const struct spi_mchp_dev_config *cfg = dev->config;
-	const struct hal_mchp_spi *hal = &cfg->hal;
-	struct spi_mchp_dev_data *const data = dev->data;
+	const spi_mchp_dev_config_t *cfg = dev->config;
+	const hal_mchp_spi_t *hal = &cfg->hal;
+	spi_mchp_dev_data_t *const data = dev->data;
 	int err;
 	uint32_t clock_rate;
 
@@ -177,9 +194,9 @@ static int spi_mchp_configure(const struct device *dev, const struct spi_config 
 
 	/* Set the Clock Phase */
 	if (((config->operation & SPI_MODE_CPHA))) {
-		hal_mchp_spi_cpha_lead_edge(hal);
-	} else {
 		hal_mchp_spi_cpha_trail_edge(hal);
+	} else {
+		hal_mchp_spi_cpha_lead_edge(hal);
 	}
 
 	/* Set the Data Order */
@@ -233,7 +250,7 @@ static int spi_mchp_configure(const struct device *dev, const struct spi_config 
  *
  * @return true if a transfer is in progress, false otherwise.
  */
-static bool spi_mchp_transfer_in_progress(struct spi_mchp_dev_data *data)
+static bool spi_mchp_transfer_in_progress(spi_mchp_dev_data_t *data)
 {
 	return spi_context_tx_on(&data->ctx) || spi_context_rx_on(&data->ctx);
 }
@@ -250,7 +267,7 @@ static bool spi_mchp_transfer_in_progress(struct spi_mchp_dev_data *data)
  * the SPI interface.
  * @param data Pointer to the SPI device data structure.
  */
-static void spi_mchp_poll_in(const struct hal_mchp_spi *hal, struct spi_mchp_dev_data *data)
+static void spi_mchp_poll_in(const hal_mchp_spi_t *hal, spi_mchp_dev_data_t *data)
 {
 	uint8_t tx;
 	uint8_t rx;
@@ -292,9 +309,9 @@ static void spi_mchp_poll_in(const struct hal_mchp_spi *hal, struct spi_mchp_dev
  * This function ensures that any ongoing SPI transmissions are completed
  * and clears any remaining data in the SPI buffer.
  *
- * @param hal Pointer to the hal_mchp_spi structure.
+ * @param hal Pointer to the hal_mchp_spi_t structure.
  */
-static void spi_mchp_finish(const struct hal_mchp_spi *hal)
+static void spi_mchp_finish(const hal_mchp_spi_t *hal)
 {
 	/* Wait until transmit complete */
 	hal_mchp_spix_comp(hal);
@@ -315,7 +332,7 @@ static void spi_mchp_finish(const struct hal_mchp_spi *hal)
  * @param tx_buf Pointer to the SPI buffer structure containing the data to
  * be transmitted.
  */
-static void spi_mchp_fast_tx(const struct hal_mchp_spi *hal, const struct spi_buf *tx_buf)
+static void spi_mchp_fast_tx(const hal_mchp_spi_t *hal, const struct spi_buf *tx_buf)
 {
 	const uint8_t *p = tx_buf->buf;
 	const uint8_t *pend = (uint8_t *)tx_buf->buf + tx_buf->len;
@@ -344,7 +361,7 @@ static void spi_mchp_fast_tx(const struct hal_mchp_spi *hal, const struct spi_bu
  * @param rx_buf Pointer to the SPI buffer structure to which the data is
  * received.
  */
-static void spi_mchp_fast_rx(const struct hal_mchp_spi *hal, const struct spi_buf *rx_buf)
+static void spi_mchp_fast_rx(const hal_mchp_spi_t *hal, const struct spi_buf *rx_buf)
 {
 	uint8_t *rx = rx_buf->buf;
 	int len = rx_buf->len;
@@ -379,7 +396,7 @@ static void spi_mchp_fast_rx(const struct hal_mchp_spi *hal, const struct spi_bu
  * @param tx_buf Pointer to the SPI transmit buffer.
  * @param rx_buf Pointer to the SPI receive buffer.
  */
-static void spi_mchp_fast_txrx(const struct hal_mchp_spi *hal, const struct spi_buf *tx_buf,
+static void spi_mchp_fast_txrx(const hal_mchp_spi_t *hal, const struct spi_buf *tx_buf,
 			       const struct spi_buf *rx_buf)
 {
 	const uint8_t *tx = tx_buf->buf;
@@ -420,8 +437,8 @@ static void spi_mchp_fast_transceive(const struct device *dev, const struct spi_
 				     const struct spi_buf_set *tx_bufs,
 				     const struct spi_buf_set *rx_bufs)
 {
-	const struct spi_mchp_dev_config *cfg = dev->config;
-	const struct hal_mchp_spi *hal = &cfg->hal;
+	const spi_mchp_dev_config_t *cfg = dev->config;
+	const hal_mchp_spi_t *hal = &cfg->hal;
 	size_t tx_count = 0;
 	size_t rx_count = 0;
 
@@ -535,9 +552,9 @@ static int spi_mchp_transceive_interrupt(const struct device *dev, const struct 
 					 const struct spi_buf_set *tx_bufs,
 					 const struct spi_buf_set *rx_bufs)
 {
-	const struct spi_mchp_dev_config *cfg = dev->config;
-	const struct hal_mchp_spi *hal = &cfg->hal;
-	const struct spi_mchp_dev_data *data = dev->data;
+	const spi_mchp_dev_config_t *cfg = dev->config;
+	const hal_mchp_spi_t *hal = &cfg->hal;
+	const spi_mchp_dev_data_t *data = dev->data;
 	uint8_t tx;
 	uint8_t rx;
 
@@ -586,9 +603,9 @@ static int spi_mchp_transceive_sync(const struct device *dev, const struct spi_c
 				    const struct spi_buf_set *tx_bufs,
 				    const struct spi_buf_set *rx_bufs)
 {
-	const struct spi_mchp_dev_config *cfg = dev->config;
-	const struct hal_mchp_spi *hal = &cfg->hal;
-	struct spi_mchp_dev_data *data = dev->data;
+	const spi_mchp_dev_config_t *cfg = dev->config;
+	const hal_mchp_spi_t *hal = &cfg->hal;
+	spi_mchp_dev_data_t *data = dev->data;
 	int err;
 
 	/* Lock SPI context */
@@ -649,9 +666,9 @@ done:
  */
 static int spi_mchp_dma_tx_load(const struct device *dev, const uint8_t *buf, size_t len)
 {
-	const struct spi_mchp_dev_config *cfg = dev->config;
-	const struct hal_mchp_spi *hal = &cfg->hal;
-	struct spi_mchp_dev_data *data = dev->data;
+	const spi_mchp_dev_config_t *cfg = dev->config;
+	const hal_mchp_spi_t *hal = &cfg->hal;
+	spi_mchp_dev_data_t *data = dev->data;
 
 	struct dma_config dma_cfg = {0};
 	struct dma_block_config dma_blk = {0};
@@ -702,7 +719,7 @@ static int spi_mchp_dma_tx_load(const struct device *dev, const uint8_t *buf, si
  */
 static bool spi_mchp_dma_advance_segment(const struct device *dev)
 {
-	struct spi_mchp_dev_data *data = dev->data;
+	spi_mchp_dev_data_t *data = dev->data;
 	uint32_t segment_len;
 
 	/* Pick the shorter buffer of ones that have an actual length */
@@ -743,7 +760,7 @@ static bool spi_mchp_dma_advance_segment(const struct device *dev)
  */
 static int spi_mchp_dma_advance_buffers(const struct device *dev)
 {
-	struct spi_mchp_dev_data *data = dev->data;
+	spi_mchp_dev_data_t *data = dev->data;
 	int retval;
 
 	if (data->dma_segment_len == 0) {
@@ -791,7 +808,7 @@ static int spi_mchp_dma_advance_buffers(const struct device *dev)
 static void spi_mchp_dma_rx_done(const struct device *dma_dev, void *arg, uint32_t id,
 				 int error_code)
 {
-	struct spi_mchp_dev_data *data = arg;
+	spi_mchp_dev_data_t *data = arg;
 	const struct device *dev = data->dev;
 	const struct spi_mchp_config *cfg = dev->config;
 	int retval;
@@ -839,9 +856,9 @@ static void spi_mchp_dma_rx_done(const struct device *dma_dev, void *arg, uint32
  */
 static int spi_mchp_dma_rx_load(const struct device *dev, uint8_t *buf, size_t len)
 {
-	const struct spi_mchp_dev_config *cfg = dev->config;
-	const struct hal_mchp_spi *hal = &cfg->hal;
-	struct spi_mchp_dev_data *data = dev->data;
+	const spi_mchp_dev_config_t *cfg = dev->config;
+	const hal_mchp_spi_t *hal = &cfg->hal;
+	spi_mchp_dev_data_t *data = dev->data;
 
 	struct dma_config dma_cfg = {0};
 	struct dma_block_config dma_blk = {0};
@@ -910,9 +927,9 @@ static int spi_mchp_transceive_async(const struct device *dev, const struct spi_
 				     const struct spi_buf_set *rx_bufs, spi_callback_t cb,
 				     void *userdata)
 {
-	const struct spi_mchp_dev_config *cfg = dev->config;
-	const struct hal_mchp_spi *hal = &cfg->hal;
-	struct spi_mchp_dev_data *data = dev->data;
+	const spi_mchp_dev_config_t *cfg = dev->config;
+	const hal_mchp_spi_t *hal = &cfg->hal;
+	spi_mchp_dev_data_t *data = dev->data;
 	int retval;
 
 /*
@@ -986,7 +1003,7 @@ err_unlock:
  */
 static int spi_mchp_release(const struct device *dev, const struct spi_config *config)
 {
-	struct spi_mchp_dev_data *data = dev->data;
+	spi_mchp_dev_data_t *data = dev->data;
 
 	/* Unlock the SPI context to allow other operations */
 	spi_context_unlock_unconditionally(&data->ctx);
@@ -1011,13 +1028,13 @@ static int spi_mchp_release(const struct device *dev, const struct spi_config *c
 static void spi_mchp_isr(const struct device *dev)
 {
 	/* Device driver runtime data */
-	struct spi_mchp_dev_data *data = dev->data;
+	spi_mchp_dev_data_t *data = dev->data;
 
 	/* Device driver configuration */
-	const struct spi_mchp_dev_config *cfg = dev->config;
+	const spi_mchp_dev_config_t *cfg = dev->config;
 
 	/* HAL structure for SPI registers */
-	const struct hal_mchp_spi *hal = &cfg->hal;
+	const hal_mchp_spi_t *hal = &cfg->hal;
 
 	/* Dummy data for padding SPI transactions */
 	uint8_t dummy_data = 0xFF;
@@ -1103,9 +1120,9 @@ static void spi_mchp_isr(const struct device *dev)
 static int spi_mchp_init(const struct device *dev)
 {
 	int err;
-	const struct spi_mchp_dev_config *cfg = dev->config;
-	const struct hal_mchp_spi *hal = &cfg->hal;
-	struct spi_mchp_dev_data *const data = dev->data;
+	const spi_mchp_dev_config_t *cfg = dev->config;
+	const hal_mchp_spi_t *hal = &cfg->hal;
+	spi_mchp_dev_data_t *const data = dev->data;
 
 	/* Enable the SPI clock */
 	SPI_MCHP_ENABLE_CLOCK(dev);
@@ -1177,18 +1194,12 @@ static const struct spi_driver_api spi_mchp_driver_api = {
  * @param n Instance number
  */
 #define SPI_MCHP_IRQ_HANDLER_DECL(n) static void spi_mchp_irq_config_##n(const struct device *dev)
-
-/**
- * @brief Macro to assign the IRQ handler function
- *
- * @param n Instance number
- */
 #define SPI_MCHP_IRQ_HANDLER_FUNC(n) .irq_config_func = spi_mchp_irq_config_##n,
 
 #else
 #define SPI_MCHP_IRQ_HANDLER_DECL(n)
 #define SPI_MCHP_IRQ_HANDLER_FUNC(n)
-#endif
+#endif /* CONFIG_SPI_MCHP_INTERRUPT_DRIVEN || CONFIG_SPI_ASYNC */
 
 #if CONFIG_SPI_MCHP_DMA_DRIVEN
 /**
@@ -1196,10 +1207,15 @@ static const struct spi_driver_api spi_mchp_driver_api = {
  *
  * @param n Instance number
  */
-#define SPI_MCHP_DMA_CHANNELS(n) .dma_dev = DEVICE_DT_GET(MICROCHIP_SAME54_DT_INST_DMA_CTLR(n, tx)),
+#define SPI_MCHP_DMA_CHANNELS(n)                                                                   \
+	.spi_dma.dma_dev = DEVICE_DT_GET(MICROCHIP_SAME54_DT_INST_DMA_CTLR(n, tx)),                \
+	.spi_dma.hal.tx_dma_request = MICROCHIP_SAME54_DT_INST_DMA_TRIGSRC(n, tx),                 \
+	.spi_dma.hal.tx_dma_channel = MICROCHIP_SAME54_DT_INST_DMA_CHANNEL(n, tx),                 \
+	.spi_dma.hal.rx_dma_request = MICROCHIP_SAME54_DT_INST_DMA_TRIGSRC(n, rx),                 \
+	.spi_dma.hal.rx_dma_channel = MICROCHIP_SAME54_DT_INST_DMA_CHANNEL(n, rx),
 #else
 #define SPI_MCHP_DMA_CHANNELS(n)
-#endif
+#endif /* CONFIG_SPI_MCHP_DMA_DRIVEN */
 
 /**
  * @brief Initial Configuration for the SPI Peripheral
@@ -1211,10 +1227,10 @@ static const struct spi_driver_api spi_mchp_driver_api = {
  * @param n Instance number
  */
 #define SPI_MCHP_CONFIG_DEFN(n)                                                                    \
-	static const struct spi_mchp_dev_config spi_mchp_config_##n = {                            \
-		SPI_MCHP_HAL_DEFN(n), .pcfg = PINCTRL_DT_INST_DEV_CONFIG_GET(n),                   \
-		.clock_dev = DEVICE_DT_GET(DT_NODELABEL(clock)),                                   \
-		SPI_MCHP_IRQ_HANDLER_FUNC(n) SPI_MCHP_DMA_CHANNELS(n)}
+	static const spi_mchp_dev_config_t spi_mchp_config_##n = {                                 \
+		.pcfg = PINCTRL_DT_INST_DEV_CONFIG_GET(n),                                         \
+		SPI_MCHP_HAL_DEFN(n) SPI_MCHP_IRQ_HANDLER_FUNC(n) SPI_MCHP_DMA_CHANNELS(n)         \
+			SPI_MCHP_CLOCK_DEFN(n)}
 
 /**
  * @brief Macro to initialize SPI device
@@ -1223,13 +1239,15 @@ static const struct spi_driver_api spi_mchp_driver_api = {
  */
 #define SPI_MCHP_DEVICE_INIT(n)                                                                    \
 	PINCTRL_DT_INST_DEFINE(n);                                                                 \
+	SPI_MCHP_IRQ_HANDLER_DECL(n);                                                              \
 	SPI_MCHP_CONFIG_DEFN(n);                                                                   \
-	static struct spi_mchp_dev_data spi_mchp_data_##n = {                                      \
+	static spi_mchp_dev_data_t spi_mchp_data_##n = {                                           \
 		SPI_CONTEXT_INIT_LOCK(spi_mchp_data_##n, ctx),                                     \
 		SPI_CONTEXT_INIT_SYNC(spi_mchp_data_##n, ctx),                                     \
 		SPI_CONTEXT_CS_GPIOS_INITIALIZE(DT_DRV_INST(n), ctx)};                             \
 	DEVICE_DT_INST_DEFINE(n, spi_mchp_init, NULL, &spi_mchp_data_##n, &spi_mchp_config_##n,    \
-			      POST_KERNEL, CONFIG_SPI_INIT_PRIORITY, &spi_mchp_driver_api);
+			      POST_KERNEL, CONFIG_SPI_INIT_PRIORITY, &spi_mchp_driver_api);        \
+	SPI_MCHP_IRQ_HANDLER(n)
 
 /**
  * @brief Initialize SPI devices for all compatible instances
