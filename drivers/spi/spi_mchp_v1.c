@@ -128,6 +128,7 @@ static int spi_mchp_configure(const struct device *dev, const struct spi_config 
 
 	/* Check if SPI is already configured */
 	if (spi_context_configured(&data->ctx, config)) {
+		hal_mchp_spi_enable(hal);
 		return 0;
 	}
 
@@ -1126,9 +1127,6 @@ static int spi_mchp_init(const struct device *dev)
 
 	/* Enable the SPI clock */
 	SPI_MCHP_ENABLE_CLOCK(dev);
-
-	/* Disable SPI to configure it safely */
-	hal_mchp_spi_disable(hal);
 
 	/* Disable all SPI interrupts initially */
 	hal_mchp_spi_disable_interrupts(hal);
