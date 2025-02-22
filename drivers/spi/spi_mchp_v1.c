@@ -180,7 +180,7 @@ static int spi_mchp_configure(const struct device *dev, const struct spi_config 
 	if ((config->operation & SPI_MODE_LOOP) != 0U) {
 
 		/* Set MISO and MOSI on the same pad */
-		hal_mchp_spi_mode_loop(hal);
+		hal_mchp_spi_mode_loopback(hal);
 	} else {
 		/* Set the Pads */
 		hal_mchp_spi_config_pinout(hal);
