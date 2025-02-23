@@ -114,6 +114,8 @@ typedef struct {
 	const uint32_t subsys_regs[CLOCK_CONTROL_MCHP_SUBSYS_COUNT];
 	/* User-defined frequency configuration. */
 	struct clock_control_mchp_user_frequency user_frequency;
+	/* Timeout in milliseconds to wait for clock to turn on */
+	uint32_t on_timeout_ms;
 } clock_control_mchp_config_t;
 
 /**
@@ -600,6 +602,8 @@ static int clock_control_mchp_on(const struct device *dev, clock_control_subsys_
 	const clock_control_mchp_config_t *config = dev->config;
 	/* Whether to wait or not if clock is supported */
 	bool is_wait = false;
+	/* Initialise clock on timeout variable */
+	uint32_t on_timeout_ms = 0;
 
 	/* Check if turning on all clocks is requested. */
 	if (sys == CLOCK_CONTROL_SUBSYS_ALL) {
@@ -656,8 +660,16 @@ static int clock_control_mchp_on(const struct device *dev, clock_control_subsys_
 				ret_val = 0;
 				break;
 			}
-			/* Sleep before checking again. */
-			k_sleep(K_MSEC(1));
+			if (on_timeout_ms < config->on_timeout_ms) {
+				/* Sleep before checking again. */
+				k_sleep(K_MSEC(1));
+				/* Increment clock on timeout value */
+				on_timeout_ms++;
+			} else {
+				/* Clock on timeout occured */
+				ret_val = -ETIMEDOUT;
+				break;
+			}
 		}
 	}
 
@@ -816,6 +828,9 @@ static const clock_control_mchp_config_t clock_control_mchp_config = {
 					     (, ))},
 	/* User-defined frequency settings for various clock sources. */
 	.user_frequency = CLOCK_CONTROL_MCHP_USER_FREQUENCY_DEFN,
+
+	/* Timeout in milliseconds to wait for clock to turn on */
+	.on_timeout_ms = DT_PROP_OR(DT_NODELABEL(clock), on_timeout_ms, 5),
 };
 
 /**
