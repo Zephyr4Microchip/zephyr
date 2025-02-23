@@ -14,3 +14,9 @@ properties:
 
   "#clock-cells":
     const: 1
+
+  on_timeout_ms:
+    type: int
+    description: |
+      Timeout in mili seconds for clock on
+    default: 5

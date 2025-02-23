@@ -34,7 +34,7 @@ typedef struct {
 
 #if defined(CONFIG_SOC_FAMILY_MCHP_SAM_D5X_E5X)
 /* Include header file for the SAM_D5X_E5X clock definitions */
-#include <dt-bindings/clock/sam/sam_d5x_e5x/mchp_clock_sam_d5x_e5x.h>
+#include <dt-bindings/clock/mchp_clock_sam_d5x_e5x.h>
 
 /** @brief MCLK AHB clock count */
 #define CLOCK_CONTROL_MCHP_MCLK_AHB_COUNT     20

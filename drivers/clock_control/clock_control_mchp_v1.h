@@ -122,7 +122,7 @@ struct clock_control_mchp_id_int_map {
 #if defined(CONFIG_SOC_FAMILY_MCHP_SAM_D5X_E5X)
 
 /* Include required header files */
-#include <dt-bindings/clock/sam/sam_d5x_e5x/mchp_clock_sam_d5x_e5x.h>
+#include <dt-bindings/clock/mchp_clock_sam_d5x_e5x.h>
 
 /* Peripheral IP HAL specific features */
 /* Count of GCLK input frequencies */
@@ -204,7 +204,7 @@ struct clock_control_mchp_user_frequency {
 /* HAL for GCLK (Generic Clock) */
 #include <gclk/hal_mchp_clock_gclk_u2122.h>
 /* HAL for SAM_D5X_E5X Clock */
-#include <clock_sam_d5x_e5x/hal_mchp_clock_sam_d5x_e5x.h>
+#include <clock/hal_mchp_clock_sam_d5x_e5x.h>
 
 #endif /* CONFIG_SOC_FAMILY_MCHP_SAM_D5X_E5X */
 
