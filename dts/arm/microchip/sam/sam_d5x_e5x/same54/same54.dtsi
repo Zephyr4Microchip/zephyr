@@ -9,7 +9,7 @@
 #include <zephyr/dt-bindings/gpio/gpio.h>
 #include <zephyr/dt-bindings/i2c/i2c.h>
 #include <zephyr/dt-bindings/pwm/pwm.h>
-#include <dt-bindings/clock/sam/sam_d5x_e5x/mchp_clock_sam_d5x_e5x.h>
+#include <dt-bindings/clock/mchp_clock_sam_d5x_e5x.h>
 
 / {
 	chosen {
