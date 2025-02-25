@@ -1,0 +1,7 @@
+tests:
+  drivers.uart.uart_mchp_elementary:
+    tags: drivers uart
+    depends_on: gpio
+    harness: ztest
+    harness_config:
+      fixture: gpio_loopback
