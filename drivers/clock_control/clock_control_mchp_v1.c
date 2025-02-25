@@ -552,7 +552,7 @@ static int clock_control_mchp_off(const struct device *dev, clock_control_subsys
 			/* Check if the clock is already turned off. */
 			if (status == CLOCK_CONTROL_MCHP_STATE_OFF) {
 				/* The clock is already OFF. */
-				ret_val = -EALREADY;
+				ret_val = 0;
 			} else {
 				/* Clock is ON or STARTING. Turn it OFF. */
 				state = hal_mchp_clock_off(config->subsys_regs[subsys_idx],
