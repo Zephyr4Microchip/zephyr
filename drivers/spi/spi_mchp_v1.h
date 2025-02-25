@@ -144,4 +144,4 @@ typedef struct mchp_spi_clock {
 
 #endif /* CONFIG_SOC_FAMILY_MCHP_SAM_D5X_E5X */
 
-#endif /* MICROCHIP_PI_MCHP_V1_H_ */
+#endif /* MICROCHIP_SPI_MCHP_V1_H_ */

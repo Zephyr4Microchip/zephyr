@@ -62,16 +62,12 @@ typedef struct spi_mchp_dev_config {
 	/* Pin control device configuration */
 	const struct pinctrl_dev_config *pcfg;
 
-	/* Clock device */
-	const struct device *clock_dev;
-
-#ifdef CONFIG_SPI_MCHP_DMA_DRIVEN
+#if CONFIG_SPI_MCHP_DMA_DRIVEN
 	/* DMA device */
-	const struct device *dma_dev;
 	mchp_spi_dma_t spi_dma;
 #endif
 
-#if CONFIG_SPI_ASYNC
+#if defined(CONFIG_SPI_ASYNC) || defined(CONFIG_SPI_MCHP_INTERRUPT_DRIVEN)
 	/*IRQ configuration function */
 	void (*irq_config_func)(const struct device *dev);
 #endif
@@ -89,10 +85,10 @@ typedef struct spi_mchp_dev_data {
 	/* SPI context structure. */
 	struct spi_context ctx;
 #if defined(CONFIG_SPI_ASYNC) || defined(CONFIG_SPI_MCHP_INTERRUPT_DRIVEN)
-	/* SPI status flag for last byte. */
-	uint8_t last_byte;
+	/* Variable to store the dummysize for tx and rx. */
+	uint8_t dummysize;
 #endif
-#ifdef CONFIG_SPI_MCHP_DMA_DRIVEN
+#if CONFIG_SPI_MCHP_DMA_DRIVEN
 	/* Pointer to the device structure. */
 	const struct device *dev;
 	/* Length of the DMA segment. */
@@ -158,7 +154,6 @@ static int spi_mchp_configure(const struct device *dev, const struct spi_config 
 
 	/* Set the SPI in Operation Mode */
 	if (SPI_OP_MODE_GET(config->operation) != SPI_OP_MODE_MASTER) {
-		/* Slave mode is not implemented */
 		err = hal_mchp_spi_slave_mode(hal);
 		if (err != 0) {
 			return -ENOTSUP;
@@ -223,17 +218,14 @@ static int spi_mchp_configure(const struct device *dev, const struct spi_config 
 	/* Enable the SPI Peripheral */
 	hal_mchp_spi_enable(hal);
 
-#if CONFIG_SPI_ASYNC
-	data->last_byte = false;
-#if CONFIG_SPI_MCHP_INTERRUPT_DRIVEN
+#if defined(CONFIG_SPI_ASYNC) || defined(CONFIG_SPI_MCHP_INTERRUPT_DRIVEN)
 	cfg->irq_config_func(dev);
 #endif
 #if CONFIG_SPI_MCHP_DMA_DRIVEN
-	if (!device_is_ready(cfg->dma_dev)) {
+	if (!device_is_ready(cfg->spi_dma.dma_dev)) {
 		return -ENODEV;
 	}
 	data->dev = dev;
-#endif
 #endif
 
 	/* Save the config into the context */
@@ -241,6 +233,7 @@ static int spi_mchp_configure(const struct device *dev, const struct spi_config 
 	return 0;
 }
 
+#ifndef CONFIG_SPI_MCHP_INTERRUPT_DRIVEN
 /**
  * @brief Check if an SPI transfer is in progress.
  *
@@ -254,6 +247,23 @@ static int spi_mchp_configure(const struct device *dev, const struct spi_config 
 static bool spi_mchp_transfer_in_progress(spi_mchp_dev_data_t *data)
 {
 	return spi_context_tx_on(&data->ctx) || spi_context_rx_on(&data->ctx);
+}
+
+/**
+ * @brief Finish any ongoing writes and drop any remaining read data.
+ *
+ * This function ensures that any ongoing SPI transmissions are completed
+ * and clears any remaining data in the SPI buffer.
+ *
+ * @param hal Pointer to the hal_mchp_spi_t structure.
+ */
+static void spi_mchp_finish(const hal_mchp_spi_t *hal)
+{
+	/* Wait until transmit complete */
+	hal_mchp_spix_comp(hal);
+
+	/* Clear the data */
+	hal_mchp_spi_clr_data(hal);
 }
 
 /**
@@ -302,23 +312,6 @@ static void spi_mchp_poll_in(const hal_mchp_spi_t *hal, spi_mchp_dev_data_t *dat
 
 	/* Update the SPI context for reception */
 	spi_context_update_rx(&data->ctx, 1, 1);
-}
-
-/**
- * @brief Finish any ongoing writes and drop any remaining read data.
- *
- * This function ensures that any ongoing SPI transmissions are completed
- * and clears any remaining data in the SPI buffer.
- *
- * @param hal Pointer to the hal_mchp_spi_t structure.
- */
-static void spi_mchp_finish(const hal_mchp_spi_t *hal)
-{
-	/* Wait until transmit complete */
-	hal_mchp_spix_comp(hal);
-
-	/* Clear the data */
-	hal_mchp_spi_clr_data(hal);
 }
 
 /**
@@ -422,6 +415,7 @@ static void spi_mchp_fast_txrx(const hal_mchp_spi_t *hal, const struct spi_buf *
 	/* Finish the SPI transmission */
 	spi_mchp_finish(hal);
 }
+
 /**
  * @brief Perform fast SPI transceive operation.
  *
@@ -533,7 +527,9 @@ static bool spi_mchp_is_same_len(const struct spi_buf_set *tx_bufs,
 
 	return true;
 }
-#if CONFIG_SPI_MCHP_INTERRUPT_DRIVEN
+#endif /* CONFIG_SPI_MCHP_INTERRUPT_DRIVEN*/
+
+#if defined(CONFIG_SPI_MCHP_INTERRUPT_DRIVEN) || (CONFIG_SPI_MCHP_INTERRUPT_DRIVEN_ASYNC)
 /**
  * @brief Perform SPI transceive operation using interrupts.
  *
@@ -555,9 +551,8 @@ static int spi_mchp_transceive_interrupt(const struct device *dev, const struct 
 {
 	const spi_mchp_dev_config_t *cfg = dev->config;
 	const hal_mchp_spi_t *hal = &cfg->hal;
-	const spi_mchp_dev_data_t *data = dev->data;
+	spi_mchp_dev_data_t *const data = dev->data;
 	uint8_t tx;
-	uint8_t rx;
 
 	/* Setup SPI buffers */
 	spi_context_buffers_setup(&data->ctx, tx_bufs, rx_bufs, 1);
@@ -569,21 +564,33 @@ static int spi_mchp_transceive_interrupt(const struct device *dev, const struct 
 		tx = 0U;
 	}
 
+	/* Clear the Data Register */
+	hal_mchp_spi_clr_data(hal);
+
+	/* Get the dummysize */
+	if ((data->ctx.rx_len) > (data->ctx.tx_len)) {
+		data->dummysize = (data->ctx.rx_len) - (data->ctx.tx_len);
+	}
+
 	/* Write first data byte to the SPI data register */
-	hal_mchp_spi_write_data(hal, tx);
 	spi_context_update_tx(&data->ctx, 1, 1);
+	hal_mchp_spi_write_data(hal, tx);
 
 	/* Enable SPI interrupts for RX, TX completion, and data empty events */
-	hal_mchp_spi_enable_rxc_interrupt(hal);
-	hal_mchp_spi_enable_txc_interrupt(hal);
-	hal_mchp_spi_enable_data_empty_interrupt(hal);
+	if (data->ctx.rx_len > 0) {
+		hal_mchp_spi_enable_rxc_interrupt(hal);
+	} else {
+		hal_mchp_spi_enable_data_empty_interrupt(hal);
+	}
 
+#if defined(CONFIG_SPI_MCHP_INTERRUPT_DRIVEN)
 	/* Wait for transaction to complete */
 	k_sem_take(&data->ctx.sync, K_FOREVER);
-
+#endif
 	return 0;
 }
 #endif
+
 /**
  * @brief Perform synchronous SPI transceive operation.
  *
@@ -609,19 +616,22 @@ static int spi_mchp_transceive_sync(const struct device *dev, const struct spi_c
 	spi_mchp_dev_data_t *data = dev->data;
 	int err;
 
+	ARG_UNUSED(hal);
 	/* Lock SPI context */
 	spi_context_lock(&data->ctx, false, NULL, NULL, config);
 
 	/* Configure SPI device */
 	err = spi_mchp_configure(dev, config);
 	if (err != 0) {
-		goto done;
+		/* Release SPI context */
+		spi_context_release(&data->ctx, err);
+		return err;
 	}
 
-#if !CONFIG_SPI_SLAVE
-	/* Assert chip select (CS) */
-	spi_context_cs_control(&data->ctx, true);
-#endif
+	if (SPI_OP_MODE_GET(config->operation) == SPI_OP_MODE_MASTER) {
+		/* Assert chip select (CS) */
+		spi_context_cs_control(&data->ctx, true);
+	}
 
 #if CONFIG_SPI_MCHP_INTERRUPT_DRIVEN
 	/* Use interrupt-driven SPI transceive */
@@ -643,14 +653,15 @@ static int spi_mchp_transceive_sync(const struct device *dev, const struct spi_c
 	/* Deassert chip select (CS) */
 	spi_context_cs_control(&data->ctx, false);
 
-done:
 	/* Release SPI context */
 	spi_context_release(&data->ctx, err);
 	return err;
 }
 
-#ifdef CONFIG_SPI_ASYNC
-#ifdef CONFIG_SPI_MCHP_DMA_DRIVEN
+#if CONFIG_SPI_ASYNC
+#if CONFIG_SPI_MCHP_DMA_DRIVEN
+static void spi_mchp_dma_rx_done(const struct device *dma_dev, void *arg, uint32_t id,
+				 int error_code);
 /**
  * @brief Load data into the DMA controller for SPI TX transfer.
  *
@@ -669,18 +680,17 @@ static int spi_mchp_dma_tx_load(const struct device *dev, const uint8_t *buf, si
 {
 	const spi_mchp_dev_config_t *cfg = dev->config;
 	const hal_mchp_spi_t *hal = &cfg->hal;
-	spi_mchp_dev_data_t *data = dev->data;
 
 	struct dma_config dma_cfg = {0};
 	struct dma_block_config dma_blk = {0};
 	int retval;
 
-	dma_cfg.channel_direction = MEMORY_TO_PERIPHERAL;
+	dma_cfg.channel_direction = PERIPHERAL_TO_MEMORY;
 	dma_cfg.source_data_size = 1;
 	dma_cfg.dest_data_size = 1;
 	dma_cfg.block_count = 1;
 	dma_cfg.head_block = &dma_blk;
-	dma_cfg.dma_slot = cfg->tx_dma_request;
+	dma_cfg.dma_slot = cfg->spi_dma.tx_dma_request;
 
 	dma_blk.block_size = len;
 
@@ -696,13 +706,75 @@ static int spi_mchp_dma_tx_load(const struct device *dev, const uint8_t *buf, si
 	dma_blk.dest_address = (uint32_t)(hal_mchp_spi_get_dma_dest_addr(hal));
 	dma_blk.dest_addr_adj = DMA_ADDR_ADJ_NO_CHANGE;
 
-	retval = dma_config(cfg->dma_dev, cfg->tx_dma_channel, &dma_cfg);
+	retval = dma_config(cfg->spi_dma.dma_dev, cfg->spi_dma.tx_dma_channel, &dma_cfg);
 
 	if (retval != 0) {
 		return retval;
 	}
 
-	return dma_start(cfg->dma_dev, cfg->tx_dma_channel);
+	return dma_start(cfg->spi_dma.dma_dev, cfg->spi_dma.tx_dma_channel);
+}
+
+/**
+ * @brief Configure and start DMA for SPI RX (receive).
+ *
+ * This function sets up the DMA configuration for receiving SPI data and
+ * starts the DMA transfer. If a valid buffer is provided, the received
+ * data is stored there. Otherwise, a dummy buffer is used.
+ *
+ * @param dev Pointer to the SPI device.
+ * @param buf Pointer to the receive buffer, or NULL if the received data
+ * is not needed.
+ * @param len Length of data to be received.
+ *
+ * @return 0 on success, or a negative error code on failure.
+ */
+static int spi_mchp_dma_rx_load(const struct device *dev, uint8_t *buf, size_t len)
+{
+	const spi_mchp_dev_config_t *cfg = dev->config;
+	const hal_mchp_spi_t *hal = &cfg->hal;
+	spi_mchp_dev_data_t *data = dev->data;
+
+	struct dma_config dma_cfg = {0};
+	struct dma_block_config dma_blk = {0};
+	int retval;
+
+	/* Configure DMA settings */
+	dma_cfg.channel_direction = PERIPHERAL_TO_MEMORY;
+	dma_cfg.source_data_size = 1;
+	dma_cfg.dest_data_size = 1;
+	dma_cfg.user_data = data;
+	dma_cfg.dma_callback = spi_mchp_dma_rx_done;
+	dma_cfg.block_count = 1;
+	dma_cfg.head_block = &dma_blk;
+	dma_cfg.dma_slot = cfg->spi_dma.rx_dma_request;
+
+	/* Set block size */
+	dma_blk.block_size = len;
+
+	/* Configure destination address */
+	if (buf != NULL) {
+		dma_blk.dest_address = (uint32_t)buf;
+	} else {
+		/* Use a static dummy variable if no buffer is provided */
+		static uint8_t dummy_data = 0xFF;
+
+		dma_blk.dest_address = (uint32_t)&dummy_data;
+		dma_blk.dest_addr_adj = DMA_ADDR_ADJ_NO_CHANGE;
+	}
+
+	/* Configure source address */
+	dma_blk.source_address = (uint32_t)(hal_mchp_spi_get_dma_src_addr(hal));
+	dma_blk.source_addr_adj = DMA_ADDR_ADJ_NO_CHANGE;
+
+	/* Apply DMA configuration */
+	retval = dma_config(cfg->spi_dma.dma_dev, cfg->spi_dma.rx_dma_channel, &dma_cfg);
+	if (retval != 0) {
+		return retval;
+	}
+
+	/* Start DMA transfer */
+	return dma_start(cfg->spi_dma.dma_dev, cfg->spi_dma.rx_dma_channel);
 }
 
 /**
@@ -811,7 +883,7 @@ static void spi_mchp_dma_rx_done(const struct device *dma_dev, void *arg, uint32
 {
 	spi_mchp_dev_data_t *data = arg;
 	const struct device *dev = data->dev;
-	const struct spi_mchp_config *cfg = dev->config;
+	const spi_mchp_dev_config_t *cfg = dev->config;
 	int retval;
 
 	ARG_UNUSED(id);
@@ -833,76 +905,15 @@ static void spi_mchp_dma_rx_done(const struct device *dma_dev, void *arg, uint32
 	retval = spi_mchp_dma_advance_buffers(dev);
 	if (retval != 0) {
 		/* Stop DMA and terminate the SPI transaction in case of failure */
-		dma_stop(cfg->dma_dev, cfg->tx_dma_channel);
-		dma_stop(cfg->dma_dev, cfg->rx_dma_channel);
+		dma_stop(cfg->spi_dma.dma_dev, cfg->spi_dma.tx_dma_channel);
+		dma_stop(cfg->spi_dma.dma_dev, cfg->spi_dma.rx_dma_channel);
 		spi_context_cs_control(&data->ctx, false);
 		spi_context_complete(&data->ctx, dev, retval);
 		return;
 	}
 }
 
-/**
- * @brief Configure and start DMA for SPI RX (receive).
- *
- * This function sets up the DMA configuration for receiving SPI data and
- * starts the DMA transfer. If a valid buffer is provided, the received
- * data is stored there. Otherwise, a dummy buffer is used.
- *
- * @param dev Pointer to the SPI device.
- * @param buf Pointer to the receive buffer, or NULL if the received data
- * is not needed.
- * @param len Length of data to be received.
- *
- * @return 0 on success, or a negative error code on failure.
- */
-static int spi_mchp_dma_rx_load(const struct device *dev, uint8_t *buf, size_t len)
-{
-	const spi_mchp_dev_config_t *cfg = dev->config;
-	const hal_mchp_spi_t *hal = &cfg->hal;
-	spi_mchp_dev_data_t *data = dev->data;
-
-	struct dma_config dma_cfg = {0};
-	struct dma_block_config dma_blk = {0};
-	int retval;
-
-	/* Configure DMA settings */
-	dma_cfg.channel_direction = PERIPHERAL_TO_MEMORY;
-	dma_cfg.source_data_size = 1;
-	dma_cfg.dest_data_size = 1;
-	dma_cfg.user_data = data;
-	dma_cfg.dma_callback = spi_mchp_dma_rx_done;
-	dma_cfg.block_count = 1;
-	dma_cfg.head_block = &dma_blk;
-	dma_cfg.dma_slot = cfg->rx_dma_request;
-
-	/* Set block size */
-	dma_blk.block_size = len;
-
-	/* Configure destination address */
-	if (buf != NULL) {
-		dma_blk.dest_address = (uint32_t)buf;
-	} else {
-		/* Use a static dummy variable if no buffer is provided */
-		static uint8_t dummy_data = 0xFF;
-
-		dma_blk.dest_address = (uint32_t)&dummy_data;
-		dma_blk.dest_addr_adj = DMA_ADDR_ADJ_NO_CHANGE;
-	}
-
-	/* Configure source address */
-	dma_blk.source_address = (uint32_t)(hal_mchp_spi_get_dma_src_addr(hal));
-	dma_blk.source_addr_adj = DMA_ADDR_ADJ_NO_CHANGE;
-
-	/* Apply DMA configuration */
-	retval = dma_config(cfg->dma_dev, cfg->rx_dma_channel, &dma_cfg);
-	if (retval != 0) {
-		return retval;
-	}
-
-	/* Start DMA transfer */
-	return dma_start(cfg->dma_dev, cfg->rx_dma_channel);
-}
-#endif
+#endif /* CONFIG_SPI_MCHP_DMA_DRIVEN */
 /**
  * @brief Perform an asynchronous SPI transceive operation.
  *
@@ -915,7 +926,7 @@ static int spi_mchp_dma_rx_load(const struct device *dev, uint8_t *buf, size_t l
  * @param config Pointer to the SPI configuration structure.
  * @param tx_bufs Pointer to the SPI buffer set for transmission.
  * @param rx_bufs Pointer to the SPI buffer set for reception.
- * @param cb Callback function to be called on completion.
+ * @param spi_callback Callback function to be called on completion.
  * @param userdata Pointer to user data to be passed to the callback.
  *
  * @retval 0 if the transfer is successfully initiated.
@@ -925,67 +936,68 @@ static int spi_mchp_dma_rx_load(const struct device *dev, uint8_t *buf, size_t l
  */
 static int spi_mchp_transceive_async(const struct device *dev, const struct spi_config *config,
 				     const struct spi_buf_set *tx_bufs,
-				     const struct spi_buf_set *rx_bufs, spi_callback_t cb,
+				     const struct spi_buf_set *rx_bufs, spi_callback_t spi_callback,
 				     void *userdata)
 {
 	const spi_mchp_dev_config_t *cfg = dev->config;
-	const hal_mchp_spi_t *hal = &cfg->hal;
 	spi_mchp_dev_data_t *data = dev->data;
 	int retval;
-
+	ARG_UNUSED(cfg);
 /*
  * Transmit clocks the output, and we use receive to
  * determine when the transmit is done, so we
  * always need both TX and RX DMA channels.
  */
-#ifdef CONFIG_SPI_MCHP_DMA_DRIVEN
-	if (cfg->tx_dma_channel == 0xFF || cfg->rx_dma_channel == 0xFF) {
+#if CONFIG_SPI_MCHP_DMA_DRIVEN
+	if (cfg->spi_dma.tx_dma_channel == 0xFF || cfg->spi_dma.rx_dma_channel == 0xFF) {
 		return -ENOTSUP;
 	}
 #endif
 
 	/* Lock SPI context for exclusive access */
-	spi_context_lock(&data->ctx, true, cb, userdata, config);
+	spi_context_lock(&data->ctx, true, spi_callback, userdata, config);
 
 	/* Configure SPI based on the provided configuration */
 	retval = spi_mchp_configure(dev, config);
 	if (retval != 0) {
-		goto err_unlock;
+		/* Release SPI context lock */
+		spi_context_release(&data->ctx, retval);
+		return retval;
 	}
 
-#ifdef !CONFIG_SPI_SLAVE
-	/* Assert chip select */
-	spi_context_cs_control(&data->ctx, true);
-#endif
+	if (SPI_OP_MODE_GET(config->operation) == SPI_OP_MODE_MASTER) {
+		/* Assert chip select */
+		spi_context_cs_control(&data->ctx, true);
+	}
 
 	/* Set up TX and RX buffers */
 	spi_context_buffers_setup(&data->ctx, tx_bufs, rx_bufs, 1);
 
 /* Prepare and start DMA transfers */
-#ifdef CONFIG_SPI_MCHP_DMA_DRIVEN
+#if CONFIG_SPI_MCHP_DMA_DRIVEN
 	spi_mchp_dma_advance_segment(dev);
 	retval = spi_mchp_dma_advance_buffers(dev);
+#else
+	retval = spi_mchp_transceive_interrupt(dev, config, tx_bufs, rx_bufs);
 #endif
+
 	if (retval != 0) {
-		goto err_cs;
+		/* Stop DMA transfers in case of failure */
+#if CONFIG_SPI_MCHP_DMA_DRIVEN
+		dma_stop(cfg->spi_dma.dma_dev, cfg->spi_dma.tx_dma_channel);
+		dma_stop(cfg->spi_dma.dma_dev, cfg->spi_dma.rx_dma_channel);
+#endif
+
+		/* Deassert chip select */
+		if (SPI_OP_MODE_GET(config->operation) == SPI_OP_MODE_MASTER) {
+			spi_context_cs_control(&data->ctx, false);
+		}
+
+		/* Release SPI context lock */
+		spi_context_release(&data->ctx, retval);
+	} else {
+		retval = 0;
 	}
-	return 0;
-
-err_cs:
-/* Stop DMA transfers in case of failure */
-#ifdef CONFIG_SPI_MCHP_DMA_DRIVEN
-	dma_stop(cfg->dma_dev, cfg->tx_dma_channel);
-	dma_stop(cfg->dma_dev, cfg->rx_dma_channel);
-#endif
-
-/* Deassert chip select */
-#ifdef !CONFIG_SPI_SLAVE
-	spi_context_cs_control(&data->ctx, false);
-#endif
-
-err_unlock:
-	/* Release SPI context lock */
-	spi_context_release(&data->ctx, retval);
 	return retval;
 }
 #endif /* CONFIG_SPI_ASYNC */
@@ -1040,69 +1052,124 @@ static void spi_mchp_isr(const struct device *dev)
 	/* Dummy data for padding SPI transactions */
 	uint8_t dummy_data = 0xFF;
 
+	/* SPI status flag for last byte. */
+	bool last_byte;
+
 	/* Transmit and receive data placeholders */
 	uint8_t tx = 0U;
 	uint8_t rx = 0U;
 
-	/* Error status variable */
-	int err = 0;
-
-	/* Check if data is available in the receive buffer */
-	if (hal_mchp_spi_is_rx_comp_set(hal)) {
-		if (spi_context_rx_buf_on(&data->ctx)) {
-			rx = hal_mchp_spi_read_data(hal);
-			*(uint8_t *)(data->ctx.rx_buf) = rx;
-			spi_context_update_rx(&data->ctx, 1, 1);
-		}
-	}
-
 	/* Check if the transmit buffer is empty and send the next byte */
-	if (hal_mchp_spi_is_data_empty_set(hal)) {
-		hal_mchp_spi_disable_data_empty_interrupt(hal);
-
-		if (spi_context_tx_buf_on(&data->ctx)) {
-			tx = *(uint8_t *)(data->ctx.tx_buf);
-			hal_mchp_spi_write_data(hal, tx);
-			spi_context_update_tx(&data->ctx, 1, 1);
-		} else if ((data->ctx.rx_len) - (data->ctx.tx_len) > 0) {
-			hal_mchp_spi_write_data(hal, dummy_data);
-		} else {
-			data->last_byte = true;
+	if (hal_mchp_spi_is_interrupt_set(hal)) {
+		/* Check if data is available in the receive buffer */
+		if (hal_mchp_spi_is_rx_comp_flag_set(hal)) {
+			if (spi_context_rx_buf_on(&data->ctx)) {
+				rx = hal_mchp_spi_read_data(hal);
+				*(uint8_t *)(data->ctx.rx_buf) = rx;
+				spi_context_update_rx(&data->ctx, 1, 1);
+			}
 		}
-
-		/* Re-enable data empty interrupt if RX buffer is full */
-		if (*(data->ctx.rx_buf) == (data->ctx.rx_len)) {
-			hal_mchp_spi_enable_data_empty_interrupt(hal);
-		}
-	} else {
-		/* Check if transmission is complete and disable interrupts
-		 */
-		if (hal_mchp_spi_is_tx_comp_set(hal) && (data->last_byte == true)) {
-			hal_mchp_spi_disable_rxc_interrupt(hal);
-			hal_mchp_spi_disable_txc_interrupt(hal);
+		if (hal_mchp_spi_is_data_empty_flag_set(hal)) {
 			hal_mchp_spi_disable_data_empty_interrupt(hal);
-
-#if !CONFIG_SPI_SLAVE
-			/* Control chip select for SPI slave mode */
-			spi_context_cs_control(&data->ctx, false);
-#endif
-
-#if CONFIG_SPI_MCHP_INTERRUPT_DRIVEN
-			/* Release the semaphore to unblock waiting threads
-			 */
-			k_sem_give(&data->ctx.sync);
-#endif
-
-#if CONFIG_SPI_MCHP_INTERRUPT_DRIVEN_ASYNC
-			/* Release the semaphore and invoke the callback */
-			k_sem_give(&data->ctx.sync);
-			spi_context_release(&data->ctx, err);
-#endif
-
-			/* Reset last byte flag */
-			data->last_byte = false;
+			if (spi_context_tx_on(&data->ctx)) {
+				tx = *(uint8_t *)(data->ctx.tx_buf);
+				hal_mchp_spi_write_data(hal, tx);
+				spi_context_update_tx(&data->ctx, 1, 1);
+			} else if (data->dummysize > 0) {
+				hal_mchp_spi_write_data(hal, dummy_data);
+				data->dummysize--;
+			} else {
+				/* Do Nothing */
+			}
+			if ((data->dummysize == 0) && spi_context_tx_on(&data->ctx)) {
+				last_byte = true;
+			} else if (spi_context_rx_on(&data->ctx)) {
+				hal_mchp_spi_enable_data_empty_interrupt(hal);
+				hal_mchp_spi_disable_rxc_interrupt(hal);
+			} else {
+				/* Do Nothing */
+			}
 		}
-	}
+		if (hal_mchp_spi_is_tx_comp_flag_set(hal) && (last_byte == true)) {
+			if (!spi_context_rx_on(&data->ctx)) {
+				hal_mchp_spi_disable_rxc_interrupt(hal);
+				hal_mchp_spi_disable_txc_interrupt(hal);
+				hal_mchp_spi_disable_data_empty_interrupt(hal);
+				last_byte = false;
+				if (spi_context_is_slave(&data->ctx)) {
+					/* Control chip select for SPI slave mode */
+					spi_context_cs_control(&data->ctx, false);
+				}
+#if CONFIG_SPI_MCHP_INTERRUPT_DRIVEN
+				/* Release the semaphore to unblock waiting threads
+				 */
+				k_sem_give(&data->ctx.sync);
+#endif
+#if CONFIG_SPI_MCHP_INTERRUPT_DRIVEN_ASYNC
+				/* Release the semaphore and invoke the callback */
+				spi_context_complete(&data->ctx, dev, 0);
+#endif
+			}
+		}
+		if (last_byte == true) {
+			hal_mchp_spi_enable_txc_interrupt(hal);
+		}
+	} // End of ISR
+	// 	if (hal_mchp_spi_is_data_empty_flag_set(hal)) {
+	// 		hal_mchp_spi_disable_data_empty_interrupt(hal);
+
+	// 		if (spi_context_tx_buf_on(&data->ctx)) {
+	// 			tx = *(uint8_t *)(data->ctx.tx_buf);
+	// 			hal_mchp_spi_write_data(hal, tx);
+	// 			spi_context_update_tx(&data->ctx, 1, 1);
+	// 		} else if ((data->ctx.rx_len) - (data->ctx.tx_len) > 0) {
+	// 			hal_mchp_spi_write_data(hal, dummy_data);
+	// 		} else {
+	// 			data->last_byte = true;
+	// 		}
+
+	// 		/* Re-enable data empty interrupt if RX buffer is full */
+	// 		if (*(data->ctx.rx_buf) == (data->ctx.rx_len)) {
+	// 			hal_mchp_spi_enable_data_empty_interrupt(hal);
+	// 		}
+	// 	} else {
+	// 		/* Check if transmission is complete and disable interrupts
+	// 		 */
+	// 		if (hal_mchp_spi_is_tx_comp_flag_set(hal) && (data->last_byte == true)) {
+	// 			hal_mchp_spi_disable_rxc_interrupt(hal);
+	// 			hal_mchp_spi_disable_txc_interrupt(hal);
+	// 			hal_mchp_spi_disable_data_empty_interrupt(hal);
+
+	// 			// #ifndef CONFIG_SPI_SLAVE
+	// 			if (spi_context_is_slave(&data->ctx)) {
+	// 				/* Control chip select for SPI slave mode */
+	// 				spi_context_cs_control(&data->ctx, false);
+	// 			}
+	// 			// #endif
+
+	// #if CONFIG_SPI_MCHP_INTERRUPT_DRIVEN
+	// 			/* Release the semaphore to unblock waiting threads
+	// 			 */
+	// 			k_sem_give(&data->ctx.sync);
+	// #endif
+
+	// #if CONFIG_SPI_MCHP_INTERRUPT_DRIVEN_ASYNC
+	// 			/* Release the semaphore and invoke the callback */
+	// 			// k_sem_give(&data->ctx.sync);
+
+	// 			// /* Callback */
+	// 			// if (data->ctx.callback) {
+	// 			// 	data->ctx.callback(dev, 0,
+	// 			// 			   data->ctx.callback_data); // 0 indicates
+	// success
+	// 			// }
+	// 			// spi_context_release(&data->ctx, err);
+	// 			spi_context_complete(&data->ctx, dev, 0);
+	// #endif
+	// 			/* Reset last byte flag */
+	// 			data->last_byte = false;
+	// 		}
+	// 	}
 }
 #endif /* CONFIG_SPI_ASYNC || CONFIG_SPI_MCHP_INTERRUPT_DRIVEN */
 /**
@@ -1154,12 +1221,12 @@ static const struct spi_driver_api spi_mchp_driver_api = {
 	/* Synchronous transceive function */
 	.transceive = spi_mchp_transceive_sync,
 
-#ifdef CONFIG_SPI_ASYNC
+#if CONFIG_SPI_ASYNC
 	/* Asynchronous transceive function */
 	.transceive_async = spi_mchp_transceive_async,
 #endif
 
-#ifdef CONFIG_SPI_RTIO
+#if CONFIG_SPI_RTIO
 	/* RTIO-based IO submission */
 	.iodev_submit = spi_rtio_iodev_default_submit,
 #endif
@@ -1193,7 +1260,6 @@ static const struct spi_driver_api spi_mchp_driver_api = {
  */
 #define SPI_MCHP_IRQ_HANDLER_DECL(n) static void spi_mchp_irq_config_##n(const struct device *dev)
 #define SPI_MCHP_IRQ_HANDLER_FUNC(n) .irq_config_func = spi_mchp_irq_config_##n,
-
 #else
 #define SPI_MCHP_IRQ_HANDLER_DECL(n)
 #define SPI_MCHP_IRQ_HANDLER_FUNC(n)
@@ -1206,11 +1272,11 @@ static const struct spi_driver_api spi_mchp_driver_api = {
  * @param n Instance number
  */
 #define SPI_MCHP_DMA_CHANNELS(n)                                                                   \
-	.spi_dma.dma_dev = DEVICE_DT_GET(MICROCHIP_SAME54_DT_INST_DMA_CTLR(n, tx)),                \
-	.spi_dma.hal.tx_dma_request = MICROCHIP_SAME54_DT_INST_DMA_TRIGSRC(n, tx),                 \
-	.spi_dma.hal.tx_dma_channel = MICROCHIP_SAME54_DT_INST_DMA_CHANNEL(n, tx),                 \
-	.spi_dma.hal.rx_dma_request = MICROCHIP_SAME54_DT_INST_DMA_TRIGSRC(n, rx),                 \
-	.spi_dma.hal.rx_dma_channel = MICROCHIP_SAME54_DT_INST_DMA_CHANNEL(n, rx),
+	.spi_dma.dma_dev = DEVICE_DT_GET(MCHP_DT_INST_DMA_CTLR(n, tx)),                            \
+	.spi_dma.tx_dma_request = MCHP_DT_INST_DMA_TRIGSRC(n, tx),                                 \
+	.spi_dma.tx_dma_channel = MCHP_DT_INST_DMA_CHANNEL(n, tx),                                 \
+	.spi_dma.rx_dma_request = MCHP_DT_INST_DMA_TRIGSRC(n, rx),                                 \
+	.spi_dma.rx_dma_channel = MCHP_DT_INST_DMA_CHANNEL(n, rx),
 #else
 #define SPI_MCHP_DMA_CHANNELS(n)
 #endif /* CONFIG_SPI_MCHP_DMA_DRIVEN */
