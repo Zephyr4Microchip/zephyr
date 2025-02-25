@@ -1,7 +1,7 @@
-# Copyright (c) 2018, Google LLC.
+# Copyright (c) 2025 Microchip Technology Inc.
 # SPDX-License-Identifier: Apache-2.0
 
-description: Microchip SAM SERCOM SPI controller
+description: Microchip SERCOM SPI controller
 
 compatible: "microchip,sercom-u2201-spi"
 
