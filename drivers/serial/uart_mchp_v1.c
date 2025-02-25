@@ -265,15 +265,14 @@ static int uart_mchp_init(const struct device *dev)
 
 	dev_data->config_cache.flow_ctrl = UART_CFG_FLOW_CTRL_NONE;
 
-	/* 8 bits of data, no parity, 1 stop bit in normal mode */
 	hal_mchp_uart_config_data_bits(hal, cfg->data_bits);
-	dev_data->config_cache.data_bits = UART_CFG_DATA_BITS_8;
+	dev_data->config_cache.data_bits = cfg->data_bits;
 
 	hal_mchp_uart_config_parity(hal, cfg->parity);
-	dev_data->config_cache.parity = UART_CFG_PARITY_NONE;
+	dev_data->config_cache.parity = cfg->parity;
 
 	hal_mchp_uart_config_stop_bits(hal, cfg->stop_bits);
-	dev_data->config_cache.stop_bits = UART_CFG_STOP_BITS_1;
+	dev_data->config_cache.stop_bits = cfg->stop_bits;
 
 	hal_mchp_uart_config_pinout(hal);
 	hal_mchp_uart_set_clock_polarity(hal, false);
@@ -598,8 +597,10 @@ static void uart_mchp_irq_tx_enable(const struct device *dev)
 	const uart_mchp_dev_cfg_t *const cfg = dev->config;
 	const hal_mchp_uart_t *const hal = &cfg->hal;
 
+	unsigned int key = irq_lock();
 	hal_mchp_uart_enable_tx_ready_interrupt(hal, true);
 	hal_mchp_uart_enable_tx_complete_interrupt(hal, true);
+	irq_unlock(key);
 }
 
 /**
@@ -631,7 +632,7 @@ static int uart_mchp_irq_tx_ready(const struct device *dev)
 	const uart_mchp_dev_cfg_t *const cfg = dev->config;
 	const hal_mchp_uart_t *const hal = &cfg->hal;
 
-	return (hal_mchp_uart_is_tx_ready(hal));
+	return (hal_mchp_uart_is_tx_ready(hal) && hal_mchp_uart_is_tx_interrupt_enabled(hal));
 }
 
 /**
