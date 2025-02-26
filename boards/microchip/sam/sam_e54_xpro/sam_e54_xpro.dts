@@ -22,6 +22,7 @@
 	
 	aliases {
 		led0 = &led0;
+		i2c-0 = &sercom7;
 	};
 	
 	leds {
@@ -53,6 +54,20 @@
 	
 	dmas = <&dmac 1 8>, <&dmac 2 9>;
 	dma-names = "rx", "tx";
+};
+
+&sercom7 {
+	status = "okay";
+	compatible = "microchip,sercom-u2201-i2c";
+	clock-frequency = <I2C_BITRATE_FAST>;
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	pinctrl-0 = <&sercom7_i2c_default>;
+	pinctrl-names = "default";
+
+	dmas = <&dmac 10 0x12>, <&dmac 11 0x13>;
+    dma-names = "rx", "tx";
 };
 
 &sercom6 {

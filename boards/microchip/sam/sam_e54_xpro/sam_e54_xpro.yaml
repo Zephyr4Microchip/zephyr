@@ -15,4 +15,5 @@ supported:
   - uart
   - gpio
   - spi
+  - i2c
 vendor: microchip

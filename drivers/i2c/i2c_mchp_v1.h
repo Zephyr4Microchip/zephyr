@@ -7,11 +7,14 @@
 #ifndef MICROCHIP_I2C_MCHP_V1_H_
 #define MICROCHIP_I2C_MCHP_V1_H_
 
-#if defined(CONFIG_SOC_SERIES_MCHP_SAME54)
+#if defined(CONFIG_SOC_FAMILY_MCHP_SAM_D5X_E5X)
 /* Include rquired header files */
 
 /* Define compatible sting */
 #define DT_DRV_COMPAT microchip_sercom_u2201_i2c
+
+#define I2C_MCHP_HAL_DEFN(n)                                                                      \
+	.hal.regs = (sercom_registers_t *)DT_INST_REG_ADDR(n), 
 
 /* Do the peripheral interrupt related configuration */
 #if DT_INST_IRQ_HAS_IDX(0, 3)
@@ -31,26 +34,31 @@
 	}
 #endif
 
-/* Enum representing the interrupt flags for the MCHP I2C peripheral */
-typedef enum i2c_mchp_intFlag {
+/* Enum representing the interrupt flags for the MCHP I2C peripheral in controleer mode */
+typedef enum i2c_mchp_controller_intFlag {
 	/* Indicates that the master is currently on the bus. */
-	master_on_bus = 1,
+	CONTROLLER_ON_BUS = 1,
 
 	/* Indicates that the target is currently on the bus. */
-	target_on_bus = 2,
+	TARGET_ON_BUS = 2,
+	
+} i2c_mchp_controller_intFlag_t;
 
-	/* Indicates an error condition in the I2C operation. */
-	error = 128,
-
+/* Enum representing the interrupt flags for the MCHP I2C peripheral in target mode */
+typedef enum i2c_mchp_target_intFlag {
 	/* Indicates that a STOP condition has been detected. */
-	stop = 1,
+	STOP = 1,
 
 	/* Indicates that an address match has occurred. */
-	addr_match = 2,
+	ADDR_MATCH = 2,
 
 	/* Indicates that data is ready for transmission or reception. */
-	data_ready = 4
-}i2c_mchp_intFlag_t;
+	DATA_READY = 4,
+
+	/* Indicates an error condition in the I2C operation. */
+	ERROR = 128,
+}i2c_mchp_target_intFlag_t;
+
 
 typedef struct mchp_i2c_clock {
 	/* Clock driver */
@@ -60,9 +68,6 @@ typedef struct mchp_i2c_clock {
 	/* Generic clock subsystem. */
 	clock_control_mchp_subsys_t gclk_sys;
 } mchp_i2c_clock_t;
-
-#define I2C_MCHP_HAL_DEFN(n)                                                                      \
-	.hal.regs = (sercom_registers_t *)DT_INST_REG_ADDR(n), 
 
 #define I2C_MCHP_CLOCK_DEFN(n)                                                                     \
 	.i2c_clock.clock_dev = DEVICE_DT_GET(DT_NODELABEL(clock)),                                 \
@@ -75,7 +80,7 @@ typedef struct mchp_i2c_clock {
 #define I2C_MCHP_GET_CLOCK_FREQ(dev, rate)                                                         \
 	clock_control_get_rate(                                                                    \
 		((const i2c_mchp_dev_config_t *)(dev->config))->i2c_clock.clock_dev,               \
-		&(((i2c_mchp_dev_config_t *)(dev->config))->i2c_clock.gclk_sys), &rate);
+		&(((i2c_mchp_dev_config_t *)(dev->config))->i2c_clock.gclk_sys), &rate)
 
 #define I2C_MCHP_ENABLE_CLOCK(dev)                                                                 \
 	clock_control_on(((const i2c_mchp_dev_config_t *)(dev->config))->i2c_clock.clock_dev,      \
