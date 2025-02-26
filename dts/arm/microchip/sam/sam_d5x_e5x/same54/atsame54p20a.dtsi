@@ -5,17 +5,5 @@
  */
 
 #include <mem.h>
-#include <microchip/sam/sam_d5x_e5x/same54/same54.dtsi>
-
-/ {
-	soc {
-		nvmctrl@41004000 {
-			flash0: flash@0 {
-				reg = <0x0 DT_SIZE_K(1024)>;
-			};
-		};
-		sram0: memory@20000000 {
-			reg = <0x20000000 DT_SIZE_K(256)>;
-		};
-	};
-};
+#include <microchip/sam/sam_d5x_e5x/common/samd5xe5x.dtsi>
+#include <microchip/sam/sam_d5x_e5x/common/samd5xe5x20.dtsi>

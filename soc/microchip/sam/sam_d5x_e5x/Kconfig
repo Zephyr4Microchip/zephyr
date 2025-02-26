@@ -2,14 +2,16 @@
 # SPDX-License-Identifier: Apache-2.0
 
 config SOC_FAMILY_MCHP_SAM_D5X_E5X
+	select ARM
+	select CPU_CORTEX_M4
+	select CPU_CORTEX_M_HAS_DWT
+	select CPU_HAS_ARM_MPU
+	select CPU_HAS_FPU
+	select SOC_RESET_HOOK
+	select CLOCK_CONTROL
 	select HAS_CMSIS_CORE
 	select HAS_SEGGER_RTT if ZEPHYR_SEGGER_MODULE
+
 	select HAS_MCHP_HAL_DFP
 	select HAS_MCHP_HAL_INCLUDE
 	select HAS_MCHP_HAL_PERIPHERALS
-
-if SOC_FAMILY_MCHP_SAM_D5X_E5X
-
-rsource "*/Kconfig"
-
-endif # SOC_FAMILY_MCHP_SAM_D5X_E5X
