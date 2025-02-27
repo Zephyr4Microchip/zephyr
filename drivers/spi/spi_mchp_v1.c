@@ -165,9 +165,15 @@ static int spi_mchp_configure(const struct device *dev, const struct spi_config 
 		}
 
 		/*Set the CS line*/
-		err = spi_context_cs_configure_all(&data->ctx);
-		if (err < 0) {
-			return err;
+		if (data->ctx.num_cs_gpios != 0) {
+			err = spi_context_cs_configure_all(&data->ctx);
+			if (err < 0) {
+				return err;
+			}
+		} else if (cfg->pcfg->states->pin_cnt == 4) {
+			hal_mchp_spi_select_line(hal);
+		} else {
+			/* Handled by user */
 		}
 	}
 

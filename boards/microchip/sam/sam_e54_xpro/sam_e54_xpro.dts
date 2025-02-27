@@ -55,6 +55,20 @@
 	dma-names = "rx", "tx";
 };
 
+&sercom6 {
+	status = "okay";
+	compatible = "microchip,sercom-u2201-spi";
+	dipo = <3>;
+	dopo = <0>;
+	#address-cells = <1>;
+	#size-cells = <0>;
+	pinctrl-0 = <&sercom6_spi_default>;
+	pinctrl-names = "default";
+	
+	dmas = <&dmac 3 17>, <&dmac 4 16>;
+	dma-names = "tx", "rx";
+};
+
 &flash0 {
 	partitions {
 		compatible = "fixed-partitions";

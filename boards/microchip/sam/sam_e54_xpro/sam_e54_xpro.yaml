@@ -14,4 +14,5 @@ ram: 256
 supported:
   - uart
   - gpio
+  - spi
 vendor: microchip
