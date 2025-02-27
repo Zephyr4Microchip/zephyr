@@ -47,6 +47,9 @@ typedef struct hal_mchp_spi {
 
 	/* SPI pad configuration */
 	uint32_t pads;
+
+	/* SPI timeout for polling method */
+	uint8_t spi_timeout;
 } hal_mchp_spi_t;
 
 /**
@@ -59,7 +62,8 @@ typedef struct hal_mchp_spi {
  *  and clock configurations are defined.
  */
 #define SPI_MCHP_HAL_DEFN(n)                                                                       \
-	.hal.regs = (sercom_registers_t *)DT_INST_REG_ADDR(n), .hal.pads = SPI_MCHP_SERCOM_PADS(n),
+	.hal.regs = (sercom_registers_t *)DT_INST_REG_ADDR(n),                                     \
+	.hal.pads = SPI_MCHP_SERCOM_PADS(n), .hal.spi_timeout = (uint8_t)DT_INST_PROP(n, timeout_us),
 
 /**
  * @brief Define interrupt configuration macros based on device
@@ -116,10 +120,10 @@ typedef struct mchp_spi_clock {
 
 #define SPI_MCHP_CLOCK_DEFN(n)                                                                     \
 	.spi_clock.clock_dev = DEVICE_DT_GET(DT_NODELABEL(clock)),                                 \
-	.spi_clock.mclk_sys = {.dev = DEVICE_DT_GET(DT_INST_CLOCKS_CTLR_BY_NAME(n, mclk)),     \
-				   .id = DT_INST_CLOCKS_CELL_BY_NAME(n, mclk, id)},                \
-	.spi_clock.gclk_sys = {.dev = DEVICE_DT_GET(DT_INST_CLOCKS_CTLR_BY_NAME(n, gclk)),     \
-				   .id = DT_INST_CLOCKS_CELL_BY_NAME(n, gclk, id)}
+	.spi_clock.mclk_sys = {.dev = DEVICE_DT_GET(DT_INST_CLOCKS_CTLR_BY_NAME(n, mclk)),         \
+			       .id = DT_INST_CLOCKS_CELL_BY_NAME(n, mclk, id)},                    \
+	.spi_clock.gclk_sys = {.dev = DEVICE_DT_GET(DT_INST_CLOCKS_CTLR_BY_NAME(n, gclk)),         \
+			       .id = DT_INST_CLOCKS_CELL_BY_NAME(n, gclk, id)}
 
 /**
  * @brief Macros for handling SPI peripheral clock configuration.
@@ -128,13 +132,14 @@ typedef struct mchp_spi_clock {
  * clocks for the SPI peripheral.
  */
 #define SPI_MCHP_GET_CLOCK_FREQ(dev, rate)                                                         \
-	clock_control_get_rate(((const spi_mchp_dev_config_t *)(dev->config))->spi_clock.clock_dev,              \
+	clock_control_get_rate(                                                                    \
+		((const spi_mchp_dev_config_t *)(dev->config))->spi_clock.clock_dev,               \
 		&(((spi_mchp_dev_config_t *)(dev->config))->spi_clock.gclk_sys), &rate);
 
 #define SPI_MCHP_ENABLE_CLOCK(dev)                                                                 \
-	clock_control_on(((const spi_mchp_dev_config_t *)(dev->config))->spi_clock.clock_dev,     \
-			 &(((spi_mchp_dev_config_t *)(dev->config))->spi_clock.gclk_sys));    \
-	clock_control_on(((const spi_mchp_dev_config_t *)(dev->config))->spi_clock.clock_dev,     \
+	clock_control_on(((const spi_mchp_dev_config_t *)(dev->config))->spi_clock.clock_dev,      \
+			 &(((spi_mchp_dev_config_t *)(dev->config))->spi_clock.gclk_sys));         \
+	clock_control_on(((const spi_mchp_dev_config_t *)(dev->config))->spi_clock.clock_dev,      \
 			 &(((spi_mchp_dev_config_t *)(dev->config))->spi_clock.mclk_sys))
 
 /**

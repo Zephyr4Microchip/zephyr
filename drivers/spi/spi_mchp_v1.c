@@ -259,8 +259,15 @@ static bool spi_mchp_transfer_in_progress(spi_mchp_dev_data_t *data)
  */
 static void spi_mchp_finish(const hal_mchp_spi_t *hal)
 {
+	uint8_t timeout;
+
+	timeout = hal->spi_timeout;
+
 	/* Wait until transmit complete */
-	hal_mchp_spix_comp(hal);
+	while (!hal_mchp_spi_tx_comp(hal) && timeout > 0) {
+		k_sleep(K_USEC(1));
+		timeout--;
+	};
 
 	/* Clear the data */
 	hal_mchp_spi_clr_data(hal);
@@ -282,6 +289,9 @@ static void spi_mchp_poll_in(const hal_mchp_spi_t *hal, spi_mchp_dev_data_t *dat
 {
 	uint8_t tx;
 	uint8_t rx;
+	uint8_t timeout;
+
+	timeout = hal->spi_timeout;
 
 	/* Check if there is data to transmit */
 	if (spi_context_tx_buf_on(&data->ctx)) {
@@ -291,7 +301,10 @@ static void spi_mchp_poll_in(const hal_mchp_spi_t *hal, spi_mchp_dev_data_t *dat
 	}
 
 	/* Indicate that the SPI data register is empty */
-	hal_mchp_spi_data_empty(hal);
+	while (!hal_mchp_spi_data_empty(hal) && timeout > 0) {
+		k_sleep(K_USEC(1));
+		timeout--;
+	};
 
 	/* Write data to the SPI data register */
 	hal_mchp_spi_write_data(hal, tx);
@@ -300,7 +313,11 @@ static void spi_mchp_poll_in(const hal_mchp_spi_t *hal, spi_mchp_dev_data_t *dat
 	spi_context_update_tx(&data->ctx, 1, 1);
 
 	/* Wait for the reception to complete */
-	hal_mchp_spi_rx_comp(hal);
+	timeout = hal->spi_timeout;
+	while (!hal_mchp_spi_rx_comp(hal) && timeout > 0) {
+		k_sleep(K_USEC(1));
+		timeout--;
+	};
 
 	/* Read the received data from the SPI data register */
 	rx = hal_mchp_spi_read_data(hal);
@@ -365,7 +382,9 @@ static void spi_mchp_fast_rx(const hal_mchp_spi_t *hal, const struct spi_buf *rx
 	}
 
 	while (len) {
-		static const uint8_t dummy_data = 0xFF;
+		uint8_t dummy_data;
+
+		dummy_data = 0U;
 
 		/* Write a dummy data to receive data */
 		hal_mchp_spi_write_data(hal, dummy_data);
@@ -667,7 +686,7 @@ static void spi_mchp_dma_rx_done(const struct device *dma_dev, void *arg, uint32
  *
  * This function configures and starts a DMA transaction to transfer data
  * from memory to the SPI peripheral. If no TX buffer is provided, it sends
- * dummy bytes (0xFF) instead.
+ * dummy bytes (0U) instead.
  *
  * @param dev Pointer to the SPI device structure.
  * @param buf Pointer to the TX data buffer (can be NULL).
@@ -697,7 +716,7 @@ static int spi_mchp_dma_tx_load(const struct device *dev, const uint8_t *buf, si
 	if (buf != NULL) {
 		dma_blk.source_address = (uint32_t)buf;
 	} else {
-		static const uint8_t dummy_data = 0xFF;
+		static const uint8_t dummy_data;
 
 		dma_blk.source_address = (uint32_t)&dummy_data;
 		dma_blk.source_addr_adj = DMA_ADDR_ADJ_NO_CHANGE;
@@ -757,7 +776,7 @@ static int spi_mchp_dma_rx_load(const struct device *dev, uint8_t *buf, size_t l
 		dma_blk.dest_address = (uint32_t)buf;
 	} else {
 		/* Use a static dummy variable if no buffer is provided */
-		static uint8_t dummy_data = 0xFF;
+		static uint8_t dummy_data;
 
 		dma_blk.dest_address = (uint32_t)&dummy_data;
 		dma_blk.dest_addr_adj = DMA_ADDR_ADJ_NO_CHANGE;
@@ -912,8 +931,8 @@ static void spi_mchp_dma_rx_done(const struct device *dma_dev, void *arg, uint32
 		return;
 	}
 }
-
 #endif /* CONFIG_SPI_MCHP_DMA_DRIVEN */
+
 /**
  * @brief Perform an asynchronous SPI transceive operation.
  *
@@ -942,6 +961,7 @@ static int spi_mchp_transceive_async(const struct device *dev, const struct spi_
 	const spi_mchp_dev_config_t *cfg = dev->config;
 	spi_mchp_dev_data_t *data = dev->data;
 	int retval;
+
 	ARG_UNUSED(cfg);
 /*
  * Transmit clocks the output, and we use receive to
@@ -1050,7 +1070,7 @@ static void spi_mchp_isr(const struct device *dev)
 	const hal_mchp_spi_t *hal = &cfg->hal;
 
 	/* Dummy data for padding SPI transactions */
-	uint8_t dummy_data = 0xFF;
+	uint8_t dummy_data;
 
 	/* SPI status flag for last byte. */
 	bool last_byte;
@@ -1058,6 +1078,8 @@ static void spi_mchp_isr(const struct device *dev)
 	/* Transmit and receive data placeholders */
 	uint8_t tx = 0U;
 	uint8_t rx = 0U;
+	last_byte = false;
+	dummy_data = 0U;
 
 	/* Check if the transmit buffer is empty and send the next byte */
 	if (hal_mchp_spi_is_interrupt_set(hal)) {
@@ -1081,9 +1103,9 @@ static void spi_mchp_isr(const struct device *dev)
 			} else {
 				/* Do Nothing */
 			}
-			if ((data->dummysize == 0) && spi_context_tx_on(&data->ctx)) {
+			if ((data->dummysize == 0) && (!spi_context_tx_on(&data->ctx))) {
 				last_byte = true;
-			} else if (spi_context_rx_on(&data->ctx)) {
+			} else if (!spi_context_rx_on(&data->ctx)) {
 				hal_mchp_spi_enable_data_empty_interrupt(hal);
 				hal_mchp_spi_disable_rxc_interrupt(hal);
 			} else {
@@ -1101,8 +1123,7 @@ static void spi_mchp_isr(const struct device *dev)
 					spi_context_cs_control(&data->ctx, false);
 				}
 #if CONFIG_SPI_MCHP_INTERRUPT_DRIVEN
-				/* Release the semaphore to unblock waiting threads
-				 */
+				/* Release the semaphore to unblock waiting threads */
 				k_sem_give(&data->ctx.sync);
 #endif
 #if CONFIG_SPI_MCHP_INTERRUPT_DRIVEN_ASYNC
@@ -1114,64 +1135,10 @@ static void spi_mchp_isr(const struct device *dev)
 		if (last_byte == true) {
 			hal_mchp_spi_enable_txc_interrupt(hal);
 		}
-	} // End of ISR
-	// 	if (hal_mchp_spi_is_data_empty_flag_set(hal)) {
-	// 		hal_mchp_spi_disable_data_empty_interrupt(hal);
-
-	// 		if (spi_context_tx_buf_on(&data->ctx)) {
-	// 			tx = *(uint8_t *)(data->ctx.tx_buf);
-	// 			hal_mchp_spi_write_data(hal, tx);
-	// 			spi_context_update_tx(&data->ctx, 1, 1);
-	// 		} else if ((data->ctx.rx_len) - (data->ctx.tx_len) > 0) {
-	// 			hal_mchp_spi_write_data(hal, dummy_data);
-	// 		} else {
-	// 			data->last_byte = true;
-	// 		}
-
-	// 		/* Re-enable data empty interrupt if RX buffer is full */
-	// 		if (*(data->ctx.rx_buf) == (data->ctx.rx_len)) {
-	// 			hal_mchp_spi_enable_data_empty_interrupt(hal);
-	// 		}
-	// 	} else {
-	// 		/* Check if transmission is complete and disable interrupts
-	// 		 */
-	// 		if (hal_mchp_spi_is_tx_comp_flag_set(hal) && (data->last_byte == true)) {
-	// 			hal_mchp_spi_disable_rxc_interrupt(hal);
-	// 			hal_mchp_spi_disable_txc_interrupt(hal);
-	// 			hal_mchp_spi_disable_data_empty_interrupt(hal);
-
-	// 			// #ifndef CONFIG_SPI_SLAVE
-	// 			if (spi_context_is_slave(&data->ctx)) {
-	// 				/* Control chip select for SPI slave mode */
-	// 				spi_context_cs_control(&data->ctx, false);
-	// 			}
-	// 			// #endif
-
-	// #if CONFIG_SPI_MCHP_INTERRUPT_DRIVEN
-	// 			/* Release the semaphore to unblock waiting threads
-	// 			 */
-	// 			k_sem_give(&data->ctx.sync);
-	// #endif
-
-	// #if CONFIG_SPI_MCHP_INTERRUPT_DRIVEN_ASYNC
-	// 			/* Release the semaphore and invoke the callback */
-	// 			// k_sem_give(&data->ctx.sync);
-
-	// 			// /* Callback */
-	// 			// if (data->ctx.callback) {
-	// 			// 	data->ctx.callback(dev, 0,
-	// 			// 			   data->ctx.callback_data); // 0 indicates
-	// success
-	// 			// }
-	// 			// spi_context_release(&data->ctx, err);
-	// 			spi_context_complete(&data->ctx, dev, 0);
-	// #endif
-	// 			/* Reset last byte flag */
-	// 			data->last_byte = false;
-	// 		}
-	// 	}
+	}
 }
 #endif /* CONFIG_SPI_ASYNC || CONFIG_SPI_MCHP_INTERRUPT_DRIVEN */
+
 /**
  * @brief Initialize the Microchip SPI controller.
  *
