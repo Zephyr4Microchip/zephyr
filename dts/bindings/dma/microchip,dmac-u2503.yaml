@@ -9,13 +9,41 @@ include: dma-controller.yaml
 
 properties:
   reg:
+    type: array
     required: true
+    description: Specifies the base address and size of the DMA controller's memory-mapped registers.
 
   interrupts:
+    type: array
     required: true
+    description: Defines the list of interrupt numbers associated with the DMA controller.
+
+  clocks:
+    type: phandle-array
+    required: true
+    description: A reference to the clock source used by the DMA controller.
+
+  clock-names:
+    type: string-array
+    required: true
+    description: The name of the clock source referenced in the 'clocks' property.
+
+  dma-channels:
+    type: int
+    required: true
+    description: The number of DMA channels available in the DMA controller.
+
+  dma-alignment:
+    type: int
+    required: false
+    description: Specifies the required memory alignment for DMA transfers.
+                 The value should be set to 16 for 128-bit alignment.
+    default: 16
 
   "#dma-cells":
+    type: int
     const: 2
+    description: Specifies the number of cells used for the DMA specifier.
 
 # #dma-cells : Must be <2>.
 # The 1st cell specifies the DMAC channel to be used for the data transfer.

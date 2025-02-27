@@ -1,11 +1,41 @@
-# Microchip MCHP_V1 DMA driver configuration options
+#Microchip MCHP_V1 DMA driver configuration options
 
-# Copyright (c) 2025 Microchip Technology Inc.
-# SPDX-License-Identifier: Apache-2.0
+#Copyright(c) 2025 Microchip Technology Inc.
+#SPDX - License - Identifier : Apache - 2.0
 
 config DMA_MCHP_V1
 	bool "Microchip MCHP_V1 DMA driver"
 	default y
 	depends on DT_HAS_MICROCHIP_DMAC_U2503_ENABLED
+	depends on !DMA_64BIT
 	help
 	  This Option enables the DMA driver support for Microchip SAM MCUs.
+
+if DMA_MCHP_V1
+
+config DMA_MCHP_V1_MAX_DESC
+	int "Number of DMA descriptors allocated in DMA descriptor pool"
+	range 4 256
+	default 128
+	help
+	  Defines the number of DMA descriptors in the dynamically allocated pool.
+	  All DMA channels will share this common pool of descriptors.
+	  Increasing this value may improve performance for systems with high
+	  DMA usage but will increase memory consumption.
+
+config DMA_MCHP_LOG_LEVEL
+	int "DMA MCHP V1 driver log level"
+	default 3
+	range 0 4
+	depends on DMA
+	help
+	  Sets the log level for the DMA driver.
+
+	  Available log levels:
+	  - 0: Off (No logs)
+	  - 1: Error
+	  - 2: Warning
+	  - 3: Info (Default)
+	  - 4: Debug
+
+endif # DMA_MCHP_V1
