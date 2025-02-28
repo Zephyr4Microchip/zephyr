@@ -34,32 +34,6 @@
 	}
 #endif
 
-/* Enum representing the interrupt flags for the MCHP I2C peripheral in controleer mode */
-typedef enum i2c_mchp_controller_intFlag {
-	/* Indicates that the master is currently on the bus. */
-	CONTROLLER_ON_BUS = 1,
-
-	/* Indicates that the target is currently on the bus. */
-	TARGET_ON_BUS = 2,
-	
-} i2c_mchp_controller_intFlag_t;
-
-/* Enum representing the interrupt flags for the MCHP I2C peripheral in target mode */
-typedef enum i2c_mchp_target_intFlag {
-	/* Indicates that a STOP condition has been detected. */
-	STOP = 1,
-
-	/* Indicates that an address match has occurred. */
-	ADDR_MATCH = 2,
-
-	/* Indicates that data is ready for transmission or reception. */
-	DATA_READY = 4,
-
-	/* Indicates an error condition in the I2C operation. */
-	ERROR = 128,
-}i2c_mchp_target_intFlag_t;
-
-
 typedef struct mchp_i2c_clock {
 	/* Clock driver */
 	const struct device *clock_dev;
