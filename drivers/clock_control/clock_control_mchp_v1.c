@@ -62,27 +62,6 @@
 #define CLOCK_CONTROL_MCHP_SUBSYS_COUNT DT_NUM_RANGES(DT_NODELABEL(clock))
 
 /**
- * @brief Structure holding callback work data for the clock control.
- *
- * This structure is used to store data associated with the clock control callback
- * and the work queued for processing in the system. It includes the work object,
- * the callback function, the device the callback is associated with, the subsystem
- * for the clock, and any user data that is passed with the callback.
- */
-typedef struct {
-	/* Work object for clock control callback processing. */
-	struct k_work work;
-	/* Callback function to be executed when the work is triggered. */
-	clock_control_cb_t cb;
-	/* Device associated with the callback function. */
-	const struct device *dev;
-	/* Clock control subsystem associated with the callback. */
-	clock_control_subsys_t sys;
-	/* User-specific data that will be passed to the callback function. */
-	void *user_data;
-} clock_control_mchp_cb_work_data_t;
-
-/**
  * @brief Structure holding data for the clock control mechanism.
  *
  * This structure contains information related to asynchronous clock control
@@ -94,8 +73,16 @@ typedef struct {
 	uint32_t async_base;
 	/* Identifier for the asynchronous clock control operation. */
 	uint32_t async_id;
-	/* Callback work data for clock control operations. */
-	clock_control_mchp_cb_work_data_t cb_work_data;
+	/* Callback function to be executed when the work is triggered. */
+	clock_control_cb_t async_cb;
+	/* Device associated with the callback function. */
+	const struct device *async_dev;
+	/* Clock control subsystem associated with the callback. */
+	clock_control_subsys_t async_sys;
+	/* User-specific data that will be passed to the callback function. */
+	void *async_user_data;
+	/* Flag indicating if an asynchronous operation is in progress. */
+	bool is_async_in_progress;
 } clock_control_mchp_data_t;
 
 /**
@@ -117,25 +104,6 @@ typedef struct {
 	/* Timeout in milliseconds to wait for clock to turn on */
 	uint32_t on_timeout_ms;
 } clock_control_mchp_config_t;
-
-/**
- * @brief Invoke the clock control callback function.
- *
- * This function is called to invoke the callback function associated with a
- * specific asynchronous clock control work. It retrieves the callback data
- * and calls the user-defined callback with the appropriate parameters.
- *
- * @param async_work Pointer to the work structure that contains the callback data.
- */
-static void clock_control_mchp_invoke_cb(struct k_work *async_work)
-{
-	/* Retrieve the callback work data from the work structure. */
-	clock_control_mchp_cb_work_data_t *cb_work_data =
-		CONTAINER_OF(async_work, clock_control_mchp_cb_work_data_t, work);
-
-	/* Invoke the callback function with the device, subsystem, and user data. */
-	cb_work_data->cb(cb_work_data->dev, cb_work_data->sys, cb_work_data->user_data);
-}
 
 /**
  * @brief Get the index of a subsystem device in the configuration.
@@ -190,10 +158,13 @@ static void clock_control_mchp_isr(const struct device *dev)
 	hal_mchp_clock_disable_interrupt(data->async_base, data->async_id);
 
 	/* Check if a callback function is provided by the caller. */
-	if (data->cb_work_data.cb != NULL) {
-		/* Submit the work to be processed by the callback function. */
-		k_work_submit(&data->cb_work_data.work);
+	if (data->async_cb != NULL) {
+		/* Invoke the callback function with the device, subsystem, and user data. */
+		data->async_cb(data->async_dev, data->async_sys, data->async_user_data);
 	}
+
+	/* Change flag to indicate async operation not in progress */
+	data->is_async_in_progress = false;
 }
 
 /**
@@ -216,16 +187,22 @@ static int clock_control_mchp_async_on(const struct device *dev, clock_control_s
 {
 	/* Return value for the operation status. */
 	int ret_val;
+	/* Subsystem index for identifying the clock device. */
+	int subsys_idx;
 	/* Pointer to the subsystem structure. */
 	clock_control_mchp_subsys_t *subsys;
 	/* Status of the clock. */
 	clock_control_mchp_state_t status;
-	/* Subsystem index for identifying the clock device. */
-	int subsys_idx;
 	/* Pointer to the clock control configuration data. */
 	const clock_control_mchp_config_t *config = dev->config;
 	/* Pointer to the clock control data associated with the device. */
 	clock_control_mchp_data_t *data = dev->data;
+
+	/* Check if an async operation is already in progress. */
+	if (data->is_async_in_progress == true) {
+		/* Return busy to indicate async is already in progress. */
+		return -EBUSY;
+	}
 
 	/* Check if the clock control for all subsystems is requested. */
 	if (sys == CLOCK_CONTROL_SUBSYS_ALL) {
@@ -254,19 +231,22 @@ static int clock_control_mchp_async_on(const struct device *dev, clock_control_s
 				/* Clock is already STARTING. */
 				ret_val = -EALREADY;
 			} else if (status == CLOCK_CONTROL_MCHP_STATE_OFF) {
+				/* Clear the interrupt before enabling */
+				hal_mchp_clock_clear_interrupt(config->subsys_regs[subsys_idx],
+							       subsys->id);
+
 				/* Clock is off, attempt to enable interrupt */
 				if (hal_mchp_clock_enable_interrupt(config->subsys_regs[subsys_idx],
 								    subsys->id) ==
 				    CLOCK_CONTROL_MCHP_STATE_OK) {
-					/* Store data and initialize work. */
+					/* Store async data to context. */
 					data->async_base = config->subsys_regs[subsys_idx];
 					data->async_id = subsys->id;
-					data->cb_work_data.cb = cb;
-					data->cb_work_data.sys = sys;
-					data->cb_work_data.user_data = user_data;
-					k_work_init(&data->cb_work_data.work,
-						    clock_control_mchp_invoke_cb);
-
+					data->async_cb = cb;
+					data->async_sys = sys;
+					data->async_user_data = user_data;
+					/* Set flag to indicate async operation is in progress. */
+					data->is_async_in_progress = true;
 					/* Clock interrupt is enabled, attempt to turn it on. */
 					if (hal_mchp_clock_on(config->subsys_regs[subsys_idx],
 							      subsys->id) ==
@@ -274,7 +254,6 @@ static int clock_control_mchp_async_on(const struct device *dev, clock_control_s
 						/* Successfully initialized */
 						ret_val = 0;
 					} else {
-						k_work_cancel(&data->cb_work_data.work);
 						/* Subsystem does not support on operation. */
 						ret_val = -ENOTSUP;
 					}
@@ -311,14 +290,14 @@ static int clock_control_mchp_configure(const struct device *dev, clock_control_
 {
 	/* Return value for the operation status. */
 	int ret_val;
+	/* Subsystem index for identifying the clock device. */
+	int subsys_idx;
 	/* Pointer to the subsystem structure. */
 	clock_control_mchp_subsys_t *subsys;
 	/* State of the clock after configuration. */
 	clock_control_mchp_state_t state;
 	/* Index variable for looping through subsystems. */
 	uint8_t index;
-	/* Subsystem index for identifying the clock device. */
-	int subsys_idx;
 	/* Pointer to the clock control configuration data. */
 	const clock_control_mchp_config_t *config = dev->config;
 
@@ -392,12 +371,12 @@ static int clock_control_mchp_get_rate(const struct device *dev, clock_control_s
 {
 	/* Return value for the operation status. */
 	int ret_val;
+	/* Subsystem index for identifying the clock device. */
+	int subsys_idx;
 	/* Pointer to the subsystem structure. */
 	clock_control_mchp_subsys_t *subsys;
 	/* State of the subsystem clock. */
 	clock_control_mchp_state_t state;
-	/* Subsystem index for identifying the clock device. */
-	int subsys_idx;
 	/* Pointer to the clock control configuration data. */
 	const clock_control_mchp_config_t *config = dev->config;
 
@@ -519,14 +498,14 @@ static int clock_control_mchp_off(const struct device *dev, clock_control_subsys
 {
 	/* Return value for the operation status. */
 	int ret_val;
+	/* Subsystem index for identifying the clock device. */
+	int subsys_idx;
 	/* Pointer to the subsystem structure. */
 	clock_control_mchp_subsys_t *subsys;
 	/* State of the clock for the given subsystem. */
 	clock_control_mchp_state_t state;
 	/* Current status of the clock for the given subsystem. */
 	clock_control_mchp_state_t status;
-	/* Subsystem index for identifying the clock device. */
-	int subsys_idx;
 	/* Pointer to the clock control configuration data. */
 	const clock_control_mchp_config_t *config = dev->config;
 
@@ -590,14 +569,14 @@ static int clock_control_mchp_on(const struct device *dev, clock_control_subsys_
 {
 	/* Return value for the operation status. */
 	int ret_val;
+	/* Subsystem index for identifying the clock device. */
+	int subsys_idx;
 	/* Pointer to the subsystem structure. */
 	clock_control_mchp_subsys_t *subsys;
 	/* State of the clock for the given subsystem. */
 	clock_control_mchp_state_t state;
 	/* Current status of the clock for the given subsystem. */
 	clock_control_mchp_state_t status;
-	/* Subsystem index for identifying the clock device. */
-	int subsys_idx;
 	/* Pointer to the clock control configuration data. */
 	const clock_control_mchp_config_t *config = dev->config;
 	/* Whether to wait or not if clock is supported */
@@ -666,7 +645,7 @@ static int clock_control_mchp_on(const struct device *dev, clock_control_subsys_
 				/* Increment clock on timeout value */
 				on_timeout_ms++;
 			} else {
-				/* Clock on timeout occured */
+				/* Clock on timeout occurred */
 				ret_val = -ETIMEDOUT;
 				break;
 			}
@@ -696,12 +675,12 @@ static int clock_control_mchp_set_rate(const struct device *dev, clock_control_s
 {
 	/* Return value for the operation status. */
 	int ret_val;
+	/* Subsystem index for identifying the clock device. */
+	int subsys_idx;
 	/* Pointer to the subsystem structure. */
 	clock_control_mchp_subsys_t *subsys;
 	/* State of the clock for the given subsystem. */
 	clock_control_mchp_state_t state;
-	/* Subsystem index for identifying the clock device. */
-	int subsys_idx;
 	/* Pointer to the clock control configuration data. */
 	const clock_control_mchp_config_t *config = dev->config;
 
@@ -806,6 +785,8 @@ static clock_control_mchp_data_t clock_control_mchp_data = {
 	.async_base = 0,
 	/* ID for the asynchronous clock operation. */
 	.async_id = 0,
+	/* Initialize the flag to indicate no asynchronous operation is in progress. */
+	.is_async_in_progress = false,
 };
 
 /**
@@ -820,12 +801,16 @@ static clock_control_mchp_data_t clock_control_mchp_data = {
 static const clock_control_mchp_config_t clock_control_mchp_config = {
 	/* Number of clock subsystems. */
 	.subsys_count = CLOCK_CONTROL_MCHP_SUBSYS_COUNT,
+
+	/* clang-format off */
 	/* Array of devices for each clock subsystem. */
 	.subsys_devs = {DT_FOREACH_CHILD_SEP(DT_NODELABEL(clock), CLOCK_CONTROL_MCHP_SUBSYS_GET,
-					     (, ))},
+					     (,))},
 	/* Array of register addresses for each clock subsystem. */
 	.subsys_regs = {DT_FOREACH_CHILD_SEP(DT_NODELABEL(clock), CLOCK_CONTROL_MCHP_SUBSYS_GET_REG,
-					     (, ))},
+					 (,))},
+	/* clang-format on */
+
 	/* User-defined frequency settings for various clock sources. */
 	.user_frequency = CLOCK_CONTROL_MCHP_USER_FREQUENCY_DEFN,
 
