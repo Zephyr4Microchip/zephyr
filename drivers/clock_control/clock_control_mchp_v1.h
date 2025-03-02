@@ -121,6 +121,16 @@ struct clock_control_mchp_id_int_map {
 
 #if defined(CONFIG_SOC_FAMILY_MCHP_SAM_D5X_E5X)
 
+#if defined(CONFIG_SOC_SERIES_MCHP_SAME51)
+#define HAL_SERIES_MCHP_SAM_E51
+#elif defined(CONFIG_SOC_SERIES_MCHP_SAME53)
+#define HAL_SERIES_MCHP_SAM_E53
+#elif defined(CONFIG_SOC_SERIES_MCHP_SAME54)
+#define HAL_SERIES_MCHP_SAM_E54
+#else
+#error "SoC Series is not valid for SAM D5x E5x Family"
+#endif
+
 /* Include required header files */
 #include <dt-bindings/clock/mchp_clock_sam_d5x_e5x.h>
 

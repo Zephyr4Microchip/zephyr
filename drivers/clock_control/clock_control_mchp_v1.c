@@ -666,7 +666,7 @@ static int clock_control_mchp_on(const struct device *dev, clock_control_subsys_
 				/* Increment clock on timeout value */
 				on_timeout_ms++;
 			} else {
-				/* Clock on timeout occured */
+				/* Clock on timeout occurred */
 				ret_val = -ETIMEDOUT;
 				break;
 			}
@@ -820,12 +820,16 @@ static clock_control_mchp_data_t clock_control_mchp_data = {
 static const clock_control_mchp_config_t clock_control_mchp_config = {
 	/* Number of clock subsystems. */
 	.subsys_count = CLOCK_CONTROL_MCHP_SUBSYS_COUNT,
+
+	/* clang-format off */
 	/* Array of devices for each clock subsystem. */
 	.subsys_devs = {DT_FOREACH_CHILD_SEP(DT_NODELABEL(clock), CLOCK_CONTROL_MCHP_SUBSYS_GET,
-					     (, ))},
+					     (,))},
 	/* Array of register addresses for each clock subsystem. */
 	.subsys_regs = {DT_FOREACH_CHILD_SEP(DT_NODELABEL(clock), CLOCK_CONTROL_MCHP_SUBSYS_GET_REG,
-					     (, ))},
+					 (,))},
+	/* clang-format on */
+
 	/* User-defined frequency settings for various clock sources. */
 	.user_frequency = CLOCK_CONTROL_MCHP_USER_FREQUENCY_DEFN,
 
