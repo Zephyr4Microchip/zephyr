@@ -265,17 +265,9 @@ static bool spi_mchp_transfer_in_progress(spi_mchp_dev_data_t *data)
  */
 static int spi_mchp_finish(const hal_mchp_spi_t *hal)
 {
-	uint8_t timeout = hal->spi_timeout;
-
-	/* Wait until transmit complete */
-	while (!hal_mchp_spi_is_tx_comp(hal) && timeout > 0) {
-		k_sleep(K_USEC(1));
-		timeout--;
+	while (hal_mchp_spi_is_tx_comp(hal) != true) {
+		/* Wait until transmit complete */
 	};
-
-	if (timeout == 0) {
-		return -ETIMEDOUT;
-	}
 
 	/* Clear the data */
 	hal_mchp_spi_clr_data(hal);
@@ -298,7 +290,6 @@ static int spi_mchp_poll_in(const hal_mchp_spi_t *hal, spi_mchp_dev_data_t *data
 {
 	uint8_t tx;
 	uint8_t rx;
-	uint8_t timeout = hal->spi_timeout;
 
 	/* Check if there is data to transmit */
 	if (spi_context_tx_buf_on(&data->ctx)) {
@@ -307,14 +298,9 @@ static int spi_mchp_poll_in(const hal_mchp_spi_t *hal, spi_mchp_dev_data_t *data
 		tx = 0U;
 	}
 
-	/* wait until the SPI data is empty */
-	while (!hal_mchp_spi_is_data_empty(hal) && timeout > 0) {
-		k_sleep(K_USEC(1));
-		timeout--;
+	while (hal_mchp_spi_is_data_empty(hal) != true) {
+		/* wait until the SPI data is empty */
 	};
-	if (timeout == 0) {
-		return -ETIMEDOUT;
-	}
 
 	/* Write data to the SPI data */
 	hal_mchp_spi_write_data(hal, tx);
@@ -322,15 +308,9 @@ static int spi_mchp_poll_in(const hal_mchp_spi_t *hal, spi_mchp_dev_data_t *data
 	/* Update the SPI context for transmission */
 	spi_context_update_tx(&data->ctx, 1, 1);
 
-	/* Wait for the reception to complete */
-	timeout = hal->spi_timeout;
-	while (!hal_mchp_spi_is_rx_comp(hal) && timeout > 0) {
-		k_sleep(K_USEC(1));
-		timeout--;
+	while (hal_mchp_spi_is_rx_comp(hal) != true) {
+		/* Wait for the reception to complete */
 	};
-	if (timeout == 0) {
-		return -ETIMEDOUT;
-	}
 
 	/* Read the received data from the SPI data register */
 	rx = hal_mchp_spi_read_data(hal);
@@ -360,22 +340,23 @@ static int spi_mchp_poll_in(const hal_mchp_spi_t *hal, spi_mchp_dev_data_t *data
 static int spi_mchp_fast_tx(const hal_mchp_spi_t *hal, const struct spi_buf *tx_buf)
 {
 	const uint8_t *p = tx_buf->buf;
-	const uint8_t *pend = (uint8_t *)tx_buf->buf + tx_buf->len;
 	uint8_t ch;
-	uint8_t timeout = hal->spi_timeout;
+	size_t len = tx_buf->len;
+	uint8_t dummy_data = 0U;
 	int err;
 
 	/* Transmit each byte in the buffer */
-	while (p != pend) {
-		ch = *p++;
-		while (!hal_mchp_spi_is_data_empty(hal) && timeout > 0) {
-			k_sleep(K_USEC(1));
-			timeout--;
-		};
-		if (timeout == 0) {
-			return -ETIMEDOUT;
+	while (len != 0) {
+		if (tx_buf->buf != NULL) {
+			ch = *p++;
+		} else {
+			ch = dummy_data;
+		}
+		while (hal_mchp_spi_is_data_empty(hal) != true) {
+			/* Wait until the tramist is complete */
 		}
 		hal_mchp_spi_write_data(hal, ch);
+		len--;
 	}
 
 	/* Finish the SPI transmission */
@@ -400,29 +381,28 @@ static int spi_mchp_fast_rx(const hal_mchp_spi_t *hal, const struct spi_buf *rx_
 	uint8_t *rx = rx_buf->buf;
 	size_t len = rx_buf->len;
 	uint8_t dummy_data = 0U;
-	uint8_t timeout = hal->spi_timeout;
 	int err;
 
 	if (len == 0) {
 		return 0;
 	}
 
-	while (len) {
+	while (len != 0) {
 
 		/* Write a dummy data to receive data */
 		hal_mchp_spi_write_data(hal, dummy_data);
 		len--;
 
-		/* Wait for completion, and read */
-		while (!hal_mchp_spi_is_rx_comp(hal) && timeout > 0) {
-			k_sleep(K_USEC(1));
-			timeout--;
+		while (hal_mchp_spi_is_rx_comp(hal) != true) {
+			/* Wait for completion, and read */
 		};
-		if (timeout == 0) {
-			return -ETIMEDOUT;
-		}
 
-		*rx++ = hal_mchp_spi_read_data(hal);
+		if (rx_buf->buf != NULL) {
+			*rx = hal_mchp_spi_read_data(hal);
+			rx++;
+		} else {
+			(void)hal_mchp_spi_read_data(hal);
+		}
 	}
 	/* Finish the SPI transmission */
 	err = spi_mchp_finish(hal);
@@ -443,31 +423,37 @@ static int spi_mchp_fast_txrx(const hal_mchp_spi_t *hal, const struct spi_buf *t
 			      const struct spi_buf *rx_buf)
 {
 	const uint8_t *tx = tx_buf->buf;
-	const uint8_t *txend = (uint8_t *)tx_buf->buf + tx_buf->len;
 	uint8_t *rx = rx_buf->buf;
 	size_t len = rx_buf->len;
-	uint8_t timeout = hal->spi_timeout;
+	uint8_t dummy_data = 0U;
 	int err;
 
 	if (len == 0) {
 		return 0;
 	}
 
-	while (tx != txend) {
+	while (len > 0) {
 		/* Send the next byte */
-		hal_mchp_spi_write_data(hal, *tx++);
-
-		/* Wait for completion */
-		while (!hal_mchp_spi_is_rx_comp(hal) && timeout > 0) {
-			k_sleep(K_USEC(1));
-			timeout--;
-		};
-		if (timeout == 0) {
-			return -ETIMEDOUT;
+		if (tx != NULL) {
+			hal_mchp_spi_write_data(hal, *tx);
+			tx++;
+		} else {
+			hal_mchp_spi_write_data(hal, dummy_data);
 		}
 
+		/* Wait for completion */
+		while (hal_mchp_spi_is_rx_comp(hal) != true) {
+			/* Wait for completion */
+		};
+
 		/* Read received data */
-		*rx++ = hal_mchp_spi_read_data(hal);
+		if (rx != NULL) {
+			*rx = hal_mchp_spi_read_data(hal);
+			rx++;
+		} else {
+			(void)hal_mchp_spi_read_data(hal);
+		}
+		len--;
 	}
 	/* Finish the SPI transmission */
 	err = spi_mchp_finish(hal);
@@ -511,18 +497,8 @@ static int spi_mchp_fast_transceive(const struct device *dev, const struct spi_c
 	}
 
 	while (tx_count != 0 && rx_count != 0) {
-		/* Process receive-only buffer */
-		if (tx->buf == NULL) {
-			err = spi_mchp_fast_rx(hal, rx);
-		}
-		/* Process transmit-only buffer */
-		else if (rx->buf == NULL) {
-			err = spi_mchp_fast_tx(hal, tx);
-		}
-		/* Process simultaneous transmit and receive */
-		else {
-			err = spi_mchp_fast_txrx(hal, tx, rx);
-		}
+		/* This function is called only if the count is equal*/
+		err = spi_mchp_fast_txrx(hal, tx, rx);
 
 		tx++;
 		tx_count--;
@@ -531,14 +507,19 @@ static int spi_mchp_fast_transceive(const struct device *dev, const struct spi_c
 	}
 
 	/* Handle remaining transmit buffers */
-	for (; tx_count != 0; tx_count--) {
-		err = spi_mchp_fast_tx(hal, tx++);
+	while (tx_count > 0) {
+		err = spi_mchp_fast_tx(hal, tx);
+		tx++;
+		tx_count--;
 	}
 
 	/* Handle remaining receive buffers */
-	for (; rx_count != 0; rx_count--) {
-		err = spi_mchp_fast_rx(hal, rx++);
+	while (rx_count > 0) {
+		err = spi_mchp_fast_rx(hal, rx);
+		rx++;
+		rx_count--;
 	}
+
 	return err;
 }
 
@@ -562,12 +543,12 @@ static bool spi_mchp_is_same_len(const struct spi_buf_set *tx_bufs,
 	size_t tx_count = 0;
 	size_t rx_count = 0;
 
-	if (tx_bufs) {
+	if (tx_bufs != NULL) {
 		tx = tx_bufs->buffers;
 		tx_count = tx_bufs->count;
 	}
 
-	if (rx_bufs) {
+	if (rx_bufs != NULL) {
 		rx = rx_bufs->buffers;
 		rx_count = rx_bufs->count;
 	}
