@@ -123,7 +123,7 @@ static int spi_mchp_configure(const struct device *dev, const struct spi_config 
 	hal_mchp_spi_disable(hal);
 
 	/* Check if SPI is already configured */
-	if (spi_context_configured(&data->ctx, config)) {
+	if (spi_context_configured(&data->ctx, config) == true) {
 		hal_mchp_spi_enable(hal);
 		return 0;
 	}
@@ -188,14 +188,14 @@ static int spi_mchp_configure(const struct device *dev, const struct spi_config 
 	}
 
 	/* Set the Clock Polarity */
-	if (((config->operation & SPI_MODE_CPOL))) {
+	if (((config->operation & SPI_MODE_CPOL)) != 0U) {
 		hal_mchp_spi_cpol_idle_high(hal);
 	} else {
 		hal_mchp_spi_cpol_idle_low(hal);
 	}
 
 	/* Set the Clock Phase */
-	if (((config->operation & SPI_MODE_CPHA))) {
+	if (((config->operation & SPI_MODE_CPHA)) != 0U) {
 		hal_mchp_spi_cpha_trail_edge(hal);
 	} else {
 		hal_mchp_spi_cpha_lead_edge(hal);
@@ -209,7 +209,7 @@ static int spi_mchp_configure(const struct device *dev, const struct spi_config 
 	}
 
 	/* Set SPI Duplex Mode */
-	if (config->operation & SPI_HALF_DUPLEX) {
+	if ((config->operation & SPI_HALF_DUPLEX) != 0U) {
 		err = hal_mchp_spi_half_duplex_mode(hal);
 		if (err != 0) {
 			return -ENOTSUP;
@@ -228,7 +228,7 @@ static int spi_mchp_configure(const struct device *dev, const struct spi_config 
 	cfg->irq_config_func(dev);
 #endif
 #if CONFIG_SPI_MCHP_DMA_DRIVEN
-	if (!device_is_ready(cfg->spi_dma.dma_dev)) {
+	if (device_is_ready(cfg->spi_dma.dma_dev) != true) {
 		return -ENODEV;
 	}
 	data->dev = dev;
@@ -292,7 +292,7 @@ static int spi_mchp_poll_in(const hal_mchp_spi_t *hal, spi_mchp_dev_data_t *data
 	uint8_t rx;
 
 	/* Check if there is data to transmit */
-	if (spi_context_tx_buf_on(&data->ctx)) {
+	if (spi_context_tx_buf_on(&data->ctx) == true) {
 		tx = *(uint8_t *)(data->ctx.tx_buf);
 	} else {
 		tx = 0U;
@@ -316,7 +316,7 @@ static int spi_mchp_poll_in(const hal_mchp_spi_t *hal, spi_mchp_dev_data_t *data
 	rx = hal_mchp_spi_read_data(hal);
 
 	/* Check if there is a buffer to store received data */
-	if (spi_context_rx_buf_on(&data->ctx)) {
+	if (spi_context_rx_buf_on(&data->ctx) == true) {
 		*data->ctx.rx_buf = rx;
 	}
 
@@ -598,7 +598,7 @@ static int spi_mchp_transceive_interrupt(const struct device *dev, const struct 
 	spi_context_buffers_setup(&data->ctx, tx_bufs, rx_bufs, 1);
 
 	/* Prepare first byte for transmission */
-	if (spi_context_tx_buf_on(&data->ctx)) {
+	if (spi_context_tx_buf_on(&data->ctx) == true) {
 		tx = *(uint8_t *)(data->ctx.tx_buf);
 	} else {
 		tx = 0U;
@@ -678,7 +678,7 @@ static int spi_mchp_transceive_sync(const struct device *dev, const struct spi_c
 	err = spi_mchp_transceive_interrupt(dev, config, tx_bufs, rx_bufs);
 #else
 	/* Use optimized fast path if TX and RX buffer lengths match */
-	if (spi_mchp_is_same_len(tx_bufs, rx_bufs)) {
+	if (spi_mchp_is_same_len(tx_bufs, rx_bufs) == true) {
 		spi_mchp_fast_transceive(dev, config, tx_bufs, rx_bufs);
 	} else {
 		/* Setup SPI buffers and process using polling */
@@ -884,7 +884,7 @@ static int spi_mchp_dma_setup_buffers(const struct device *dev)
 	}
 
 	/* Load receive buffer first to prepare for incoming data */
-	if (data->ctx.rx_len) {
+	if (data->ctx.rx_len != 0U) {
 		retval = spi_mchp_dma_rx_load(dev, data->ctx.rx_buf, data->dma_segment_len);
 	} else {
 		retval = spi_mchp_dma_rx_load(dev, NULL, data->dma_segment_len);
@@ -895,7 +895,7 @@ static int spi_mchp_dma_setup_buffers(const struct device *dev)
 	}
 
 	/* Load transmit buffer, which starts SPI bus clocking */
-	if (data->ctx.tx_len) {
+	if (data->ctx.tx_len != 0U) {
 		retval = spi_mchp_dma_tx_load(dev, data->ctx.tx_buf, data->dma_segment_len);
 	} else {
 		retval = spi_mchp_dma_tx_load(dev, NULL, data->dma_segment_len);
@@ -937,7 +937,7 @@ static void spi_mchp_dma_rx_done(const struct device *dma_dev, void *arg, uint32
 	spi_context_update_rx(&data->ctx, 1, data->dma_segment_len);
 
 	/* Check if more segments need to be transferred */
-	if (!spi_mchp_dma_select_segment(dev)) {
+	if (spi_mchp_dma_select_segment(dev) == false) {
 		/* Transmission complete */
 		spi_context_cs_control(&data->ctx, false);
 		spi_context_complete(&data->ctx, dev, 0);
@@ -1106,18 +1106,18 @@ static void spi_mchp_isr(const struct device *dev)
 	dummy_data = 0U;
 
 	/* Check if the transmit buffer is empty and send the next byte */
-	if (hal_mchp_spi_is_interrupt_set(hal)) {
+	if (hal_mchp_spi_is_interrupt_set(hal) == true) {
 		/* Check if data is available in the receive buffer */
-		if (hal_mchp_spi_is_rx_comp(hal)) {
-			if (spi_context_rx_buf_on(&data->ctx)) {
+		if (hal_mchp_spi_is_rx_comp(hal) == true) {
+			if (spi_context_rx_buf_on(&data->ctx) == true) {
 				rx = hal_mchp_spi_read_data(hal);
 				*(uint8_t *)(data->ctx.rx_buf) = rx;
 				spi_context_update_rx(&data->ctx, 1, 1);
 			}
 		}
-		if (hal_mchp_spi_is_data_empty(hal)) {
+		if (hal_mchp_spi_is_data_empty(hal) == true) {
 			hal_mchp_spi_disable_data_empty_interrupt(hal);
-			if (spi_context_tx_on(&data->ctx)) {
+			if (spi_context_tx_on(&data->ctx) == true) {
 				tx = *(uint8_t *)(data->ctx.tx_buf);
 				hal_mchp_spi_write_data(hal, tx);
 				spi_context_update_tx(&data->ctx, 1, 1);
@@ -1127,22 +1127,22 @@ static void spi_mchp_isr(const struct device *dev)
 			} else {
 				/* Do Nothing */
 			}
-			if ((data->dummysize == 0) && (!spi_context_tx_on(&data->ctx))) {
+			if ((data->dummysize == 0) && (spi_context_tx_on(&data->ctx) == false)) {
 				last_byte = true;
-			} else if (!spi_context_rx_on(&data->ctx)) {
+			} else if (spi_context_rx_on(&data->ctx) == false) {
 				hal_mchp_spi_enable_data_empty_interrupt(hal);
 				hal_mchp_spi_disable_rxc_interrupt(hal);
 			} else {
 				/* Do Nothing */
 			}
 		}
-		if (hal_mchp_spi_is_tx_comp(hal) && (last_byte == true)) {
-			if (!spi_context_rx_on(&data->ctx)) {
+		if ((hal_mchp_spi_is_tx_comp(hal) == true) && (last_byte == true)) {
+			if (spi_context_rx_on(&data->ctx) == false) {
 				hal_mchp_spi_disable_rxc_interrupt(hal);
 				hal_mchp_spi_disable_txc_interrupt(hal);
 				hal_mchp_spi_disable_data_empty_interrupt(hal);
 				last_byte = false;
-				if (spi_context_is_slave(&data->ctx)) {
+				if (spi_context_is_slave(&data->ctx) == true) {
 					/* Control chip select for SPI slave mode */
 					spi_context_cs_control(&data->ctx, false);
 				}
