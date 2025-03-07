@@ -48,8 +48,6 @@ typedef struct hal_mchp_spi {
 	/* SPI pad configuration */
 	uint32_t pads;
 
-	/* SPI timeout for polling method */
-	uint8_t spi_timeout;
 } hal_mchp_spi_t;
 
 /**
@@ -63,7 +61,7 @@ typedef struct hal_mchp_spi {
  */
 #define SPI_MCHP_HAL_DEFN(n)                                                                       \
 	.hal.regs = (sercom_registers_t *)DT_INST_REG_ADDR(n),                                     \
-	.hal.pads = SPI_MCHP_SERCOM_PADS(n), .hal.spi_timeout = (uint8_t)DT_INST_PROP(n, timeout_us),
+	.hal.pads = SPI_MCHP_SERCOM_PADS(n),
 
 /**
  * @brief Define interrupt configuration macros based on device

@@ -288,14 +288,14 @@ static int spi_mchp_finish(const hal_mchp_spi_t *hal)
  */
 static int spi_mchp_poll_in(const hal_mchp_spi_t *hal, spi_mchp_dev_data_t *data)
 {
-	uint8_t tx;
-	uint8_t rx;
+	uint8_t tx_data;
+	uint8_t rx_data;
 
 	/* Check if there is data to transmit */
 	if (spi_context_tx_buf_on(&data->ctx) == true) {
-		tx = *(uint8_t *)(data->ctx.tx_buf);
+		tx_data = *(uint8_t *)(data->ctx.tx_buf);
 	} else {
-		tx = 0U;
+		tx_data = 0U;
 	}
 
 	while (hal_mchp_spi_is_data_empty(hal) != true) {
@@ -303,7 +303,7 @@ static int spi_mchp_poll_in(const hal_mchp_spi_t *hal, spi_mchp_dev_data_t *data
 	};
 
 	/* Write data to the SPI data */
-	hal_mchp_spi_write_data(hal, tx);
+	hal_mchp_spi_write_data(hal, tx_data);
 
 	/* Update the SPI context for transmission */
 	spi_context_update_tx(&data->ctx, 1, 1);
@@ -313,11 +313,11 @@ static int spi_mchp_poll_in(const hal_mchp_spi_t *hal, spi_mchp_dev_data_t *data
 	};
 
 	/* Read the received data from the SPI data register */
-	rx = hal_mchp_spi_read_data(hal);
+	rx_data = hal_mchp_spi_read_data(hal);
 
 	/* Check if there is a buffer to store received data */
 	if (spi_context_rx_buf_on(&data->ctx) == true) {
-		*data->ctx.rx_buf = rx;
+		*data->ctx.rx_buf = rx_data;
 	}
 
 	/* Update the SPI context for reception */
@@ -339,8 +339,8 @@ static int spi_mchp_poll_in(const hal_mchp_spi_t *hal, spi_mchp_dev_data_t *data
  */
 static int spi_mchp_fast_tx(const hal_mchp_spi_t *hal, const struct spi_buf *tx_buf)
 {
-	const uint8_t *p = tx_buf->buf;
-	uint8_t ch;
+	const uint8_t *tx_data_ptr = tx_buf->buf;
+	uint8_t tx_data;
 	size_t len = tx_buf->len;
 	uint8_t dummy_data = 0U;
 	int err;
@@ -348,14 +348,14 @@ static int spi_mchp_fast_tx(const hal_mchp_spi_t *hal, const struct spi_buf *tx_
 	/* Transmit each byte in the buffer */
 	while (len != 0) {
 		if (tx_buf->buf != NULL) {
-			ch = *p++;
+			tx_data = *tx_data_ptr++;
 		} else {
-			ch = dummy_data;
+			tx_data = dummy_data;
 		}
 		while (hal_mchp_spi_is_data_empty(hal) != true) {
 			/* Wait until the tramist is complete */
 		}
-		hal_mchp_spi_write_data(hal, ch);
+		hal_mchp_spi_write_data(hal, tx_data);
 		len--;
 	}
 
@@ -378,7 +378,7 @@ static int spi_mchp_fast_tx(const hal_mchp_spi_t *hal, const struct spi_buf *tx_
  */
 static int spi_mchp_fast_rx(const hal_mchp_spi_t *hal, const struct spi_buf *rx_buf)
 {
-	uint8_t *rx = rx_buf->buf;
+	uint8_t *rx_data_ptr = rx_buf->buf;
 	size_t len = rx_buf->len;
 	uint8_t dummy_data = 0U;
 	int err;
@@ -398,8 +398,8 @@ static int spi_mchp_fast_rx(const hal_mchp_spi_t *hal, const struct spi_buf *rx_
 		};
 
 		if (rx_buf->buf != NULL) {
-			*rx = hal_mchp_spi_read_data(hal);
-			rx++;
+			*rx_data_ptr = hal_mchp_spi_read_data(hal);
+			rx_data_ptr++;
 		} else {
 			(void)hal_mchp_spi_read_data(hal);
 		}
@@ -422,8 +422,8 @@ static int spi_mchp_fast_rx(const hal_mchp_spi_t *hal, const struct spi_buf *rx_
 static int spi_mchp_fast_txrx(const hal_mchp_spi_t *hal, const struct spi_buf *tx_buf,
 			      const struct spi_buf *rx_buf)
 {
-	const uint8_t *tx = tx_buf->buf;
-	uint8_t *rx = rx_buf->buf;
+	const uint8_t *tx_data_ptr = tx_buf->buf;
+	uint8_t *rx_data_ptr = rx_buf->buf;
 	size_t len = rx_buf->len;
 	uint8_t dummy_data = 0U;
 	int err;
@@ -434,9 +434,9 @@ static int spi_mchp_fast_txrx(const hal_mchp_spi_t *hal, const struct spi_buf *t
 
 	while (len > 0) {
 		/* Send the next byte */
-		if (tx != NULL) {
-			hal_mchp_spi_write_data(hal, *tx);
-			tx++;
+		if (tx_data_ptr != NULL) {
+			hal_mchp_spi_write_data(hal, *tx_data_ptr);
+			tx_data_ptr++;
 		} else {
 			hal_mchp_spi_write_data(hal, dummy_data);
 		}
@@ -447,9 +447,9 @@ static int spi_mchp_fast_txrx(const hal_mchp_spi_t *hal, const struct spi_buf *t
 		};
 
 		/* Read received data */
-		if (rx != NULL) {
-			*rx = hal_mchp_spi_read_data(hal);
-			rx++;
+		if (rx_data_ptr != NULL) {
+			*rx_data_ptr = hal_mchp_spi_read_data(hal);
+			rx_data_ptr++;
 		} else {
 			(void)hal_mchp_spi_read_data(hal);
 		}
@@ -480,43 +480,43 @@ static int spi_mchp_fast_transceive(const struct device *dev, const struct spi_c
 	const hal_mchp_spi_t *hal = &cfg->hal;
 	size_t tx_count = 0;
 	size_t rx_count = 0;
-	const struct spi_buf *tx = NULL;
-	const struct spi_buf *rx = NULL;
+	const struct spi_buf *tx_data_ptr = NULL;
+	const struct spi_buf *rx_data_ptr = NULL;
 	int err;
 
 	if (tx_bufs != NULL) {
-		tx = tx_bufs->buffers;
+		tx_data_ptr = tx_bufs->buffers;
 		tx_count = tx_bufs->count;
 	}
 
 	if (rx_bufs != NULL) {
-		rx = rx_bufs->buffers;
+		rx_data_ptr = rx_bufs->buffers;
 		rx_count = rx_bufs->count;
 	} else {
-		rx = NULL;
+		rx_data_ptr = NULL;
 	}
 
 	while (tx_count != 0 && rx_count != 0) {
 		/* This function is called only if the count is equal*/
-		err = spi_mchp_fast_txrx(hal, tx, rx);
+		err = spi_mchp_fast_txrx(hal, tx_data_ptr, rx_data_ptr);
 
-		tx++;
+		tx_data_ptr++;
 		tx_count--;
-		rx++;
+		rx_data_ptr++;
 		rx_count--;
 	}
 
 	/* Handle remaining transmit buffers */
 	while (tx_count > 0) {
-		err = spi_mchp_fast_tx(hal, tx);
-		tx++;
+		err = spi_mchp_fast_tx(hal, tx_data_ptr);
+		tx_data_ptr++;
 		tx_count--;
 	}
 
 	/* Handle remaining receive buffers */
 	while (rx_count > 0) {
-		err = spi_mchp_fast_rx(hal, rx);
-		rx++;
+		err = spi_mchp_fast_rx(hal, rx_data_ptr);
+		rx_data_ptr++;
 		rx_count--;
 	}
 
@@ -538,30 +538,30 @@ static int spi_mchp_fast_transceive(const struct device *dev, const struct spi_c
 static bool spi_mchp_is_same_len(const struct spi_buf_set *tx_bufs,
 				 const struct spi_buf_set *rx_bufs)
 {
-	const struct spi_buf *tx = NULL;
-	const struct spi_buf *rx = NULL;
+	const struct spi_buf *tx_data_ptr = NULL;
+	const struct spi_buf *rx_data_ptr = NULL;
 	size_t tx_count = 0;
 	size_t rx_count = 0;
 
 	if (tx_bufs != NULL) {
-		tx = tx_bufs->buffers;
+		tx_data_ptr = tx_bufs->buffers;
 		tx_count = tx_bufs->count;
 	}
 
 	if (rx_bufs != NULL) {
-		rx = rx_bufs->buffers;
+		rx_data_ptr = rx_bufs->buffers;
 		rx_count = rx_bufs->count;
 	}
 
 	while (tx_count != 0 && rx_count != 0) {
 		/* Compare the length of each corresponding TX and RX buffer */
-		if (tx->len != rx->len) {
+		if (tx_data_ptr->len != rx_data_ptr->len) {
 			return false;
 		}
 
-		tx++;
+		tx_data_ptr++;
 		tx_count--;
-		rx++;
+		rx_data_ptr++;
 		rx_count--;
 	}
 
@@ -592,16 +592,16 @@ static int spi_mchp_transceive_interrupt(const struct device *dev, const struct 
 	const spi_mchp_dev_config_t *cfg = dev->config;
 	const hal_mchp_spi_t *hal = &cfg->hal;
 	spi_mchp_dev_data_t *const data = dev->data;
-	uint8_t tx;
+	uint8_t tx_data;
 
 	/* Setup SPI buffers */
 	spi_context_buffers_setup(&data->ctx, tx_bufs, rx_bufs, 1);
 
 	/* Prepare first byte for transmission */
 	if (spi_context_tx_buf_on(&data->ctx) == true) {
-		tx = *(uint8_t *)(data->ctx.tx_buf);
+		tx_data = *(uint8_t *)(data->ctx.tx_buf);
 	} else {
-		tx = 0U;
+		tx_data = 0U;
 	}
 
 	/* Clear the Data Register */
@@ -614,7 +614,7 @@ static int spi_mchp_transceive_interrupt(const struct device *dev, const struct 
 
 	/* Write first data byte to the SPI data register */
 	spi_context_update_tx(&data->ctx, 1, 1);
-	hal_mchp_spi_write_data(hal, tx);
+	hal_mchp_spi_write_data(hal, tx_data);
 
 	/* Enable SPI interrupts for RX, TX completion, and data empty events */
 	if (data->ctx.rx_len > 0) {
@@ -1094,32 +1094,30 @@ static void spi_mchp_isr(const struct device *dev)
 	const hal_mchp_spi_t *hal = &cfg->hal;
 
 	/* Dummy data for padding SPI transactions */
-	uint8_t dummy_data;
+	uint8_t dummy_data = 0U;
 
 	/* SPI status flag for last byte. */
-	bool last_byte;
+	bool last_byte = false;
 
 	/* Transmit and receive data placeholders */
-	uint8_t tx = 0U;
-	uint8_t rx = 0U;
-	last_byte = false;
-	dummy_data = 0U;
+	uint8_t tx_data = 0U;
+	uint8_t rx_data = 0U;
 
 	/* Check if the transmit buffer is empty and send the next byte */
 	if (hal_mchp_spi_is_interrupt_set(hal) == true) {
 		/* Check if data is available in the receive buffer */
 		if (hal_mchp_spi_is_rx_comp(hal) == true) {
 			if (spi_context_rx_buf_on(&data->ctx) == true) {
-				rx = hal_mchp_spi_read_data(hal);
-				*(uint8_t *)(data->ctx.rx_buf) = rx;
+				rx_data = hal_mchp_spi_read_data(hal);
+				*(uint8_t *)(data->ctx.rx_buf) = rx_data;
 				spi_context_update_rx(&data->ctx, 1, 1);
 			}
 		}
 		if (hal_mchp_spi_is_data_empty(hal) == true) {
 			hal_mchp_spi_disable_data_empty_interrupt(hal);
 			if (spi_context_tx_on(&data->ctx) == true) {
-				tx = *(uint8_t *)(data->ctx.tx_buf);
-				hal_mchp_spi_write_data(hal, tx);
+				tx_data = *(uint8_t *)(data->ctx.tx_buf);
+				hal_mchp_spi_write_data(hal, tx_data);
 				spi_context_update_tx(&data->ctx, 1, 1);
 			} else if (data->dummysize > 0) {
 				hal_mchp_spi_write_data(hal, dummy_data);
