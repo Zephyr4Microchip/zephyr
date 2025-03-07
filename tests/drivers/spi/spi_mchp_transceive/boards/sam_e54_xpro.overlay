@@ -1,0 +1,16 @@
+/*
+ * Copyright (c) 2025 Microchip Technology Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+ /*connect the PC04 to PC07 for the test*/
+ 
+dut: &sercom6 {
+	status = "okay";
+	dmas = <&dmac 1 10>,<&dmac 0 11>;
+	dma-names = "rx","tx";
+};
+
+
+
