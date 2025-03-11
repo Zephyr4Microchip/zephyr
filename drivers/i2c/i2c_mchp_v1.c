@@ -124,6 +124,10 @@ typedef struct i2c_mchp_dev_data {
 #ifdef CONFIG_I2C_TARGET
 	/* Target configuration for I2C target mode. */
 	struct i2c_target_config target_config;
+	/* Target collbacks for I2C target mode. */
+	struct i2c_target_callbacks target_callbacks;
+
+	uint8_t rx_tx_data;
 #endif
 } i2c_mchp_dev_data_t;
 
@@ -265,9 +269,8 @@ static void i2c_mchp_target_handler(const struct device *dev)
 	const i2c_mchp_dev_config_t *const cfg = dev->config;
 	const hal_mchp_i2c_t *i2c_hal = &cfg->hal;
 	/* Get the target configuration and callbacks */
-	struct i2c_target_config *target_config = &data->target_config;
-	const struct i2c_target_callbacks *target_cb = data->target_config.callbacks;
-	static uint8_t rx_tx_data = 0;
+	const struct i2c_target_callbacks *target_cb = &data->target_callbacks;
+	int retval = 0;
 
 	/* Retrieve the interrupt status for the I2C peripheral */
 	i2c_mchp_target_intflag_t int_status = hal_mchp_i2c_target_int_flag_get(i2c_hal);
@@ -281,42 +284,70 @@ static void i2c_mchp_target_handler(const struct device *dev)
 	/* Handle error conditions */
 	if ((int_status & I2C_MCHP_TARGET_INTFLAG_ERROR) == I2C_MCHP_TARGET_INTFLAG_ERROR) {
 		LOG_ERR("Interrupt Error generated");
-		target_cb->stop(target_config);
+		target_cb->stop(&data->target_config);
 		return;
 	}
 
 	/* Handle address match */
-	if ((int_status & I2C_MCHP_TARGET_INTFLAG_ADDR_MATCH) == I2C_MCHP_TARGET_INTFLAG_ADDR_MATCH) {
-		if ((target_status & I2C_MCHP_TARGET_STATUS_FLAG_DATA_DIR_READ) == I2C_MCHP_TARGET_STATUS_FLAG_DATA_DIR_READ) {
-			rx_tx_data = 0;
+	if ((int_status & I2C_MCHP_TARGET_INTFLAG_ADDR_MATCH) ==
+	    I2C_MCHP_TARGET_INTFLAG_ADDR_MATCH) {
+		if ((target_status & I2C_MCHP_TARGET_STATUS_FLAG_DATA_DIR_READ) ==
+		    I2C_MCHP_TARGET_STATUS_FLAG_DATA_DIR_READ) {
 			/* Master is reading */
-			target_cb->read_requested(target_config, &rx_tx_data);
-			// hal_mchp_i2c_byte_write(i2c_hal, rx_tx_data);
+			retval = target_cb->read_requested(&data->target_config, &data->rx_tx_data);
+
+			if (retval != 0) {
+				/*stop the communication*/
+				hal_mchp_i2c_target_transfer_stop(i2c_hal);
+				return;
+			}
 		} else {
 			/* Master is writing */
-			target_cb->write_requested(target_config);
+			retval = target_cb->write_requested(&data->target_config);
+
+			if (retval != 0) {
+				/*stop the communication*/
+				hal_mchp_i2c_target_transfer_stop(i2c_hal);
+				return;
+			}
 		}
 	}
 
 	/* Handle data ready (Read/Write Operations) */
-	if ((int_status & I2C_MCHP_TARGET_INTFLAG_DATA_READY) == I2C_MCHP_TARGET_INTFLAG_DATA_READY) {
-		if ((target_status & I2C_MCHP_TARGET_STATUS_FLAG_DATA_DIR_READ) == I2C_MCHP_TARGET_STATUS_FLAG_DATA_DIR_READ){
+	if ((int_status & I2C_MCHP_TARGET_INTFLAG_DATA_READY) ==
+	    I2C_MCHP_TARGET_INTFLAG_DATA_READY) {
+		if ((target_status & I2C_MCHP_TARGET_STATUS_FLAG_DATA_DIR_READ) ==
+		    I2C_MCHP_TARGET_STATUS_FLAG_DATA_DIR_READ) {
 			/* Master is reading */
-			hal_mchp_i2c_byte_write(i2c_hal, rx_tx_data);
+			hal_mchp_i2c_byte_write(i2c_hal, data->rx_tx_data);
 
-			target_cb->read_processed(target_config, &rx_tx_data);
+			retval = target_cb->read_processed(&data->target_config, &data->rx_tx_data);
+
+			if (retval != 0) {
+				/*stop the communication*/
+				hal_mchp_i2c_target_transfer_stop(i2c_hal);
+				return;
+			}
 		} else {
 			/* Master is writing */
-			rx_tx_data = hal_mchp_i2c_byte_read(i2c_hal);
-			target_cb->write_received(target_config, rx_tx_data);
+			data->rx_tx_data = hal_mchp_i2c_byte_read(i2c_hal);
+			retval = target_cb->write_received(&data->target_config, data->rx_tx_data);
+
+			if (retval != 0) {
+				/*stop the communication*/
+				hal_mchp_i2c_target_transfer_stop(i2c_hal);
+				return;
+			}
 		}
 	}
 
 	/* Handle stop condition interrupt */
 	if ((int_status & I2C_MCHP_TARGET_INTFLAG_STOP) == I2C_MCHP_TARGET_INTFLAG_STOP) {
 		/* Notify that a stop condition was received */
-		target_cb->stop(target_config);
+		target_cb->stop(&data->target_config);
 	}
+
+	hal_mchp_i2c_target_status_clear(i2c_hal, target_status);
 }
 
 #endif
@@ -503,18 +534,22 @@ static int i2c_mchp_target_register(const struct device *dev, struct i2c_target_
 		return -EINVAL;
 	}
 
-	/*Store the target configuration in device data*/
-	data->target_config.address = target_cfg->address;
-	data->target_config.callbacks = target_cfg->callbacks;
-
 	/*Check if the target address is invalid */
-	if (data->target_config.address == INVALID_ADDR) {
+	if (target_cfg->address == INVALID_ADDR) {
 		LOG_ERR("device can't be register in target mode with 0x00 address\n");
 		return -EINVAL;
 	}
 
 	/* Acquire the mutex to ensure thread-safe access */
 	k_mutex_lock(&data->i2c_bus_mutex, K_FOREVER);
+
+	/*Store the target configuration in device data*/
+	data->target_config.address = target_cfg->address;
+	data->target_callbacks.write_requested = target_cfg->callbacks->write_requested;
+	data->target_callbacks.write_received = target_cfg->callbacks->write_received;
+	data->target_callbacks.read_requested = target_cfg->callbacks->read_requested;
+	data->target_callbacks.read_processed = target_cfg->callbacks->read_processed;
+	data->target_callbacks.stop = target_cfg->callbacks->stop;
 
 	/* Disable the I2C peripheral for configuration changes */
 	hal_mchp_i2c_target_enable(i2c_hal, false);
@@ -895,12 +930,8 @@ static int i2c_mchp_transfer_cb(const struct device *dev, struct i2c_msg *msgs, 
 	i2c_mchp_dev_data_t *data = dev->data;
 	const i2c_mchp_dev_config_t *const cfg = dev->config;
 	const hal_mchp_i2c_t *i2c_hal = &cfg->hal;
-	data->msg_index = 0;
 	uint32_t addr_reg;
 	int retval = 0;
-
-	/* Set the target address for the transfer. */
-	data->target_addr = addr;
 
 	/* Validate that there are messages to process. */
 	if (num_msgs == 0) {
@@ -914,9 +945,10 @@ static int i2c_mchp_transfer_cb(const struct device *dev, struct i2c_msg *msgs, 
 	}
 
 	/* Check for empty messages (invalid read/write). */
-	if ((data->msgs_array[data->msg_index].len == 0) ||
-	    (data->msgs_array[data->msg_index].buf == NULL)) {
-		return -EINVAL;
+	for (uint8_t num_buffer = 0; num_buffer < num_msgs; num_buffer++) {
+		if ((msgs[num_buffer].len == 0) || (msgs[num_buffer].buf == NULL)) {
+			return -EINVAL;
+		}
 	}
 	/* Lock the mutex to ensure exclusive access to the I2C device. */
 	k_mutex_lock(&data->i2c_bus_mutex, K_FOREVER);
@@ -926,6 +958,8 @@ static int i2c_mchp_transfer_cb(const struct device *dev, struct i2c_msg *msgs, 
 	data->msgs_array = msgs;
 	data->i2c_async_callback = i2c_async_callback;
 	data->user_data = user_data;
+	data->target_addr = addr;
+	data->msg_index = 0;
 
 	/* Disable I2C interrupts, clear interrupt flags, and reset status registers. */
 	hal_mchp_i2c_controller_int_disable(i2c_hal, I2C_MCHP_CONTROLLER_INTERRUPT_ALL);
@@ -1119,6 +1153,13 @@ static int i2c_mchp_transfer(const struct device *dev, struct i2c_msg *msgs, uin
 		return -EBUSY;
 	}
 
+	/* Check for empty messages (invalid read/write). */
+	for (uint8_t num_buffer = 0; num_buffer < num_msgs; num_buffer++) {
+		if ((msgs[num_buffer].len == 0) || (msgs[num_buffer].buf == NULL)) {
+			return -EINVAL;
+		}
+	}
+
 	k_mutex_lock(&data->i2c_bus_mutex, K_FOREVER);
 
 	/* Disable I2C interrupts, clear interrupt flags, and reset status registers. */
@@ -1133,13 +1174,6 @@ static int i2c_mchp_transfer(const struct device *dev, struct i2c_msg *msgs, uin
 	data->target_addr = addr;
 
 	while (data->num_msgs > 0) {
-		/* Check for empty messages (invalid read/write) and buffer not NULL. */
-		if ((data->msgs_array[data->msg_index].len == 0) ||
-		    (data->msgs_array[data->msg_index].buf == NULL)) {
-			/* Unlock the mutex before returning. */
-			k_mutex_unlock(&data->i2c_bus_mutex);
-			return -EINVAL;
-		}
 
 		/* Initialize message buffer and size. */
 		data->current_msg.buffer = data->msgs_array[data->msg_index].buf;
