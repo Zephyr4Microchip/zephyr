@@ -7,3 +7,17 @@ tests:
   drivers.i2c.i2c_async:
     platform_allow:
       - sam_e54_xpro
+  drivers.i2c.i2c_eeprom_int:
+    platform_allow:
+      - sam_e54_xpro
+    extra_configs:
+      - CONFIG_I2C_MCHP_INTERRUPT_DRIVEN=y
+      - CONFIG_DMA=n
+      - CONFIG_I2C_CALLBACK=n
+  drivers.i2c.i2c_eeprom_poll:
+    platform_allow:
+      - sam_e54_xpro
+    extra_configs:
+      - CONFIG_I2C_MCHP_INTERRUPT_DRIVEN=n
+      - CONFIG_DMA=n
+      - CONFIG_I2C_CALLBACK=n
