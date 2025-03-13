@@ -61,4 +61,6 @@ source "drivers/dac/Kconfig.ad569x"
 
 source "drivers/dac/Kconfig.test"
 
+source "drivers/dac/Kconfig.mchp_v1"
+
 endif # DAC

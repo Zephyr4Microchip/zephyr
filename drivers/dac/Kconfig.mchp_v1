@@ -1,0 +1,16 @@
+# Copyright (c) 2025 Microchip Technology Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+config DAC_MCHP_V1
+	bool "Microchip MCHP V1 series DAC Driver"
+	default y
+	depends on DT_HAS_MICROCHIP_DAC_U2502_ENABLED
+	select PINCTRL
+	help
+	  Enable support for the Microchip MCHP V1 series Digital-to-Analog (DAC) driver.
+
+config DAC_MCHP_DIFFERENTIAL
+	bool "Differential Mode Enable"
+	depends on DAC_MCHP_V1
+	help
+	  Enable Differential Mode support for the Microchip MCHP V1 series

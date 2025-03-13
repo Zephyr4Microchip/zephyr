@@ -246,7 +246,6 @@
             clock-names = "mclk", "gclk";
             prescaler = <1>;
         };
-		/* todo: Define SDHC0 node */
 		wdog: watchdog@40002000 {
 			compatible = "microchip,wdt-u2251";
 			reg = <0x40002000 13>;
@@ -258,6 +257,17 @@
 			max_timeout_window_mode = <0x8000>;/**< 32768 milliseconds */
 			min_window_limit = <0x8>;/**< 8 milliseconds */
 		};
+		dac: dac@43002400 {
+			compatible = "microchip,dac-u2502";
+			status = "disabled";
+			reg = <0x43002400 0x1E>;
+			interrupts = <123 0>, <124 0>, <125 0>, <126 0>, <127 0>;
+			#io-channel-cells = <1>;
+			clocks = <&mclk CLOCK_MCHP_SAM_D5X_E5X_MCLK_APBD_DAC>,
+					<&gclk CLOCK_MCHP_SAM_D5X_E5X_GCLK_DAC>;
+			clock-names = "mclk", "gclk";
+		};
+		/* todo: Define SDHC0 node */
 	};
 };
 &nvic {

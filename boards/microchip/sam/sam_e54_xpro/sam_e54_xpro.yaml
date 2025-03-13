@@ -18,4 +18,5 @@ supported:
   - i2c
   - dma
   - watchdog
+  - dac
 vendor: microchip
