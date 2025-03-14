@@ -69,8 +69,8 @@
  * as well as the callback work data for clock control.
  */
 typedef struct {
-	/* Base address for asynchronous operations related to clock control. */
-	uint32_t async_base;
+	/* Register address for asynchronous operations related to clock control. */
+	uint32_t async_reg;
 	/* Identifier for the asynchronous clock control operation. */
 	uint32_t async_id;
 	/* Callback function to be executed when the work is triggered. */
@@ -152,10 +152,10 @@ static void clock_control_mchp_isr(const struct device *dev)
 	clock_control_mchp_data_t *data = dev->data;
 
 	/* Clear the interrupt for the specified async base and ID. */
-	hal_mchp_clock_clear_interrupt(data->async_base, data->async_id);
+	hal_mchp_clock_clear_interrupt(data->async_reg, data->async_id);
 
 	/* Disable the interrupt for the specified async base and ID. */
-	hal_mchp_clock_disable_interrupt(data->async_base, data->async_id);
+	hal_mchp_clock_disable_interrupt(data->async_reg, data->async_id);
 
 	/* Check if a callback function is provided by the caller. */
 	if (data->async_cb != NULL) {
@@ -240,7 +240,7 @@ static int clock_control_mchp_async_on(const struct device *dev, clock_control_s
 								    subsys->id) ==
 				    CLOCK_CONTROL_MCHP_STATE_OK) {
 					/* Store async data to context. */
-					data->async_base = config->subsys_regs[subsys_idx];
+					data->async_reg = config->subsys_regs[subsys_idx];
 					data->async_id = subsys->id;
 					data->async_cb = cb;
 					data->async_sys = sys;
@@ -445,6 +445,8 @@ static enum clock_control_status clock_control_mchp_get_status(const struct devi
 	int subsys_idx;
 	/* Pointer to the clock control configuration data. */
 	const clock_control_mchp_config_t *config = dev->config;
+	/* Pointer to the clock control data associated with the device. */
+	clock_control_mchp_data_t *data = dev->data;
 
 	/* Check if clock status for all subsystems is not requested. */
 	if (sys != CLOCK_CONTROL_SUBSYS_ALL) {
@@ -456,8 +458,17 @@ static enum clock_control_status clock_control_mchp_get_status(const struct devi
 
 		/* Check if the specified subsystem was found. */
 		if (subsys_idx >= 0) {
-			/* Retrieve the current clock status for the subsystem. */
-			status = hal_mchp_clock_status(config->subsys_regs[subsys_idx], subsys->id);
+			/* Check whether an async operation is initiated for this clock */
+			if ((data->is_async_in_progress == true) &&
+			    (data->async_id == subsys->id) &&
+			    (data->async_reg == config->subsys_regs[subsys_idx])) {
+				/* The clock async operation is in progress. */
+				status = CLOCK_CONTROL_MCHP_STATE_STARTING;
+			} else {
+				/* Retrieve the current clock status for the subsystem. */
+				status = hal_mchp_clock_status(config->subsys_regs[subsys_idx],
+							       subsys->id);
+			}
 
 			/* Map the status directly to the return status */
 			switch (status) {
@@ -508,6 +519,8 @@ static int clock_control_mchp_off(const struct device *dev, clock_control_subsys
 	clock_control_mchp_state_t status;
 	/* Pointer to the clock control configuration data. */
 	const clock_control_mchp_config_t *config = dev->config;
+	/* Pointer to the clock control data associated with the device. */
+	clock_control_mchp_data_t *data = dev->data;
 
 	/* Check if turning off all clocks is requested. */
 	if (sys == CLOCK_CONTROL_SUBSYS_ALL) {
@@ -525,18 +538,31 @@ static int clock_control_mchp_off(const struct device *dev, clock_control_subsys
 			/* No matching subsystem found. */
 			ret_val = -ENOTSUP;
 		} else {
-			/* Retrieve the current clock status for the subsystem. */
-			status = hal_mchp_clock_status(config->subsys_regs[subsys_idx], subsys->id);
 
-			/* Check if the clock is already turned off. */
-			if (status == CLOCK_CONTROL_MCHP_STATE_OFF) {
-				/* The clock is already OFF. */
-				ret_val = 0;
-			} else {
-				/* Clock is ON or STARTING. Turn it OFF. */
+			/* Check whether an async operation is initiated for this clock */
+			if ((data->is_async_in_progress == true) &&
+			    (data->async_id == subsys->id) &&
+			    (data->async_reg == config->subsys_regs[subsys_idx])) {
+				/* The clock is starting. disable interrupts */
+				hal_mchp_clock_disable_interrupt(config->subsys_regs[subsys_idx],
+								 subsys->id);
+				data->is_async_in_progress = false;
+				status = CLOCK_CONTROL_MCHP_STATE_STARTING;
+
+			} else { /* Retrieve the current clock status for the subsystem. */
+				status = hal_mchp_clock_status(config->subsys_regs[subsys_idx],
+							       subsys->id);
+				/* Check if the clock is already turned off. */
+				if (status == CLOCK_CONTROL_MCHP_STATE_OFF) {
+					/* The clock is already OFF. */
+					ret_val = 0;
+				}
+			}
+
+			if (status == CLOCK_CONTROL_MCHP_STATE_STARTING) {
+				/* Clock is STARTING. Turn it OFF. */
 				state = hal_mchp_clock_off(config->subsys_regs[subsys_idx],
 							   subsys->id);
-
 				/* Check if the clock off operation was successful. */
 				if (state == CLOCK_CONTROL_MCHP_STATE_OK) {
 					ret_val = 0;
@@ -781,11 +807,12 @@ static int clock_control_mchp_init(const struct device *dev)
  * for asynchronous operations. It is initialized with default values.
  */
 static clock_control_mchp_data_t clock_control_mchp_data = {
-	/* Base address for asynchronous clock operations. */
-	.async_base = 0,
+	/* Register address for asynchronous clock operations. */
+	.async_reg = 0,
 	/* ID for the asynchronous clock operation. */
 	.async_id = 0,
-	/* Initialize the flag to indicate no asynchronous operation is in progress. */
+	/* Initialize the flag to indicate no asynchronous operation is in progress.
+	 */
 	.is_async_in_progress = false,
 };
 

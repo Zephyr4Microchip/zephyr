@@ -125,15 +125,13 @@ struct clock_control_mchp_id_int_map {
 #include <dt-bindings/clock/mchp_clock_sam_d5x_e5x.h>
 
 /* Peripheral IP HAL specific features */
-/* Count of GCLK input frequencies */
-#define CLOCK_CONTROL_MCHP_GCLK_IN_COUNT 8
 
 /**
  * @brief Macro to set user frequencies from device tree properties
  */
 #define CLOCK_CONTROL_MCHP_USER_FREQUENCY_DEFN                                                     \
 	{                                                                                          \
-		.dfll = DT_PROP_OR(DT_NODELABEL(oscctrl), dfll_frequency, 48000000),               \
+		.dfll = DT_PROP_OR(DT_NODELABEL(oscctrl), dfll_frequency, MCLK_SYSTEM_CLOCK),      \
 		.xosc = DT_PROP_OR(DT_NODELABEL(oscctrl), xosc_frequency, 0),                      \
 		.xosc32k = DT_PROP_OR(DT_NODELABEL(osc32kctrl), xosc32k_frequency, 0),             \
 		.gclk_in = DT_PROP_OR(DT_NODELABEL(gclk), in_frequency, (0, 0, 0, 0, 0, 0, 0, 0)), \
@@ -191,7 +189,7 @@ struct clock_control_mchp_user_frequency {
 	/* 32KHz External Oscillator frequency setting */
 	uint32_t xosc32k;
 	/* Array of GCLK input frequencies (up to 8 inputs) */
-	uint32_t gclk_in[CLOCK_CONTROL_MCHP_GCLK_IN_COUNT];
+	uint32_t gclk_in[GCLK_IO_NUM];
 };
 
 /* Include HAL file, specific to the peripheral IP */
