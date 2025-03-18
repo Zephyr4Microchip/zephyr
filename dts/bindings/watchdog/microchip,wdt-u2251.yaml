@@ -11,5 +11,8 @@ properties:
   reg:
     required: true
 
-  interrupts:
+  clocks:
+    required: true
+
+  clock-names:
     required: true

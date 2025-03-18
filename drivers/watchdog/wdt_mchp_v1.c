@@ -11,6 +11,8 @@
 #include <zephyr/irq.h>
 #include <stdio.h>
 #include "wdt_mchp_v1.h"
+
+
 LOG_MODULE_REGISTER(wdt_mchp_v1);
 
 /**
@@ -49,6 +51,7 @@ typedef struct wdt_mchp_dev_data {
 typedef struct wdt_mchp_dev_cfg {
 	hal_mchp_wdt_t hal;
 	void (*irq_config_func)(const struct device *dev); /**< Function to configure IRQ */
+	mchp_wdt_clock_t wdt_clock;
 } wdt_mchp_dev_cfg_t;
 
 /**
@@ -269,6 +272,8 @@ static int wdt_mchp_init(const struct device *dev)
 		LOG_ERR("Watchdog could not be disabled on startup");
 	}
 #endif
+	MCHP_WDT_ENABLE_CLOCK(dev)
+
 	mchp_wdt_data->installed_timeout_cnt = 0;
 	mchp_wdt_cfg->irq_config_func(dev);
 
@@ -318,7 +323,7 @@ static int wdt_mchp_init(const struct device *dev)
  */
 #define WDT_MCHP_CONFIG_DEFN(n)                                                                    \
 	static const wdt_mchp_dev_cfg_t wdt_mchp_config_##n = {                                    \
-		WDT_MCHP_HAL_DEFN(n) WDT_MCHP_IRQ_HANDLER_FUNC(n)}
+		WDT_MCHP_HAL_DEFN(n) WDT_MCHP_IRQ_HANDLER_FUNC(n) WDT_MCHP_CLOCK_DEFN(n)}
 
 /**
  * @brief Initialize the WDT device.
