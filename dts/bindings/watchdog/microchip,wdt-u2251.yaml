@@ -10,9 +10,37 @@ include: base.yaml
 properties:
   reg:
     required: true
+    description: Specifies the base address and size of the register
+      block for the watchdog timer.
 
   clocks:
     required: true
+    description: Defines the clock sources used by the watchdog timer peripheral.
 
   clock-names:
     required: true
+    description: Names of the clocks referenced in the "clocks"
+      property, used to identify the clock sources
+
+  max_installable_timeout_count:
+    type: int
+    required: true
+    description: Specifies the maximum number of timeout
+      counts that can be configured for the watchdog timer.
+
+  max_timeout_window:
+    type: int
+    required: true
+    description: Defines the maximum timeout window period for the watchdog timer
+
+  max_timeout_window_mode:
+    type: int
+    required: true
+    description: Indicates the maximum timeout period in window mode
+      for the watchdog timer.
+
+  min_window_limit:
+    type: int
+    required: true
+    description: Indicates the minimum window limit for the watchdog
+      timer in window mode

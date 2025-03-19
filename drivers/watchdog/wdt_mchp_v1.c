@@ -1,6 +1,16 @@
-/**
+/*
  * Copyright (c) 2025 Microchip Technology Inc.
+ *
  * SPDX-License-Identifier: Apache-2.0
+ */
+
+/**
+ * @file wdt_mchp_v1.c
+ * @brief WDT driver implementation for Microchip Technology Inc. devices
+ *
+ * This file contains the implementation of the WDT driver for Microchip
+ * Technology Inc. devices. It includes initialization, configuration, and
+ * setup functions.
  */
 
 #include <soc.h>
@@ -12,17 +22,7 @@
 #include <stdio.h>
 #include "wdt_mchp_v1.h"
 
-
 LOG_MODULE_REGISTER(wdt_mchp_v1);
-
-/**
- * @enum wdt_mchp_enable_disable_t
- * @brief Enumeration for enabling or disabling the WDT.
- */
-typedef enum {
-	WDT_DISABLE = 0, /**< Disable the WDT */
-	WDT_ENABLE = 1,  /**< Enable the WDT */
-} wdt_mchp_enable_disable_t;
 
 /**
  * @struct wdt_mchp_channel_data
@@ -55,6 +55,43 @@ typedef struct wdt_mchp_dev_cfg {
 } wdt_mchp_dev_cfg_t;
 
 /**
+ * @brief Set the Watchdog Timer (WDT) reset type.
+ *
+ * This function sets the type of reset that the Watchdog Timer (WDT) will trigger
+ * based on the provided flag. The function will call the appropriate hardware
+ * abstraction layer (HAL) function to set the reset type.
+ *
+ * @param flag The reset type flag. This can be one of the following:
+ *             - WDT_FLAG_RESET_NONE: No reset.
+ *             - WDT_FLAG_RESET_CPU_CORE: Reset the CPU core.
+ *             - WDT_FLAG_RESET_SOC: Reset the entire system on chip (SoC).
+ *
+ * @return int Returns WDT_MCHP_SUCCESS on success, or -ENOTSUP if the flag is not supported.
+ */
+static inline int wdt_mchp_reset_type_set(const hal_mchp_wdt_t *hal, uint8_t flag)
+{
+	int hal_ret = WDT_MCHP_SUCCESS;
+	switch (flag) {
+	case WDT_FLAG_RESET_NONE:
+		hal_ret = hal_mchp_wdt_use_flag_set_reset_none(hal);
+		break;
+	case WDT_FLAG_RESET_CPU_CORE:
+		hal_ret = hal_mchp_wdt_use_flag_set_reset_cpu_core(hal);
+		break;
+	case WDT_FLAG_RESET_SOC:
+		hal_ret = hal_mchp_wdt_use_flag_set_reset_soc(hal);
+		break;
+	default:
+		hal_ret = -EINVAL;
+		break;
+	}
+	if (hal_ret < 0) {
+		return -ENOTSUP;
+	}
+	return WDT_MCHP_SUCCESS;
+}
+
+/**
  * @brief WDT interrupt service routine.
  *
  * @param dev Pointer to the device structure.
@@ -72,6 +109,34 @@ static void wdt_mchp_isr(const struct device *dev)
 }
 
 /**
+ * @brief Apply Watchdog Timer (WDT) options.
+ *
+ * This function applies the specified options to the Watchdog Timer (WDT).
+ * The options can be combined using bitwise OR. The function will call the
+ * appropriate hardware abstraction layer (HAL) functions to apply the options.
+ *
+ * @param options The options to apply. This can be a combination of the following:
+ *                - WDT_OPT_PAUSE_IN_SLEEP: Pause the WDT when the system is in sleep mode.
+ *                - WDT_OPT_PAUSE_HALTED_BY_DBG: Pause the WDT when the system is halted by a
+ * debugger.
+ *
+ * @return int Returns WDT_MCHP_SUCCESS on success, or -ENOTSUP if applying any option fails.
+ */
+static inline int wdt_mchp_apply_options(const hal_mchp_wdt_t *hal, uint8_t options)
+{
+	int hal_ret = WDT_MCHP_SUCCESS;
+	if ((options & WDT_OPT_PAUSE_IN_SLEEP) != 0) {
+		hal_ret = hal_mchp_wdt_apply_opt_pause_in_sleep(hal);
+	}
+	if ((hal_ret >= 0) && (options & WDT_OPT_PAUSE_HALTED_BY_DBG) != 0) {
+		hal_ret = hal_mchp_wdt_apply_opt_pause_halted_by_debug(hal);
+	}
+	if (hal_ret < 0) {
+		return -ENOTSUP;
+	}
+	return WDT_MCHP_SUCCESS;
+}
+/**
  * @brief Setup the WDT.
  *
  * @param dev Pointer to the device structure.
@@ -83,9 +148,9 @@ static int wdt_mchp_setup(const struct device *dev, uint8_t options)
 	wdt_mchp_dev_data_t *mchp_wdt_data = dev->data;
 	const wdt_mchp_dev_cfg_t *const mchp_wdt_cfg = dev->config;
 	const hal_mchp_wdt_t *const hal = &mchp_wdt_cfg->hal;
-	int ret = 0;
+	int ret = WDT_MCHP_SUCCESS;
 
-	if (hal_mchp_wdt_is_enabled(hal) != 0) {
+	if (hal_mchp_wdt_is_enabled(hal) == true) {
 		LOG_ERR("Watchdog already setup");
 		return -EBUSY;
 	}
@@ -94,15 +159,15 @@ static int wdt_mchp_setup(const struct device *dev, uint8_t options)
 		LOG_ERR("No valid timeout installed");
 		return -EINVAL;
 	}
-	ret = hal_mchp_wdt_apply_options(options);
-	if (ret != 0) {
+	ret = wdt_mchp_apply_options(hal, options);
+	if (ret < 0) {
 		LOG_ERR("ret val apply = %d", ret);
 		return ret;
 	}
 
-	ret = hal_mchp_wdt_enable(hal, WDT_ENABLE);
+	hal_mchp_wdt_enable(hal, true);
 	DBG_WDT("watchdog enabled : 0x%x\n\r", hal_mchp_wdt_is_enabled(hal));
-	return 0;
+	return WDT_MCHP_SUCCESS;
 }
 /**
  * @brief Disable the WDT.
@@ -115,18 +180,19 @@ static int wdt_mchp_disable(const struct device *dev)
 	wdt_mchp_dev_data_t *mchp_wdt_data = dev->data;
 	const wdt_mchp_dev_cfg_t *const mchp_wdt_cfg = dev->config;
 	const hal_mchp_wdt_t *const hal = &mchp_wdt_cfg->hal;
-	int ret = MCHP_SUCCESS;
+	int hal_ret = WDT_MCHP_SUCCESS;
 
 	mchp_wdt_data->installed_timeout_cnt = 0;
 	/*if watchdog is not enabled, then return fault*/
-	if (hal_mchp_wdt_is_enabled(hal) == 0) {
+	if (hal_mchp_wdt_is_enabled(hal) == false) {
 		return -EFAULT;
 	}
-	ret = hal_mchp_wdt_enable(hal, WDT_DISABLE);
-	if (ret != 0) {
-		LOG_ERR("ret wdg was not disabled = %d", ret);
+	hal_ret = hal_mchp_wdt_enable(hal, false);
+	if (hal_ret < 0) {
+		LOG_ERR("ret wdg was not disabled = %d", hal_ret);
+		return -EPERM;
 	}
-	return ret;
+	return WDT_MCHP_SUCCESS;
 }
 
 /**
@@ -143,10 +209,12 @@ static int wdt_mchp_install_timeout(const struct device *dev, const struct wdt_t
 	const hal_mchp_wdt_t *const hal = &mchp_wdt_cfg->hal;
 	wdt_mchp_channel_data_t *channel_data = mchp_wdt_data->channel_data;
 	hal_wdt_mchp_channel_data_t actual_set_timeout = {0};
-	int ret = 0;
+	int ret = WDT_MCHP_SUCCESS;
 
 	mchp_wdt_data->cb = cfg->callback;
-	mchp_wdt_data->window_mode = (cfg->window.min) > 0;
+	if (hal_mchp_wdt_win_mode_supported(hal) == WDT_MCHP_SUCCESS) {
+		mchp_wdt_data->window_mode = (cfg->window.min) > 0;
+	}
 	mchp_wdt_data->interrupt_enabled = mchp_wdt_data->cb != NULL;
 	/* CONFIG is enable protected, error out if already enabled */
 	if (hal_mchp_wdt_is_enabled(hal) != 0) {
@@ -173,34 +241,35 @@ static int wdt_mchp_install_timeout(const struct device *dev, const struct wdt_t
 		LOG_ERR("No more timeouts available");
 		return -ENOMEM;
 	}
-	/*Set the behaviour of the watcdog peripheral based on the flags supplied */
-	ret = hal_mchp_wdt_reset_type_set(cfg->flags);
-	if (ret != 0) {
+	/*Set the behaviour of the watchdog peripheral based on the flags supplied */
+	ret = wdt_mchp_reset_type_set(hal, cfg->flags);
+	if (ret < 0) {
 		return ret;
 	}
 	/*validate the timeout window to be in the range available for the peripheral*/
 	ret = hal_mchp_wdt_validate_window(cfg->window.min, cfg->window.max);
-	if (ret != 0) {
+	if (ret < 0) {
 		LOG_ERR("timeout out of range");
-		return ret;
+		return -EINVAL;
 	}
 	/*register the provided callback and enable the interrupt*/
 	if (mchp_wdt_data->interrupt_enabled != 0) {
 		mchp_wdt_data->cb = cfg->callback;
 		ret = hal_mchp_wdt_interrupt_enable(hal);
-		if (ret == -ENOTSUP) {
+		if (ret < 0) {
 			LOG_ERR("Interrupt is not supported for this peripeheral");
+			return -ENOTSUP;
 		}
 	}
 
 	switch (mchp_wdt_data->window_mode) {
 
 	case NORMAL_MODE:
-		hal_mchp_wdt_window_enable(hal, WDT_DISABLE);
+		hal_mchp_wdt_window_enable(hal, false);
 		break;
 
 	case WINDOW_MODE:
-		hal_mchp_wdt_window_enable(hal, WDT_ENABLE);
+		hal_mchp_wdt_window_enable(hal, true);
 		break;
 	}
 	actual_set_timeout = hal_mchp_wdt_set_timeout(hal, cfg->window.min, cfg->window.max);
@@ -242,7 +311,7 @@ static int wdt_mchp_feed(const struct device *dev, int channel_id)
 		return -EINVAL;
 	}
 	hal_mchp_wdt_reset_timer(hal, channel_id);
-	return 0;
+	return WDT_MCHP_SUCCESS;
 }
 /**
  * @brief WDT driver API structure.
@@ -268,7 +337,7 @@ static int wdt_mchp_init(const struct device *dev)
 #if defined(CONFIG_WDT_DISABLE_AT_BOOT)
 	int ret = wdt_mchp_disable(dev);
 
-	if (ret != 0) {
+	if (ret < 0) {
 		LOG_ERR("Watchdog could not be disabled on startup");
 	}
 #endif

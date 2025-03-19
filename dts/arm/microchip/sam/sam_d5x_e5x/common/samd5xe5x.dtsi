@@ -253,6 +253,10 @@
 			interrupts = <10 0>;
 			clocks = <&mclk CLOCK_MCHP_SAM_D5X_E5X_MCLK_APBA_WDT>;
 			clock-names = "mclk";
+			max_installable_timeout_count = <1>;
+			max_timeout_window = <0x4000>;	/**< 16384 milliseconds */
+			max_timeout_window_mode = <0x8000>;/**< 32768 milliseconds */
+			min_window_limit = <0x8>;/**< 8 milliseconds */
 		};
 	};
 };
