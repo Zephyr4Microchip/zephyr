@@ -34,6 +34,7 @@ tests:
     platform_allow:
       - robokit1
       - mimxrt1170_evk/mimxrt1176/cm7
+      - sam_e54_xpro
     integration_platforms:
       - robokit1
   drivers.spi.mcux_dspi_dma.loopback:
@@ -51,6 +52,22 @@ tests:
       - robokit1
     integration_platforms:
       - sam_e70_xplained/same70q21
+  drivers.spi.mchp_v1_spi_dma.loopback:
+    extra_args:
+      - EXTRA_CONF_FILE="overlay-mchp-v1-spi-dma.conf"
+      - DTC_OVERLAY_FILE="boards/sam_e54_xpro.overlay"
+    platform_allow:
+      - sam_e54_xpro
+  drivers.spi.stm32_spi_16bits_frames.loopback:
+    extra_args:
+      - EXTRA_CONF_FILE="overlay-stm32-spi-16bits.conf"
+      - DTC_OVERLAY_FILE="overlay-stm32-spi-16bits.overlay"
+    filter: CONFIG_SOC_FAMILY_STM32
+    platform_allow:
+      - nucleo_h743zi
+      - nucleo_h753zi
+      - nucleo_h745zi_q/stm32h745xx/m4
+      - nucleo_h745zi_q/stm32h745xx/m7
   drivers.spi.stm32_spi_dma.loopback:
     extra_args: EXTRA_CONF_FILE="overlay-stm32-spi-dma.conf"
     platform_allow:
