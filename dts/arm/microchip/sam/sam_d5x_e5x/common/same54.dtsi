@@ -1,0 +1,13 @@
+/*
+ * Copyright (c) 2025 Microchip Technology Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/ {
+	soc {
+		/* todo: Define GMAC node */
+		/* todo: Define MDIO node */
+		/* todo: Define CAN node */
+	};
+};
