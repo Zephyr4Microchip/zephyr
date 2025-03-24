@@ -29,7 +29,7 @@
 			reg = <0x42001400 0x400>;
 			interrupts = <111 0>;
 			clocks = <&mclk CLOCK_MCHP_SAM_D5X_E5X_MCLK_APBC_TC4>,
-			<&gclk CLOCK_MCHP_SAM_D5X_E5X_GCLK_TC4_TC5>;
+			<&gclk CLOCK_MCHP_SAM_D5X_E5X_GCLK_TC4>;
 			clock-names = "mclk", "gclk";
 		};
 		tc5: tc@42001800 {
@@ -37,7 +37,7 @@
 			reg = <0x42001800 0x400>;
 			interrupts = <112 0>;
 			clocks = <&mclk CLOCK_MCHP_SAM_D5X_E5X_MCLK_APBC_TC5>,
-			<&gclk CLOCK_MCHP_SAM_D5X_E5X_GCLK_TC4_TC5>;
+			<&gclk CLOCK_MCHP_SAM_D5X_E5X_GCLK_TC5>;
 			clock-names = "mclk", "gclk";
 		};
 		tc6: tc@43001400 {
@@ -45,7 +45,7 @@
 			reg = <0x43001400 0x400>;
 			interrupts = <113 0>;
 			clocks = <&mclk CLOCK_MCHP_SAM_D5X_E5X_MCLK_APBD_TC6>,
-			<&gclk CLOCK_MCHP_SAM_D5X_E5X_GCLK_TC6_TC7>;
+			<&gclk CLOCK_MCHP_SAM_D5X_E5X_GCLK_TC6>;
 			clock-names = "mclk", "gclk";
 		};
 		tc7: tc@43001800 {
@@ -53,7 +53,7 @@
 			reg = <0x43001800 0x400>;
 			interrupts = <114 0>;
 			clocks = <&mclk CLOCK_MCHP_SAM_D5X_E5X_MCLK_APBD_TC7>,
-			<&gclk CLOCK_MCHP_SAM_D5X_E5X_GCLK_TC6_TC7>;
+			<&gclk CLOCK_MCHP_SAM_D5X_E5X_GCLK_TC7>;
 			clock-names = "mclk", "gclk";
 		};
 		tcc3: tcc@42001000 {
@@ -61,7 +61,7 @@
 			reg = <0x42001000 0x2000>;
 			interrupts = <101 0>, <102 0>, <103 0>;
 			clocks = <&mclk CLOCK_MCHP_SAM_D5X_E5X_MCLK_APBC_TCC3>,
-			<&gclk CLOCK_MCHP_SAM_D5X_E5X_GCLK_TCC2_TCC3>;
+			<&gclk CLOCK_MCHP_SAM_D5X_E5X_GCLK_TCC3>;
 			clock-names = "mclk", "gclk";
 		};
 		tcc4: tcc@43001000 {
