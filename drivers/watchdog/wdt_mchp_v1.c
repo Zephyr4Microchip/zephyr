@@ -42,6 +42,7 @@ typedef struct wdt_mchp_dev_data {
 	bool window_mode;              /**< Flag to indicate if window mode is enabled */
 	uint8_t installed_timeout_cnt; /**< Number of installed timeouts */
 	wdt_mchp_channel_data_t channel_data[MAX_INSTALLABLE_TIMEOUT_COUNT]; /**< Channel data */
+	MCHP_WDT_LOCK_TYPE lock;
 } wdt_mchp_dev_data_t;
 
 /**
@@ -73,13 +74,13 @@ static inline int wdt_mchp_reset_type_set(const hal_mchp_wdt_t *hal, uint8_t fla
 	int hal_ret = WDT_MCHP_SUCCESS;
 	switch (flag) {
 	case WDT_FLAG_RESET_NONE:
-		hal_ret = hal_mchp_wdt_use_flag_set_reset_none(hal);
+		hal_ret = hal_mchp_wdt_use_flag_reset_none(hal);
 		break;
 	case WDT_FLAG_RESET_CPU_CORE:
-		hal_ret = hal_mchp_wdt_use_flag_set_reset_cpu_core(hal);
+		hal_ret = hal_mchp_wdt_use_flag_reset_cpu_core(hal);
 		break;
 	case WDT_FLAG_RESET_SOC:
-		hal_ret = hal_mchp_wdt_use_flag_set_reset_soc(hal);
+		hal_ret = hal_mchp_wdt_use_flag_reset_soc(hal);
 		break;
 	default:
 		hal_ret = -EINVAL;
@@ -169,6 +170,7 @@ static int wdt_mchp_setup(const struct device *dev, uint8_t options)
 	DBG_WDT("watchdog enabled : 0x%x\n\r", hal_mchp_wdt_is_enabled(hal));
 	return WDT_MCHP_SUCCESS;
 }
+
 /**
  * @brief Disable the WDT.
  *
@@ -178,20 +180,23 @@ static int wdt_mchp_setup(const struct device *dev, uint8_t options)
 static int wdt_mchp_disable(const struct device *dev)
 {
 	wdt_mchp_dev_data_t *mchp_wdt_data = dev->data;
+	MCHP_WDT_DATA_LOCK(&mchp_wdt_data->lock);
 	const wdt_mchp_dev_cfg_t *const mchp_wdt_cfg = dev->config;
 	const hal_mchp_wdt_t *const hal = &mchp_wdt_cfg->hal;
 	int hal_ret = WDT_MCHP_SUCCESS;
-
 	mchp_wdt_data->installed_timeout_cnt = 0;
 	/*if watchdog is not enabled, then return fault*/
 	if (hal_mchp_wdt_is_enabled(hal) == false) {
+		MCHP_WDT_DATA_UNLOCK(&mchp_wdt_data->lock);
 		return -EFAULT;
 	}
 	hal_ret = hal_mchp_wdt_enable(hal, false);
 	if (hal_ret < 0) {
 		LOG_ERR("ret wdg was not disabled = %d", hal_ret);
+		MCHP_WDT_DATA_UNLOCK(&mchp_wdt_data->lock);
 		return -EPERM;
 	}
+	MCHP_WDT_DATA_UNLOCK(&mchp_wdt_data->lock);
 	return WDT_MCHP_SUCCESS;
 }
 
@@ -205,6 +210,7 @@ static int wdt_mchp_disable(const struct device *dev)
 static int wdt_mchp_install_timeout(const struct device *dev, const struct wdt_timeout_cfg *cfg)
 {
 	wdt_mchp_dev_data_t *mchp_wdt_data = dev->data;
+	MCHP_WDT_DATA_LOCK(&mchp_wdt_data->lock);
 	const wdt_mchp_dev_cfg_t *const mchp_wdt_cfg = dev->config;
 	const hal_mchp_wdt_t *const hal = &mchp_wdt_cfg->hal;
 	wdt_mchp_channel_data_t *channel_data = mchp_wdt_data->channel_data;
@@ -213,12 +219,13 @@ static int wdt_mchp_install_timeout(const struct device *dev, const struct wdt_t
 
 	mchp_wdt_data->cb = cfg->callback;
 	if (hal_mchp_wdt_win_mode_supported(hal) == WDT_MCHP_SUCCESS) {
-		mchp_wdt_data->window_mode = (cfg->window.min) > 0;
+		mchp_wdt_data->window_mode = ((cfg->window.min) > 0);
 	}
-	mchp_wdt_data->interrupt_enabled = mchp_wdt_data->cb != NULL;
+	mchp_wdt_data->interrupt_enabled = (mchp_wdt_data->cb != NULL);
 	/* CONFIG is enable protected, error out if already enabled */
 	if (hal_mchp_wdt_is_enabled(hal) != 0) {
 		LOG_ERR("Watchdog already setup");
+		MCHP_WDT_DATA_UNLOCK(&mchp_wdt_data->lock);
 		return -EBUSY;
 	}
 #if defined(WDT_FLAG_ONLY_ONE_TIMEOUT_VALUE_SUPPORTED)
@@ -229,6 +236,7 @@ static int wdt_mchp_install_timeout(const struct device *dev, const struct wdt_t
 			hal_mchp_wdt_get_available_timeout_val(cfg->window.min, cfg->window.max);
 		if ((new_set_timeout.min != channel_data[0].window.min) ||
 		    (new_set_timeout.max != channel_data[0].window.max)) {
+			MCHP_WDT_DATA_UNLOCK(&mchp_wdt_data->lock);
 			return -EINVAL;
 		}
 	}
@@ -239,17 +247,20 @@ static int wdt_mchp_install_timeout(const struct device *dev, const struct wdt_t
 	 */
 	if (mchp_wdt_data->installed_timeout_cnt == MAX_INSTALLABLE_TIMEOUT_COUNT) {
 		LOG_ERR("No more timeouts available");
+		MCHP_WDT_DATA_UNLOCK(&mchp_wdt_data->lock);
 		return -ENOMEM;
 	}
 	/*Set the behaviour of the watchdog peripheral based on the flags supplied */
 	ret = wdt_mchp_reset_type_set(hal, cfg->flags);
 	if (ret < 0) {
+		MCHP_WDT_DATA_UNLOCK(&mchp_wdt_data->lock);
 		return ret;
 	}
 	/*validate the timeout window to be in the range available for the peripheral*/
 	ret = hal_mchp_wdt_validate_window(cfg->window.min, cfg->window.max);
 	if (ret < 0) {
 		LOG_ERR("timeout out of range");
+		MCHP_WDT_DATA_UNLOCK(&mchp_wdt_data->lock);
 		return -EINVAL;
 	}
 	/*register the provided callback and enable the interrupt*/
@@ -258,6 +269,7 @@ static int wdt_mchp_install_timeout(const struct device *dev, const struct wdt_t
 		ret = hal_mchp_wdt_interrupt_enable(hal);
 		if (ret < 0) {
 			LOG_ERR("Interrupt is not supported for this peripeheral");
+			MCHP_WDT_DATA_UNLOCK(&mchp_wdt_data->lock);
 			return -ENOTSUP;
 		}
 	}
@@ -283,6 +295,7 @@ static int wdt_mchp_install_timeout(const struct device *dev, const struct wdt_t
 	/*this will return the channel id and then increment the
 	 * count which will then be used for the next channel.
 	 */
+	MCHP_WDT_DATA_UNLOCK(&mchp_wdt_data->lock);
 	return mchp_wdt_data->installed_timeout_cnt++;
 }
 /**
@@ -333,7 +346,7 @@ static int wdt_mchp_init(const struct device *dev)
 {
 	wdt_mchp_dev_data_t *mchp_wdt_data = dev->data;
 	const wdt_mchp_dev_cfg_t *const mchp_wdt_cfg = dev->config;
-
+	MCHP_WDT_DATA_LOCK_INIT(&mchp_wdt_data->lock);
 #if defined(CONFIG_WDT_DISABLE_AT_BOOT)
 	int ret = wdt_mchp_disable(dev);
 
@@ -342,7 +355,6 @@ static int wdt_mchp_init(const struct device *dev)
 	}
 #endif
 	MCHP_WDT_ENABLE_CLOCK(dev)
-
 	mchp_wdt_data->installed_timeout_cnt = 0;
 	mchp_wdt_cfg->irq_config_func(dev);
 
