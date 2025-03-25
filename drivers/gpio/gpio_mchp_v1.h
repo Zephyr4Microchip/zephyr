@@ -4,6 +4,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+ /**
+ * @file gpio_mchp_v1.h
+ * @brief GPIO driver configuration for Microchip devices.
+ */
+
 #ifndef MICROCHIP_GPIO_MCHP_V1_H_
 #define MICROCHIP_GPIO_MCHP_V1_H_
 

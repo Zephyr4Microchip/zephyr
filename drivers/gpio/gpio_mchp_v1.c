@@ -4,6 +4,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+ /**
+ * @file gpio_mchp_v1.c
+ * @brief GPIO driver implementation for Microchip devices.
+ */
+ 
 #include <errno.h>
 #include <zephyr/device.h>
 #include <zephyr/drivers/gpio.h>
@@ -38,7 +43,8 @@ struct gpio_mchp_data {
  * @param dev Pointer to the device structure
  * @param pin Pin number to configure
  * @param flags Configuration flags
- * @return 0 on success, negative error code on failure
+ * @retval 0 on success
+ * @retval ENOTSUP If any of the configuration options is not supported
  */
 static int gpio_mchp_configure(const struct device *dev, gpio_pin_t pin, gpio_flags_t flags)
 {
@@ -59,7 +65,18 @@ static int gpio_mchp_configure(const struct device *dev, gpio_pin_t pin, gpio_fl
 
 	/* Configure the pin as input if requested */
 	if ((flags & GPIO_INPUT) != 0) {
-		hal_mchp_gpio_enable_input(hal_gpio, pin);
+		/* If not output, configure as input */
+		hal_mchp_gpio_set_dir_input(hal_gpio, pin);
+
+		/* Configure pull-up or pull-down if requested */
+		if ((flags & (GPIO_PULL_UP | GPIO_PULL_DOWN)) != 0) {
+			hal_mchp_gpio_enable_pullup(hal_gpio, pin);
+			if ((flags & GPIO_PULL_UP) != 0) {
+				hal_mchp_gpio_outset(hal_gpio, pin);
+			} else {
+				hal_mchp_gpio_outclr(hal_gpio, pin);
+			}
+		}
 	}
 
 	/* Configure the pin as output if requested */
@@ -75,20 +92,7 @@ static int gpio_mchp_configure(const struct device *dev, gpio_pin_t pin, gpio_fl
 			hal_mchp_gpio_outset(hal_gpio, pin);
 		}
 		/* Set the pin as output */
-		hal_mchp_gpio_dirset_output(hal_gpio, pin);
-	} else {
-		/* If not output, configure as input */
-		hal_mchp_gpio_dirset_input(hal_gpio, pin);
-
-		/* Configure pull-up or pull-down if requested */
-		if ((flags & (GPIO_PULL_UP | GPIO_PULL_DOWN)) != 0) {
-			hal_mchp_gpio_pull_enable(hal_gpio, pin);
-			if ((flags & GPIO_PULL_UP) != 0) {
-				hal_mchp_gpio_outset(hal_gpio, pin);
-			} else {
-				hal_mchp_gpio_outclr(hal_gpio, pin);
-			}
-		}
+		hal_mchp_gpio_set_dir_output(hal_gpio, pin);
 	}
 
 	return 0;
@@ -99,7 +103,7 @@ static int gpio_mchp_configure(const struct device *dev, gpio_pin_t pin, gpio_fl
  *
  * @param dev Pointer to the device structure
  * @param value Pointer to store the port value
- * @return 0 on success
+ * @retval 0 on success
  */
 static int gpio_mchp_port_get_raw(const struct device *dev, gpio_port_value_t *value)
 {
@@ -117,7 +121,7 @@ static int gpio_mchp_port_get_raw(const struct device *dev, gpio_port_value_t *v
  * @param dev Pointer to the device structure
  * @param mask Mask of pins to set
  * @param value Value to set
- * @return 0 on success
+ * @retval 0 on success
  */
 static int gpio_mchp_port_set_masked_raw(const struct device *dev, gpio_port_pins_t mask,
 					 gpio_port_value_t value)
@@ -135,14 +139,14 @@ static int gpio_mchp_port_set_masked_raw(const struct device *dev, gpio_port_pin
  *
  * @param dev Pointer to the device structure
  * @param pins Pins to set
- * @return 0 on success
+ * @retval 0 on success
  */
 static int gpio_mchp_port_set_bits_raw(const struct device *dev, gpio_port_pins_t pins)
 {
 	const struct gpio_mchp_config *config = dev->config;
 	hal_gpio_port_reg *hal_gpio = config->hal_regs;
 	/* Set the specified pins in the output register */
-	hal_mchp_gpio_port_set_bits_raw(hal_gpio, pins);
+	hal_mchp_gpio_set_pins_high(hal_gpio, pins);
 
 	return 0;
 }
@@ -152,14 +156,14 @@ static int gpio_mchp_port_set_bits_raw(const struct device *dev, gpio_port_pins_
  *
  * @param dev Pointer to the device structure
  * @param pins Pins to clear
- * @return 0 on success
+ * @retval 0 on success
  */
 static int gpio_mchp_port_clear_bits_raw(const struct device *dev, gpio_port_pins_t pins)
 {
 	const struct gpio_mchp_config *config = dev->config;
 	hal_gpio_port_reg *hal_gpio = config->hal_regs;
 	/* Clear the specified pins in the output register */
-	hal_mchp_gpio_port_clr_bits_raw(hal_gpio, pins);
+	hal_mchp_gpio_set_pins_low(hal_gpio, pins);
 
 	return 0;
 }
@@ -169,14 +173,14 @@ static int gpio_mchp_port_clear_bits_raw(const struct device *dev, gpio_port_pin
  *
  * @param dev Pointer to the device structure
  * @param pins Pins to toggle
- * @return 0 on success
+ * @retval 0 on success
  */
 static int gpio_mchp_port_toggle_bits(const struct device *dev, gpio_port_pins_t pins)
 {
 	const struct gpio_mchp_config *config = dev->config;
 	hal_gpio_port_reg *hal_gpio = config->hal_regs;
 	/* Toggle the specified pins in the output register */
-	hal_mchp_gpio_port_tgl_bits_raw(hal_gpio, pins);
+	hal_mchp_gpio_toggle_pins(hal_gpio, pins);
 
 	return 0;
 }
@@ -190,7 +194,7 @@ static int gpio_mchp_port_toggle_bits(const struct device *dev, gpio_port_pins_t
  * @param dev Pointer to the device structure
  * @param pin The pin number to get the configuration for
  * @param out_flags Pointer to store the retrieved configuration flags
- * @return 0 on success
+ * @retval 0 on success
  */
 static int gpio_mchp_pin_get_config(const struct device *dev, gpio_pin_t pin,
 				    gpio_flags_t *out_flags)
@@ -199,14 +203,17 @@ static int gpio_mchp_pin_get_config(const struct device *dev, gpio_pin_t pin,
 	hal_gpio_port_reg *hal_gpio = config->hal_regs;
 	struct gpio_mchp_data *data = dev->data;
 	gpio_flags_t flags = 0;
+	
 	/* flag to check if the pin is configured as an output */
-	bool is_output = hal_mchp_gpio_port_is_output(hal_gpio, pin) != 0;
+	bool is_output = hal_mchp_gpio_is_pin_output(hal_gpio, pin);
 	/* flag to check if pull-up or pull-down resistors are enabled */
-	bool is_pull_enabled = hal_mchp_gpio_is_pull_enabled(hal_gpio, pin) != 0;
+	bool is_pull_enabled = hal_mchp_gpio_is_pullup(hal_gpio, pin);
 	/* flag to check if the output is set to high */
-	bool is_output_high = hal_mchp_gpio_port_is_output_high(hal_gpio, pin) != 0;
+	bool is_output_high = hal_mchp_gpio_is_pin_high(hal_gpio, pin);
 	/* Check if the pin is configured as active low */
 	bool is_active_low = data->common.invert & (gpio_port_pins_t)BIT(pin);
+	/* Check if the pin is configured as open drain */
+	bool is_open_drain = hal_mchp_gpio_is_pin_open_drain(hal_gpio, pin);
 
 	/* Check if the pin is configured as an output */
 	if (is_output) {
@@ -219,6 +226,9 @@ static int gpio_mchp_pin_get_config(const struct device *dev, gpio_pin_t pin,
 			flags |= is_output_high ? GPIO_PULL_UP : GPIO_PULL_DOWN;
 		}
 	}
+
+	/* Check if the pin is configured as open drain */
+	flags |= is_open_drain ? GPIO_LINE_OPEN_DRAIN : GPIO_LINE_OPEN_SOURCE;	
 	/* Check if the pin is configured as active low */
 	flags |= is_active_low ? GPIO_ACTIVE_LOW : GPIO_ACTIVE_HIGH;
 
@@ -238,7 +248,7 @@ static int gpio_mchp_pin_get_config(const struct device *dev, gpio_pin_t pin,
  * @param inputs Pointer to store the bitmask of input pins (can be NULL).
  * @param outputs Pointer to store the bitmask of output pins (can be NULL).
  *
- * @return 0 on success
+ * @retval 0 on success
  */
 static int gpio_mchp_port_get_direction(const struct device *dev, gpio_port_pins_t map,
 					gpio_port_pins_t *inputs, gpio_port_pins_t *outputs)
@@ -252,7 +262,7 @@ static int gpio_mchp_port_get_direction(const struct device *dev, gpio_port_pins
 
 	if (inputs != NULL) {
 		/* Get the input pins */
-		*inputs = map & (!hal_mchp_gpio_port_get_dir(hal_gpio));
+		*inputs = map & (~hal_mchp_gpio_port_get_dir(hal_gpio));
 	}
 
 	if (outputs != NULL) {
@@ -287,7 +297,7 @@ static const struct gpio_driver_api gpio_mchp_api = {
  * @brief Initialize the GPIO driver
  *
  * @param dev Pointer to the device structure
- * @return 0 on success
+ * @retval 0 on success
  */
 static int gpio_mchp_init(const struct device *dev)
 {

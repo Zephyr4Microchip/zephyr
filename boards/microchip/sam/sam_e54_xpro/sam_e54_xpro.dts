@@ -23,6 +23,7 @@
 	aliases {
 		led0 = &led0;
 		i2c-0 = &sercom7;
+		sw0 = &button0;
 	};
 	
 	leds {
@@ -32,6 +33,15 @@
 			label = "Yellow LED";
 		};
 	};
+
+    buttons {
+        compatible = "gpio-keys";
+        button0: button_0 {
+            gpios = <&portb 31 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>;
+            label = "SW0";
+            zephyr,code = <INPUT_KEY_0>;
+        };
+    };	
 };
 
 &sercom2 {
