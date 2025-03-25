@@ -146,8 +146,8 @@ static int wdt_mchp_setup(const struct device *dev, uint8_t options)
 	const wdt_mchp_dev_cfg_t *const mchp_wdt_cfg = dev->config;
 	const hal_mchp_wdt_t *const hal = &mchp_wdt_cfg->hal;
 	int ret = WDT_MCHP_SUCCESS;
+	MCHP_WDT_DATA_LOCK(&mchp_wdt_data->lock);
 	do {
-		MCHP_WDT_DATA_LOCK(&mchp_wdt_data->lock);
 		if (hal_mchp_wdt_is_enabled(hal) == true) {
 			LOG_ERR("Watchdog already setup");
 			ret = -EBUSY;
@@ -184,8 +184,9 @@ static int wdt_mchp_disable(const struct device *dev)
 	const wdt_mchp_dev_cfg_t *const mchp_wdt_cfg = dev->config;
 	const hal_mchp_wdt_t *const hal = &mchp_wdt_cfg->hal;
 	int ret = WDT_MCHP_SUCCESS;
+	uint32_t irq_key = 0;
 
-	MCHP_WDT_DATA_LOCK(&mchp_wdt_data->lock);
+	irq_key = irq_lock();
 	do {
 		mchp_wdt_data->installed_timeout_cnt = 0;
 		/*if watchdog is not enabled, then return fault*/
@@ -199,7 +200,8 @@ static int wdt_mchp_disable(const struct device *dev)
 			LOG_ERR("wdg was not disabled = %d", ret);
 		}
 	} while (0);
-	MCHP_WDT_DATA_UNLOCK(&mchp_wdt_data->lock);
+	irq_unlock(irq_key);
+
 	return ret;
 }
 
@@ -218,10 +220,12 @@ static int wdt_mchp_install_timeout(const struct device *dev, const struct wdt_t
 	wdt_mchp_channel_data_t *channel_data = mchp_wdt_data->channel_data;
 	hal_wdt_mchp_channel_data_t actual_set_timeout = {0};
 	int ret = WDT_MCHP_SUCCESS;
+	uint32_t irq_key = 0;
+
 	/*Lock the API to prevent other thread from accessing shared resources */
 	MCHP_WDT_DATA_LOCK(&mchp_wdt_data->lock);
-	mchp_wdt_data->cb = cfg->callback;
 	do {
+		mchp_wdt_data->cb = cfg->callback;
 		if (hal_mchp_wdt_win_mode_supported(hal) == WDT_MCHP_SUCCESS) {
 			mchp_wdt_data->window_mode = ((cfg->window.min) > 0);
 		}
@@ -300,7 +304,9 @@ static int wdt_mchp_install_timeout(const struct device *dev, const struct wdt_t
 		/*this will return the channel id and then increment the
 		 * count which will then be used for the next channel.
 		 */
+		irq_key = irq_lock();
 		ret = mchp_wdt_data->installed_timeout_cnt++;
+		irq_unlock(irq_key);
 	} while (0);
 	MCHP_WDT_DATA_UNLOCK(&mchp_wdt_data->lock);
 	return ret;
@@ -318,7 +324,10 @@ static int wdt_mchp_feed(const struct device *dev, int channel_id)
 	const wdt_mchp_dev_cfg_t *const mchp_wdt_cfg = dev->config;
 	const hal_mchp_wdt_t *const hal = &mchp_wdt_cfg->hal;
 	int ret = WDT_MCHP_SUCCESS;
-	MCHP_WDT_DATA_LOCK(&mchp_wdt_data->lock);
+	/*Lock mutex only if feed called from a thread */
+	if (k_is_in_isr() == false) {
+		MCHP_WDT_DATA_LOCK(&mchp_wdt_data->lock);
+	}
 	do {
 		if (hal_mchp_wdt_is_enabled(hal) == 0) {
 			LOG_ERR("Watchdog not setup");
@@ -337,7 +346,9 @@ static int wdt_mchp_feed(const struct device *dev, int channel_id)
 		}
 		hal_mchp_wdt_reset_timer(hal, channel_id);
 	} while (0);
-	MCHP_WDT_DATA_UNLOCK(&mchp_wdt_data->lock);
+	if (k_is_in_isr() == false) {
+		MCHP_WDT_DATA_UNLOCK(&mchp_wdt_data->lock);
+	}
 	return ret;
 }
 /**
