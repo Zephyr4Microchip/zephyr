@@ -16,8 +16,6 @@
 #ifndef MICROCHIP_WDT_MCHP_V1_H_
 #define MICROCHIP_WDT_MCHP_V1_H_
 
-#define DT_DRV_COMPAT microchip_wdt_u2251
-
 #include <stdint.h>
 #include <zephyr/drivers/clock_control.h>
 #include <zephyr/drivers/clock_control/mchp_clock_control.h>
@@ -69,6 +67,20 @@
 #define MCHP_WDT_DATA_UNLOCK(p_lock) k_mutex_unlock(p_lock)
 
 #if defined(CONFIG_SOC_FAMILY_MCHP_SAM_D5X_E5X)
+
+/**
+ * @brief Device Tree Driver Compatibility
+ *
+ * This macro defines the compatibility string used in the device tree to
+ * identify the Microchip U2251 Watchdog Timer (WDT) driver. It is used by
+ * the device driver infrastructure to match the driver with the corresponding
+ * hardware described in the device tree.
+ *
+ * The compatibility string "microchip,wdt-u2251" should be used in the device
+ * tree source file to specify the Microchip U2251 WDT node
+ */
+#define DT_DRV_COMPAT microchip_wdt_u2251
+
 /**
  * @def MAX_INSTALLABLE_TIMEOUT_COUNT
  * @brief Macro to get the maximum installable timeout count from the device
@@ -119,7 +131,7 @@ typedef struct hal_mchp_wdt {
  *
  * @param n Instance number.
  */
-#define WDT_MCHP_HAL_DEFN(n) .hal.regs = (wdt_registers_t *)DT_INST_REG_ADDR(n),
+#define WDT_MCHP_HAL_DEFN(n) .hal_wdt.regs = (wdt_registers_t *)DT_INST_REG_ADDR(n),
 
 /**
  * @brief Macro to define the Watchdog Timer (WDT) clock configuration.
@@ -141,12 +153,12 @@ typedef struct hal_mchp_wdt {
  * It uses the clock control API to turn on the clock device and the main clock system
  * (MCLK) for the WDT.
  *
- * @param dev Pointer to the device structure for the driver instance.
+ * @param wdt_dev Pointer to the device structure for the driver instance.
  *
  */
-#define MCHP_WDT_ENABLE_CLOCK(dev)                                                                 \
-	clock_control_on(((const wdt_mchp_dev_cfg_t *)(dev->config))->wdt_clock.clock_dev,         \
-			 &(((wdt_mchp_dev_cfg_t *)(dev->config))->wdt_clock.mclk_sys));
+#define MCHP_WDT_ENABLE_CLOCK(wdt_dev)                                                             \
+	clock_control_on(((const wdt_mchp_dev_cfg_t *)(wdt_dev->config))->wdt_clock.clock_dev,     \
+			 &(((wdt_mchp_dev_cfg_t *)(wdt_dev->config))->wdt_clock.mclk_sys));
 
 /**
  * @struct mchp_wdt_clock
