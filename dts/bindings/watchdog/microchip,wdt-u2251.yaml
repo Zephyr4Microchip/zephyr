@@ -1,0 +1,15 @@
+# Copyright (c) 2025, Microchip Technologies Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+description: MICROCHIP Watchdog U2251
+
+compatible: "microchip,wdt-u2251"
+
+include: base.yaml
+
+properties:
+  reg:
+    required: true
+
+  interrupts:
+    required: true

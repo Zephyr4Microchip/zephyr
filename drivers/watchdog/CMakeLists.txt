@@ -53,3 +53,5 @@ zephyr_library_sources_ifdef(CONFIG_WDT_NXP_FS26 wdt_nxp_fs26.c)
 zephyr_library_sources_ifdef(CONFIG_WDT_SHELL wdt_shell.c)
 
 zephyr_library_sources_ifdef(CONFIG_USERSPACE wdt_handlers.c)
+
+zephyr_library_sources_ifdef(CONFIG_WDT_MCHP_V1 wdt_mchp_v1.c)

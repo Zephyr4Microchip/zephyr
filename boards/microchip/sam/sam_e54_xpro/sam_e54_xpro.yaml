@@ -17,4 +17,5 @@ supported:
   - spi
   - i2c
   - dma
+  - watchdog
 vendor: microchip

@@ -247,6 +247,11 @@
             prescaler = <1>;
         };
 		/* todo: Define SDHC0 node */
+		wdog: watchdog@40002000 {
+			compatible = "microchip,wdt-u2251";
+			reg = <0x40002000 13>;
+			interrupts = <10 0>;
+		};
 	};
 };
 &nvic {
