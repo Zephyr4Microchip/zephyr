@@ -2,9 +2,9 @@
 # SPDX-License-Identifier: Apache-2.0
 
 config WDT_MCHP_V1
-	bool "Microchip MCHP V1 series Watchdog (WDT) Driver"
+	bool "Microchip MCHP V1 Watchdog (WDT) Driver"
 	default y
 	depends on DT_HAS_MICROCHIP_WDT_U2251_ENABLED
 	select HAS_WDT_DISABLE_AT_BOOT
 	help
-	  Enable WDT driver for Microchip MCHP V1 series.
+	  Enable WDT driver for Microchip MCHP V1
