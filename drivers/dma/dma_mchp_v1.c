@@ -472,7 +472,7 @@ static int dma_mchp_config(const struct device *dev, uint32_t channel, struct dm
 			}
 		}
 
-		/* If any error occured inside for loop, break from do while loop */
+		/* If any error occurred inside for loop, break from do while loop */
 		if (ret < 0) {
 			break;
 		}
@@ -1005,7 +1005,12 @@ static const struct dma_driver_api dma_mchp_api = {
 	static void mchp_dma_irq_connect_##n(void)                                                 \
 	{                                                                                          \
 		/** Connect all IRQs for this instance */                                          \
-		LISTIFY(DT_NUM_IRQS(DT_DRV_INST(n)), DMA_MCHP_IRQ_CONNECT, (), n)                                                                            \
+		LISTIFY(\
+			DT_NUM_IRQS(DT_DRV_INST(n)), \
+			DMA_MCHP_IRQ_CONNECT, \
+			(), \
+			n\
+		)                                                                          \
 	}
 
 /**

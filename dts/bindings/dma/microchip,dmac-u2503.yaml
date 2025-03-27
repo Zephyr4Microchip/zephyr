@@ -11,7 +11,9 @@ properties:
   reg:
     type: array
     required: true
-    description: Specifies the base address and size of the DMA controller's memory-mapped registers.
+    description: >
+      Specifies the base address and size of the DMA controller's
+      memory-mapped registers.
 
   interrupts:
     type: array
@@ -35,7 +37,6 @@ properties:
 
   dma-alignment:
     type: int
-    required: false
     description: Specifies the required memory alignment for DMA transfers.
                  The value should be set to 16 for 128-bit alignment.
     default: 16
