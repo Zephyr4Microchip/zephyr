@@ -6,10 +6,10 @@
 config DMA_MCHP_V1
 	bool "Microchip MCHP_V1 DMA driver"
 	default y
-	depends on DT_HAS_MICROCHIP_DMAC_U2503_ENABLED
-	depends on !DMA_64BIT
+	select KERNEL_MEM_POOL
+	depends on DT_HAS_MICROCHIP_DMAC_U2503_ENABLED && !DMA_64BIT
 	help
-	  This Option enables the DMA driver support for Microchip SAM MCUs.
+	  Enables the DMA driver support for Microchip MCUs.
 
 if DMA_MCHP_V1
 
@@ -37,5 +37,13 @@ config DMA_MCHP_LOG_LEVEL
 	  - 2: Warning
 	  - 3: Info (Default)
 	  - 4: Debug
+
+config HEAP_MEM_POOL_ADD_SIZE_DMA
+	int
+	default 8192
+	help
+	  Specifies the heap memory required for allocating DMA descriptors
+	  in the memory pool (in bytes). Ensuring sufficient heap memory helps prevent
+	  allocation failures and ensures reliable DMA operation.
 
 endif # DMA_MCHP_V1
