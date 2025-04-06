@@ -39,6 +39,8 @@ typedef enum {
 	CLOCK_CONTROL_MCHP_STATE_NO_SUPPORT,
 	/* Clock is having a user-defined frequency */
 	CLOCK_CONTROL_MCHP_STATE_USER_FREQ,
+	/* Clock configuration is not present */
+	CLOCK_CONTROL_MCHP_STATE_NO_CONFIG,
 } clock_control_mchp_state_t;
 
 /**
@@ -116,7 +118,7 @@ struct clock_control_mchp_id_int_map {
  */
 #define CLOCK_CONTROL_MCHP_IRQ_CONNECT_ENABLE(node, idx)                                           \
 	IRQ_CONNECT(DT_IRQ_BY_IDX(node, idx, irq), DT_IRQ_BY_IDX(node, idx, priority),             \
-		    clock_control_mchp_isr, DEVICE_DT_GET(node), 0);                               \
+		    clock_control_mchp_isr, DEVICE_DT_GET(DT_NODELABEL(clock)), 0);                \
 	irq_enable(DT_IRQ_BY_IDX(node, idx, irq))
 
 #if defined(CONFIG_SOC_FAMILY_MCHP_SAM_D5X_E5X)

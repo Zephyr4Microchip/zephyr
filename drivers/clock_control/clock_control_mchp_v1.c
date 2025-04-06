@@ -14,6 +14,8 @@
 
 #include <zephyr/drivers/clock_control/mchp_clock_control.h>
 #include "clock_control_mchp_v1.h"
+#include "zephyr/syscall.h"
+#include <stdbool.h>
 
 /**
  * @brief Get the subsys device for a given node_id.
@@ -300,6 +302,8 @@ static int clock_control_mchp_configure(const struct device *dev, clock_control_
 	uint8_t index;
 	/* Pointer to the clock control configuration data. */
 	const clock_control_mchp_config_t *config = dev->config;
+	/* Flag to indicate one or more subsystems is missing configuration data. */
+	bool is_config_missing = false;
 
 	/* Check if requested configuration is NULL. */
 	if (req_configuration == NULL) {
@@ -316,12 +320,21 @@ static int clock_control_mchp_configure(const struct device *dev, clock_control_
 			state = hal_mchp_clock_configure(config->subsys_regs[index], 0,
 							 req_configuration);
 
-			/* Check if the configuration for all subsystems was successful. */
-			if (state != CLOCK_CONTROL_MCHP_STATE_OK) {
-				/* Configuration failed for one of the subsystems. */
+			/* Check if the configuration for current subsystem was not supported. */
+			if (state == CLOCK_CONTROL_MCHP_STATE_NO_SUPPORT) {
+				/* Configuration failed for current subsystem. */
 				ret_val = -ENOTSUP;
 				break;
+			} else if (state == CLOCK_CONTROL_MCHP_STATE_NO_CONFIG) {
+				/* Configuration missing for current subsystem. */
+				is_config_missing = true;
 			}
+		}
+
+		/* Check whether one or more configuration is not valid. */
+		if ((ret_val == 0) && (is_config_missing == true)) {
+			/* One or more subsytem configuration is not valid. */
+			ret_val = -EINVAL;
 		}
 	} else {
 		/* Get the subsystem pointer for a specific subsystem. */
@@ -538,7 +551,6 @@ static int clock_control_mchp_off(const struct device *dev, clock_control_subsys
 			/* No matching subsystem found. */
 			ret_val = -ENOTSUP;
 		} else {
-
 			/* Check whether an async operation is initiated for this clock */
 			if ((data->is_async_in_progress == true) &&
 			    (data->async_id == subsys->id) &&
@@ -552,24 +564,26 @@ static int clock_control_mchp_off(const struct device *dev, clock_control_subsys
 			} else { /* Retrieve the current clock status for the subsystem. */
 				status = hal_mchp_clock_status(config->subsys_regs[subsys_idx],
 							       subsys->id);
-				/* Check if the clock is already turned off. */
-				if (status == CLOCK_CONTROL_MCHP_STATE_OFF) {
-					/* The clock is already OFF. */
-					ret_val = 0;
-				}
 			}
 
-			if (status == CLOCK_CONTROL_MCHP_STATE_STARTING) {
-				/* Clock is STARTING. Turn it OFF. */
+			if (status == CLOCK_CONTROL_MCHP_STATE_OFF) {
+				/* The clock is already OFF. */
+				ret_val = 0;
+			} else if ((status == CLOCK_CONTROL_MCHP_STATE_STARTING) ||
+				   (status == CLOCK_CONTROL_MCHP_STATE_ON)) {
+				/* Clock is On or Starting. Turn it OFF. */
 				state = hal_mchp_clock_off(config->subsys_regs[subsys_idx],
 							   subsys->id);
 				/* Check if the clock off operation was successful. */
 				if (state == CLOCK_CONTROL_MCHP_STATE_OK) {
 					ret_val = 0;
 				} else {
-					/* Subsystem does not support off operation. */
+					/* The clock does not support Off operation. */
 					ret_val = -ENOTSUP;
 				}
+			} else {
+				/* The clock does not support Status operation. */
+				ret_val = -ENOTSUP;
 			}
 		}
 	}
@@ -666,8 +680,11 @@ static int clock_control_mchp_on(const struct device *dev, clock_control_subsys_
 				break;
 			}
 			if (on_timeout_ms < config->on_timeout_ms) {
-				/* Sleep before checking again. */
-				k_sleep(K_MSEC(1));
+				/* Thread is not available while booting. */
+				if ((k_is_pre_kernel() == false) && (k_current_get() != NULL)) {
+					/* Sleep before checking again. */
+					k_sleep(K_MSEC(1));
+				}
 				/* Increment clock on timeout value */
 				on_timeout_ms++;
 			} else {
