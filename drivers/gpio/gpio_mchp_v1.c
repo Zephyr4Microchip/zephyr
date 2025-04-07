@@ -4,11 +4,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
- /**
+/**
  * @file gpio_mchp_v1.c
  * @brief GPIO driver implementation for Microchip devices.
  */
- 
+
 #include <errno.h>
 #include <zephyr/device.h>
 #include <zephyr/drivers/gpio.h>
@@ -51,6 +51,14 @@ static int gpio_mchp_configure(const struct device *dev, gpio_pin_t pin, gpio_fl
 	const struct gpio_mchp_config *config = dev->config;
 	hal_gpio_port_reg *hal_gpio = config->hal_regs;
 	int retval = 0;
+	gpio_flags_t io_flags = 0;
+
+	io_flags = flags & (GPIO_INPUT | GPIO_OUTPUT);
+	if (io_flags == GPIO_DISCONNECTED) {
+		/* Disconnect the gpio if the feature is supported, and exit */
+		retval = hal_mchp_gpio_disconnect(hal_gpio, pin);
+		return (retval < 0) ? -ENOTSUP : 0;
+	}
 
 	/* Check for single-ended mode configuration */
 	if (flags & GPIO_SINGLE_ENDED) {
@@ -63,24 +71,38 @@ static int gpio_mchp_configure(const struct device *dev, gpio_pin_t pin, gpio_fl
 		}
 	}
 
-	/* Configure the pin as input if requested */
-	if ((flags & GPIO_INPUT) != 0) {
-		/* If not output, configure as input */
+	/* Configure the pin as input and output if requested */
+	if (io_flags == (GPIO_INPUT | GPIO_OUTPUT)) {
+		retval = hal_mchp_gpio_set_dir_input_output(hal_gpio, pin);
+
+		if (retval < 0) {
+			return -ENOTSUP;
+		}
+
+		/* Set initial output state if specified */
+		if (flags & GPIO_OUTPUT_INIT_LOW) {
+			hal_mchp_gpio_outclr(hal_gpio, pin);
+		} else if (flags & GPIO_OUTPUT_INIT_HIGH) {
+			hal_mchp_gpio_outset(hal_gpio, pin);
+		}
+	} else if ((flags & GPIO_INPUT) != 0) {
+		/* Configure the pin as input if requested */
 		hal_mchp_gpio_set_dir_input(hal_gpio, pin);
 
 		/* Configure pull-up or pull-down if requested */
 		if ((flags & (GPIO_PULL_UP | GPIO_PULL_DOWN)) != 0) {
-			hal_mchp_gpio_enable_pullup(hal_gpio, pin);
+			retval = hal_mchp_gpio_enable_pullup(hal_gpio, pin);
+			if (retval < 0) {
+				return -ENOTSUP;
+			}
+
 			if ((flags & GPIO_PULL_UP) != 0) {
 				hal_mchp_gpio_outset(hal_gpio, pin);
 			} else {
 				hal_mchp_gpio_outclr(hal_gpio, pin);
 			}
 		}
-	}
-
-	/* Configure the pin as output if requested */
-	if ((flags & GPIO_OUTPUT) != 0) {
+	} else if ((flags & GPIO_OUTPUT) != 0) {
 		/* Output is incompatible with pull-up or pull-down */
 		if ((flags & (GPIO_PULL_UP | GPIO_PULL_DOWN)) != 0) {
 			return -ENOTSUP;
@@ -203,7 +225,7 @@ static int gpio_mchp_pin_get_config(const struct device *dev, gpio_pin_t pin,
 	hal_gpio_port_reg *hal_gpio = config->hal_regs;
 	struct gpio_mchp_data *data = dev->data;
 	gpio_flags_t flags = 0;
-	
+
 	/* flag to check if the pin is configured as an output */
 	bool is_output = hal_mchp_gpio_is_pin_output(hal_gpio, pin);
 	/* flag to check if pull-up or pull-down resistors are enabled */
@@ -228,7 +250,7 @@ static int gpio_mchp_pin_get_config(const struct device *dev, gpio_pin_t pin,
 	}
 
 	/* Check if the pin is configured as open drain */
-	flags |= is_open_drain ? GPIO_LINE_OPEN_DRAIN : GPIO_LINE_OPEN_SOURCE;	
+	flags |= is_open_drain ? GPIO_LINE_OPEN_DRAIN : GPIO_LINE_OPEN_SOURCE;
 	/* Check if the pin is configured as active low */
 	flags |= is_active_low ? GPIO_ACTIVE_LOW : GPIO_ACTIVE_HIGH;
 
@@ -262,12 +284,12 @@ static int gpio_mchp_port_get_direction(const struct device *dev, gpio_port_pins
 
 	if (inputs != NULL) {
 		/* Get the input pins */
-		*inputs = map & (~hal_mchp_gpio_port_get_dir(hal_gpio));
+		*inputs = map & (hal_mchp_gpio_port_get_input_pins(hal_gpio));
 	}
 
 	if (outputs != NULL) {
 		/* Get the output pins */
-		*outputs = map & (hal_mchp_gpio_port_get_dir(hal_gpio));
+		*outputs = map & (hal_mchp_gpio_port_get_output_pins(hal_gpio));
 	}
 
 	return 0;
