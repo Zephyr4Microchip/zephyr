@@ -1,0 +1,21 @@
+# Copyright (c) 2025 Microchip Technology Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+description: |
+  Microchip TCC counter driver. This driver is used for configuring and anaging TCC
+  (Timer Counter Control) peripheral in Microchip microcontrollers. This peripherals
+  support counting events, measuring time intervals, and generating periodic interrupts.
+
+compatible: "microchip,counter-tcc-u2213"
+
+include: microchip,tcc-u2213.yaml
+properties:
+  max-bit-width:
+    type: int
+    required: true
+    description: |
+      Maximum bit width supported by the counter. This property indicates the
+      resolution of the counter, which can be 8, 16, 24, or 32 bits.
+    enum:
+      - 16
+      - 24

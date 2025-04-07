@@ -1,0 +1,21 @@
+# Copyright (c) 2025 Microchip Technology Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+description: |
+  Microchip RTC counter driver. This driver is used for configuring and
+  managing the RTC (Real Time Counter) peripheral in Microchip microcontrollers.
+  These peripherals support measuring time intervals and generating periodic
+  interrupts.
+compatible: "microchip,counter-rtc-u2250"
+
+include: microchip,rtc-u2250.yaml
+properties:
+  max-bit-width:
+    type: int
+    required: true
+    description: |
+      Maximum bit width supported by the counter. This property indicates the
+      resolution of the counter, which can be 16 or 32 bits.
+    enum:
+      - 16
+      - 32

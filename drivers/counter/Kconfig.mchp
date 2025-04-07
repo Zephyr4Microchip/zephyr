@@ -1,0 +1,33 @@
+# Copyright (c) 2025 Microchip Technology Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+menu "Microchip Counter Drivers"
+
+config COUNTER_MCHP_TC_U2249
+	bool "Microchip TC U2249 Counter driver"
+	default y
+	depends on DT_HAS_MICROCHIP_COUNTER_TC_U2249_ENABLED
+	help
+	  This option enables the counter driver for Microchip timer peripherals.
+	  Supported Device Families:
+		- SOC_FAMILY_MCHP_SAM_D5X_E5X
+
+config COUNTER_MCHP_TCC_U2213
+	bool "Microchip TCC U2213 Counter driver"
+	default y
+	depends on	 DT_HAS_MICROCHIP_COUNTER_TCC_U2213_ENABLED
+	help
+	  This option enables the counter driver for Microchip timer perip
+	  Supported Device Families:
+		- SOC_FAMILY_MCHP_SAM_D5X_E5X
+
+config COUNTER_MCHP_RTC_U2250
+	bool "Microchip RTC U2250 Counter driver"
+	default y
+	depends on DT_HAS_MICROCHIP_COUNTER_RTC_U2250_ENABLED
+	help
+	  This option enables the counter driver for Microchip timer peripherals
+	  Supported Device Families:
+		- SOC_FAMILY_MCHP_SAM_D5X_E5X
+
+endmenu
