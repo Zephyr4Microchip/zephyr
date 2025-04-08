@@ -1,0 +1,13 @@
+#Copyright(c) 2025 Microchip Technology Inc.
+#SPDX - License - Identifier : Apache - 2.0
+
+config ADC_MCHP_U2500
+	bool "Microchip ADC Driver for ADC_U2500 IP"
+	default y
+	depends on DT_HAS_MICROCHIP_ADC_U2500_ENABLED
+	select PINCTRL
+	select ADC_CONFIGURABLE_INPUTS
+	help
+	  Enable the Microchip Analog-to-Digital Converter (ADC) driver.
+	  This driver supports Microchip device families:
+	  - SOC_FAMILY_MCHP_SAM_D5X_E5X

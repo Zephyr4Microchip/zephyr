@@ -1,0 +1,64 @@
+# Copyright (c) 2025 Microchip Technology Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+description: |
+  Microchip ADC peripheral binding. Includes support for selecting the ADC input clock
+  prescaler, vref-mv, clocks and interrupts.
+
+compatible: "microchip,adc-u2500"
+
+include:
+  - name: adc-controller.yaml
+  - name: pinctrl-device.yaml
+
+properties:
+  reg:
+    required: true
+    description: Register base address and size for the ADC peripheral.
+
+  interrupts:
+    required: true
+    description: Interrupt specifier for the ADC peripheral.
+
+  clocks:
+    required: true
+    description: Clock phandles used to drive the ADC.
+
+  clock-names:
+    required: true
+    description: Clock name corresponding to the `clocks` entry.
+
+  vref-mv:
+    type: int
+    description: |
+      ADC reference voltage in millivolts.
+      This should match the reference selected in hardware or software config.
+
+  prescaler:
+    type: int
+    required: true
+    enum: [2, 4, 8, 16, 32, 64, 128, 256]
+    description: |
+      Clock prescaler value. Must be a power of 2 between 2 and 256 inclusive.
+      The ADC clock is derived by dividing the source clock by this prescaler.
+
+  num-channels:
+    type: int
+    required: true
+    default: 23
+    description: |
+      Number of ADC input channels supported by the hardware instance.
+
+  "#io-channel-cells":
+    const: 1
+    description: Specifies that each io-channel uses a single cell (input index).
+
+  calib-offset:
+    type: int
+    enum: [0, 14]
+    description: |
+      Bit offset of the BIASCOMP field in NVM software calibration region.
+      Typically 0 for ADC0 and 14 for ADC1. Used on SAMD5x/E5x SoCs.
+
+io-channel-cells:
+  - input
