@@ -1,8 +1,8 @@
 /*
-* Copyright (c) 2025 Microchip Technology Inc.
-*
-* SPDX-License-Identifier: Apache-2.0
-*/
+ * Copyright (c) 2025 Microchip Technology Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 /dts-v1/;
 #include <microchip/sam/sam_d5x_e5x/same54/atsame54p20a.dtsi>
@@ -12,20 +12,20 @@
 / {
 	model = "SAM E54 Xplained Pro";
 	compatible = "same54,xpro", "microchip,atsame54p20a", "microchip,same54";
-	
+
 	chosen {
 		zephyr,console = &sercom2;
 		zephyr,shell-uart = &sercom2;
 		zephyr,sram = &sram0;
 		zephyr,flash = &flash0;
 	};
-	
+
 	aliases {
 		led0 = &led0;
 		i2c-0 = &sercom7;
 		sw0 = &button0;
 	};
-	
+
 	leds {
 		compatible = "gpio-leds";
 		led0: led_0 {
@@ -34,34 +34,34 @@
 		};
 	};
 
-    buttons {
-        compatible = "gpio-keys";
-        button0: button_0 {
-            gpios = <&portb 31 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>;
-            label = "SW0";
-            zephyr,code = <INPUT_KEY_0>;
-        };
-    };	
+	buttons {
+		compatible = "gpio-keys";
+		button0: button_0 {
+			gpios = <&portb 31 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>;
+			label = "SW0";
+			zephyr,code = <INPUT_KEY_0>;
+		};
+	};
 };
 
 &sercom2 {
 	status = "okay";
 	compatible = "microchip,sercom-u2201-uart";
-	
+
 	current-speed = <115200>;
 	data-bits = <8>;
 	parity = "none";
 	stop-bits = "1";
-	
+
 	rxpo = <1>;
 	txpo = <0>;
 	//clock_external;
 	#address-cells = <1>;
 	#size-cells = <0>;
-	
+
 	pinctrl-0 = <&sercom2_uart_default>;
 	pinctrl-names = "default";
-	
+
 	dmas = <&dmac 1 8>, <&dmac 2 9>;
 	dma-names = "rx", "tx";
 };
@@ -77,7 +77,7 @@
 	pinctrl-names = "default";
 
 	dmas = <&dmac 10 0x12>, <&dmac 11 0x13>;
-    dma-names = "rx", "tx";
+	dma-names = "rx", "tx";
 };
 
 &sercom6 {
@@ -97,12 +97,12 @@
 		compatible = "fixed-partitions";
 		#address-cells = <1>;
 		#size-cells = <1>;
-		
+
 		/*
-		* The final 16 KiB is reserved for the application.
-		* Storage partition will be used by FCB/LittleFS/NVS
-		* if enabled.
-		*/
+		 * The final 16 KiB is reserved for the application.
+		 * Storage partition will be used by FCB/LittleFS/NVS
+		 * if enabled.
+		 */
 		storage_partition: partition@fc000 {
 			label = "storage";
 			reg = <0x000fc000 0x00004000>;
