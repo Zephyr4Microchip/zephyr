@@ -63,8 +63,8 @@ static int gpio_mchp_configure(const struct device *dev, gpio_pin_t pin, gpio_fl
 	/* Check for single-ended mode configuration */
 	if (flags & GPIO_SINGLE_ENDED) {
 		retval = (flags & GPIO_LINE_OPEN_DRAIN)
-				 ? hal_mchp_gpio_set_open_drain(hal_gpio, pin)
-				 : hal_mchp_gpio_set_open_source(hal_gpio, pin);
+				 ? hal_mchp_gpio_port_set_open_drain(hal_gpio, pin)
+				 : hal_mchp_gpio_port_set_open_source(hal_gpio, pin);
 
 		if (retval < 0) {
 			return -ENOTSUP;
@@ -151,7 +151,7 @@ static int gpio_mchp_port_set_masked_raw(const struct device *dev, gpio_port_pin
 	const struct gpio_mchp_config *config = dev->config;
 	hal_gpio_port_reg *hal_gpio = config->hal_regs;
 	/* Set the output value of the port with the specified mask */
-	hal_mchp_gpio_port_set_masked(hal_gpio, mask, value);
+	hal_mchp_gpio_port_outset_masked(hal_gpio, mask, value);
 
 	return 0;
 }
@@ -168,7 +168,7 @@ static int gpio_mchp_port_set_bits_raw(const struct device *dev, gpio_port_pins_
 	const struct gpio_mchp_config *config = dev->config;
 	hal_gpio_port_reg *hal_gpio = config->hal_regs;
 	/* Set the specified pins in the output register */
-	hal_mchp_gpio_set_pins_high(hal_gpio, pins);
+	hal_mchp_gpio_port_set_pins_high(hal_gpio, pins);
 
 	return 0;
 }
@@ -185,7 +185,7 @@ static int gpio_mchp_port_clear_bits_raw(const struct device *dev, gpio_port_pin
 	const struct gpio_mchp_config *config = dev->config;
 	hal_gpio_port_reg *hal_gpio = config->hal_regs;
 	/* Clear the specified pins in the output register */
-	hal_mchp_gpio_set_pins_low(hal_gpio, pins);
+	hal_mchp_gpio_port_set_pins_low(hal_gpio, pins);
 
 	return 0;
 }
@@ -202,7 +202,7 @@ static int gpio_mchp_port_toggle_bits(const struct device *dev, gpio_port_pins_t
 	const struct gpio_mchp_config *config = dev->config;
 	hal_gpio_port_reg *hal_gpio = config->hal_regs;
 	/* Toggle the specified pins in the output register */
-	hal_mchp_gpio_toggle_pins(hal_gpio, pins);
+	hal_mchp_gpio_port_toggle_pins(hal_gpio, pins);
 
 	return 0;
 }

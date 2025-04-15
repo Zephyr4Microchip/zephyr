@@ -1,3 +1,6 @@
+# Copyright (c) 2025 Microchip Technology Inc.
+# SPDX-License-Identifier: Apache-2.0
+
 description: Microchip PORT-u2210 (GPIO)
 
 compatible: "microchip,port-u2210-gpio"
