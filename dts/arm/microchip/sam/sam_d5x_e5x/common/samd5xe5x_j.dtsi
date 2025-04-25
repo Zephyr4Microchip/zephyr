@@ -9,14 +9,17 @@
 		tc4: tc@42001400 {
 			compatible = "microchip,tc-u2249";
 			reg = <0x42001400 0x400>;
+			instance-id = <PWM_COUNTER_MCHP_SAM_D5X_E5X_TC4_ID >;
 			interrupts = <111 0>;
 			clocks = <&mclk CLOCK_MCHP_SAM_D5X_E5X_MCLK_APBC_TC4>,
 			<&gclk CLOCK_MCHP_SAM_D5X_E5X_GCLK_TC4>;
 			clock-names = "mclk", "gclk";
+
 		};
 		tc5: tc@42001800 {
 			compatible = "microchip,tc-u2249";
 			reg = <0x42001800 0x400>;
+			instance-id = <PWM_COUNTER_MCHP_SAM_D5X_E5X_TC5_ID>;
 			interrupts = <112 0>;
 			clocks = <&mclk CLOCK_MCHP_SAM_D5X_E5X_MCLK_APBC_TC5>,
 			<&gclk CLOCK_MCHP_SAM_D5X_E5X_GCLK_TC5>;
@@ -25,6 +28,7 @@
 		tcc3: tcc@42001000 {
 			compatible = "microchip,tcc-u2213";
 			reg = <0x42001000 0x2000>;
+			instance-id = <PWM_COUNTER_MCHP_SAM_D5X_E5X_TCC3_ID>;
 			interrupts = <101 0>, <102 0>, <103 0>;
 			clocks = <&mclk CLOCK_MCHP_SAM_D5X_E5X_MCLK_APBC_TCC3>,
 			<&gclk CLOCK_MCHP_SAM_D5X_E5X_GCLK_TCC3>;
@@ -33,6 +37,7 @@
 		tcc4: tcc@43001000 {
 			compatible = "microchip,tcc-u2213";
 			reg = <0x43001000 0x2000>;
+			instance-id = <PWM_COUNTER_MCHP_SAM_D5X_E5X_TCC4_ID>;
 			interrupts = <104 0>, <105 0>, <106 0>;
 			clocks = <&mclk CLOCK_MCHP_SAM_D5X_E5X_MCLK_APBD_TCC4>,
 			<&gclk CLOCK_MCHP_SAM_D5X_E5X_GCLK_TCC4>;

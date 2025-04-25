@@ -24,14 +24,7 @@
 		led0 = &led0;
 		i2c-0 = &sercom7;
 		sw0 = &button0;
-	};
-
-	leds {
-		compatible = "gpio-leds";
-		led0: led_0 {
-			gpios = <&portc 18 GPIO_ACTIVE_LOW>;
-			label = "Yellow LED";
-		};
+		pwm-led0 = &pwm_led0;
 	};
 
 	buttons {
@@ -40,6 +33,21 @@
 			gpios = <&portb 31 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>;
 			label = "SW0";
 			zephyr,code = <INPUT_KEY_0>;
+		};
+	};
+	leds {
+		compatible = "gpio-leds";
+		led0: led_0 {
+			gpios = <&portc 18 GPIO_ACTIVE_LOW>;
+			label = "Yellow LED";
+		};
+	};
+
+	pwmleds {
+		compatible = "pwm-leds";
+		pwm_led0: pwm_led_0 {
+			status = "okay";
+			pwms = <&tcc0 2 PWM_MSEC(20) 0>;
 		};
 	};
 };
@@ -90,6 +98,30 @@
 	pinctrl-0 = <&sercom6_spi_default>;
 	pinctrl-names = "default";
 
+};
+
+&tc0 {
+	status = "disabled";
+	compatible = "microchip,pwm-tc-u2249";
+	#pwm-cells = <3>;
+	pinctrl-0 = <&tc0_pwm_default>;
+	pinctrl-names = "default";
+	max_bit_width = <32>;
+	prescaler = <1>;
+	channels = <2>;
+	/* Chained to TC1 for 32-bit operation */
+	client = <&tc1>;
+};
+
+&tcc0 {
+	status = "okay";
+	compatible = "microchip,pwm-tcc-u2213";
+	#pwm-cells = <3>;
+	pinctrl-0 = <&tcc0_pwm_default>;
+	pinctrl-names = "default";
+	max_bit_width = <24>;
+	prescaler = <1>;
+	channels = <6>;
 };
 
 &flash0 {

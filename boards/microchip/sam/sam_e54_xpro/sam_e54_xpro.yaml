@@ -12,12 +12,13 @@ toolchain:
 flash: 1024
 ram: 256
 supported:
-  - uart
-  - gpio
-  - spi
-  - i2c
-  - dma
-  - watchdog
-  - dac
   - adc
+  - dac
+  - dma
+  - gpio
+  - i2c
+  - pwm
+  - spi
+  - uart
+  - watchdog
 vendor: microchip

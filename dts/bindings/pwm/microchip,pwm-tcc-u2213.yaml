@@ -1,0 +1,43 @@
+# Copyright (c) 2025 Microchip Technology Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+# Description of the Microchip TC, RTC, and TCC counter driver
+description: >
+  Microchip TCC pwm driver. This driver is used for configuring
+  and managing TCC (Timer/ Counter for Control Applications)
+  peripheral in Microchip microcontrollers. This peripherals
+  support creating PWM signals.
+
+# Compatible strings for the device
+compatible: "microchip,pwm-tcc-u2213"
+
+# Include base properties from the common TCC binding file
+
+include:
+  - base.yaml
+  - pwm-controller.yaml
+  - microchip,tcc-u2213.yaml
+  - pinctrl-device.yaml
+
+pwm-cells:
+  - channel
+  - period
+  - polarity
+
+properties:
+  # Maximum bit width supported by the counter
+  max_bit_width:
+    type: int
+    required: true
+    description: >
+      Maximum bit width supported by the counter. This property indicates the
+      resolution of the counter, which can be 8, 16, 24, or 32 bits.
+    enum:
+      - 16
+      - 24
+
+  channels:
+    type: int
+    required: true
+    description: >
+      This property indicates the maximum available channels in a peripheral instance

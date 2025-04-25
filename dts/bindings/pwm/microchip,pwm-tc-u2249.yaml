@@ -1,0 +1,56 @@
+# Copyright (c) 2025 Microchip Technology Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+# Description of the Microchip PWM TC driver
+description: >
+  Microchip PWM TC  driver. This driver is responsible for configuring
+  and managing the TC peripheral in Microchip microcontrollers for PWM configuration.
+
+# Compatible string to match this device with the corresponding driver
+compatible: "microchip,pwm-tc-u2249"
+
+# Include base properties from the common TC binding file
+include:
+  - pwm-controller.yaml
+  - microchip,tc-u2249.yaml
+
+properties:
+  channels:
+    type: int
+    required: true
+    description: >
+      This specifies the maximum number of channels available for the peripheral.
+
+  max_bit_width:
+    type: int
+    required: true
+    description: >
+      Maximum bit width supported by the PWM counter. This property indicates the
+      resolution of the counter, which can be 8, 16, 24, or 32 bits.
+    enum:
+      - 8
+      - 16
+      - 32
+
+  "#pwm-cells":
+    const: 3
+# Example usage in a Device Tree Source (DTS) file:
+#
+#   pwm_led0: pwm_led_0 {
+#       status = "okay";
+#       pwms = <&tcc0 2 PWM_MSEC(20) 0>;
+#   };
+#
+# Explanation:
+#   - 'pwm_led0' is a node representing a device (e.g., an LED) controlled by PWM.
+#   - The 'pwms' property uses the phandle to the PWM controller (here, 'tcc0'),
+#     specifies channel 2, sets the PWM period to 20 milliseconds,
+#     and uses a polarity of 0 (normal).
+#   - The order of the 'pwms' arguments matches the 'pwm-cells' definition:
+#       <&controller channel period polarity>
+#   - This allows the device to be driven with a specific PWM configuration using
+#     the Microchip PWM TC driver.
+pwm-cells:
+  - channel
+  - period
+  - polarity

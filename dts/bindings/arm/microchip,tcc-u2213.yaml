@@ -1,0 +1,56 @@
+# Copyright (c) 2025 Microchip Technology Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+description: >
+  Microchip TCC-U2213 timer counter peripheral. This peripheral is used for
+  generating PWM signals.
+
+compatible: "microchip,tcc-u2213"
+
+# Include common properties from base.yaml and pinctrl-device.yaml
+include:
+  - name: base.yaml
+  - name: pinctrl-device.yaml
+
+properties:
+  reg:
+    description: >
+      Specifies the base address and size of the register set for the timer counter peripheral.
+    required: true
+
+  interrupts:
+    description: >
+      Defines the interrupt lines used by the timer counter peripheral. This property
+      specifies the interrupt number and priority.
+    required: true
+
+  clocks:
+    description: >
+      Specifies the clock sources and their configurations for the timer counter peripheral.
+      This property ensures the peripheral is provided with the necessary clock signals.
+    required: true
+
+  prescaler:
+    type: int
+    description: >
+      Timer prescaler values. The prescaler divides the input clock frequency to
+      achieve the desired timer frequency. Common prescaler values include 1, 2,
+      4, 8, 16, 64, 256, and 1024.
+    enum:
+      - 1
+      - 2
+      - 4
+      - 8
+      - 16
+      - 64
+      - 256
+      - 1024
+
+  instance-id:
+    type: int
+    required: true
+    description: >
+      Unique identifier indicating the sequence or instance number of the peripheral.
+      This is primarily used for scenarios like chaining peripherals (e.g., for 32-bit
+      PWM or counter operation). The value determines the peripheral's position in
+      the chaining hierarchy.
