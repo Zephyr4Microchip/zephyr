@@ -1,0 +1,18 @@
+# Copyright (c) 2025 Microchip Technology Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+description: Microchip Non-Volatile Memory Controller u2409
+
+compatible: "microchip,nvmctrl-u2409"
+
+include: flash-controller.yaml
+
+properties:
+  lock-regions:
+    type: int
+    required: true
+    description: |
+      Number of lock regions.
+      The main address space is divided into 32 equal size regions. The region size is
+      dependent on the flash memory size.Each region can be protected against write or
+      erase operation.

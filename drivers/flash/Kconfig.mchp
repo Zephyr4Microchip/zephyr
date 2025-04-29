@@ -1,0 +1,23 @@
+# Copyright (c) 2025 Microchip Technology Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+config FLASH_MCHP_NVMCTRL_U2409
+	bool "Microchip Flash Driver for NVMCTRL_U2409 IP"
+	default y
+	depends on DT_HAS_MICROCHIP_NVMCTRL_U2409_ENABLED
+	select FLASH_HAS_PAGE_LAYOUT
+	select FLASH_HAS_EX_OP
+	select FLASH_EX_OP_ENABLED
+	select FLASH_HAS_DRIVER_ENABLED
+	select FLASH_HAS_EXPLICIT_ERASE
+	select MPU_ALLOW_FLASH_WRITE if ARM_MPU
+	help
+	  Enable Flash driver for Microchip Non Volatile Memory Controller.
+
+config FLASH_HAS_PARTIAL_PAGE_WRITE
+	bool "Provide partial page write support"
+	help
+	  This option enhances the Zephyr flash API by enabling data
+	  to be written to flash memory not only from the start of a
+	  page but also from any offset within the available flash
+	  memory space.

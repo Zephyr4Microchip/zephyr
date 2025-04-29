@@ -17,6 +17,7 @@ supported:
   - dma
   - gpio
   - i2c
+  - nvmctrl
   - pwm
   - spi
   - uart
