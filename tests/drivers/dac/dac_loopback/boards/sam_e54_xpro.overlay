@@ -1,0 +1,50 @@
+/*
+ * Copyright (c) 2025 Microchip Technology Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/* DAC0 internally connected to ADC channel 30*/
+
+&dac {
+	status = "okay";
+	refsel = "vddana";
+	dac0: dac0{
+		channel = <0>;
+		rate = <100>;
+		data-adj = "right";
+		refresh = <30>;
+		sampling-ratio = <1>;
+	};
+};
+
+&adc0 {
+	status = "okay";
+	prescaler = <16>;
+};
+
+&clock {
+		gclkgen: gclkgen {
+				gclkgen1 {
+						subsystem = <CLOCK_MCHP_GCLKGEN_ID_GEN1>;
+						gclkgen-div-factor = <2>;
+						gclkgen-run-in-standby-en = <1>;
+						gclkgen-src = "fdpll0";
+						gclkgen-en = <1>;
+				};
+		};
+
+		gclkperiph: gclkperiph {
+				adc0 {
+						subsystem = <CLOCK_MCHP_GCLKPERIPH_ID_ADC0>;
+						gclkperiph-src = "gclk1";
+						gclkperiph-en = <1>;
+				};
+
+				dac {
+						subsystem = <CLOCK_MCHP_GCLKPERIPH_ID_DAC>;
+						gclkperiph-src = "gclk1";
+						gclkperiph-en = <1>;
+				};
+		};
+};
