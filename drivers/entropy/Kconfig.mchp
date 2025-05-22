@@ -1,0 +1,10 @@
+# Copyright (c) 2025 Microchip Technology Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+config ENTROPY_MCHP_U2242
+    bool "Microchip MCHP U2242 Entropy Driver"
+    default y
+    depends on DT_HAS_MICROCHIP_TRNG_U2242_ENABLED
+    select ENTROPY_HAS_DRIVER
+    help
+      Enable Entropy driver for Microchip MCHP U2242

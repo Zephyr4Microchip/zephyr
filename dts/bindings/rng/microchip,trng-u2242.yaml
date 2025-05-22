@@ -1,0 +1,15 @@
+# Copyright (c) 2025, Microchip Technologies Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+description: MICROCHIP TRNG U2242
+
+compatible: "microchip,trng-u2242"
+
+include: base.yaml
+
+properties:
+  reg:
+    required: true
+
+  interrupts:
+    required: true

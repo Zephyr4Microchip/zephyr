@@ -14,6 +14,7 @@
 / {
 	chosen {
 		zephyr,flash-controller = &nvmctrl;
+		zephyr,entropy = &trng;
 	};
 	cpus {
 		#address-cells = <1>;
@@ -294,7 +295,6 @@
 			clocks = <&mclk CLOCK_MCHP_SAM_D5X_E5X_MCLK_APBB_TC3>,
 					<&gclk CLOCK_MCHP_SAM_D5X_E5X_GCLK_TC3>;
 			clock-names = "mclk", "gclk";
-			prescaler = <1>;
 		};
 		tcc0: tcc@41016000 {
 			compatible = "microchip,tcc-u2213";
@@ -324,14 +324,23 @@
 					<&gclk CLOCK_MCHP_SAM_D5X_E5X_GCLK_TCC3>;
 			clock-names = "mclk", "gclk";
 		};
+		trng: random@42002800 {
+			compatible = "microchip,trng-u2242";
+			status = "disabled";
+			clocks = <&mclk CLOCK_MCHP_SAM_D5X_E5X_MCLK_APBC_TRNG>;
+			clock-names = "mclk";
+			reg = <0x42002800 0x1e>;
+			interrupts = <131 0>;
+		};
 		rtc: rtc@40002400 {
 			compatible = "microchip,rtc-u2250";
 			status = "disabled";
 			reg = <0x40002400 0x1C>;
+			max-bit-width = <24>;
 			interrupts = <11 0>;
 			clocks = <&mclk CLOCK_MCHP_SAM_D5X_E5X_MCLK_APBA_RTC>,
-					<&osc32kctrl CLOCK_MCHP_SAM_D5X_E5X_OSC32KCTRL_RTC>;
-			clock-names =  "mclk" ,"osc32kctrl";
+					<&gclk CLOCK_MCHP_SAM_D5X_E5X_OSC32KCTRL_RTC>;
+			clock-names = "mclk", "gclk";
 			prescaler = <1>;
 		};
 		wdog: watchdog@40002000 {
