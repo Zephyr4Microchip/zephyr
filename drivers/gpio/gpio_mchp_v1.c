@@ -9,13 +9,16 @@
  * @brief GPIO driver implementation for Microchip devices.
  */
 
-#include <errno.h>
 #include <zephyr/device.h>
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/dt-bindings/gpio/microchip-sam-gpio.h>
+#include <zephyr/drivers/interrupt_controller/intc_mchp_eic_u2254.h>
 #include <soc.h>
 #include <zephyr/drivers/gpio/gpio_utils.h>
 #include "gpio_mchp_v1.h"
+#include <zephyr/devicetree.h>
+#include <zephyr/logging/log.h>
+LOG_MODULE_REGISTER(gpio_mchp_v1, CONFIG_GPIO_LOG_LEVEL);
 
 /**
  * @brief Configuration structure for MCHP GPIO driver
@@ -25,6 +28,8 @@ struct gpio_mchp_config {
 	struct gpio_driver_config common;
 	/* Pointer to port group registers */
 	hal_gpio_port_reg *hal_regs;
+	/*Contains the ID of the gpio port*/
+	uint8_t gpio_port_id;
 };
 
 /**
@@ -35,6 +40,13 @@ struct gpio_mchp_data {
 	struct gpio_driver_data common;
 	/* Pointer to device structure */
 	const struct device *dev;
+	gpio_port_pins_t debounce;
+#ifdef CONFIG_MCHP_EIC_U2254
+	/* provided by gpio_utils
+	 * callbacks are stored here for each pins
+	 */
+	sys_slist_t callbacks;
+#endif /*CONFIG_MCHP_EIC_U2254*/
 };
 
 /**
@@ -49,6 +61,7 @@ struct gpio_mchp_data {
 static int gpio_mchp_configure(const struct device *dev, gpio_pin_t pin, gpio_flags_t flags)
 {
 	const struct gpio_mchp_config *config = dev->config;
+	struct gpio_mchp_data *gpio_data = dev->data;
 	hal_gpio_port_reg *hal_gpio = config->hal_regs;
 	int retval = 0;
 	gpio_flags_t io_flags = 0;
@@ -116,7 +129,8 @@ static int gpio_mchp_configure(const struct device *dev, gpio_pin_t pin, gpio_fl
 		/* Set the pin as output */
 		hal_mchp_gpio_set_dir_output(hal_gpio, pin);
 	}
-
+	/* Preserve debounce flag for interrupt configuration. */
+	WRITE_BIT(gpio_data->debounce, pin, ((flags & MCHP_GPIO_DEBOUNCE) != 0));
 	return 0;
 }
 
@@ -297,6 +311,183 @@ static int gpio_mchp_port_get_direction(const struct device *dev, gpio_port_pins
 
 #endif /* CONFIG_GPIO_GET_DIRECTION */
 
+#ifdef CONFIG_MCHP_EIC_U2254
+/**
+ * @brief Convert a GPIO trigger mode to a Microchip EIC trigger type.
+ *
+ * This function maps a generic GPIO interrupt trigger mode to the corresponding
+ * Microchip EIC trigger type enumeration value.
+ *
+ * @param trigger_mode The GPIO trigger mode (e.g., edge/level, rising/falling/both).
+ *                    Should be one of the GPIO_INT_* macros.
+ *
+ * @return The corresponding @ref mchp_eic_trigger_t value for the given trigger mode.
+ *         If the trigger mode is not recognized, returns 0.
+ *
+ */
+static mchp_eic_trigger_t get_eic_trig_type(uint32_t trigger_mode)
+{
+	mchp_eic_trigger_t trig_type = 0;
+
+	switch (trigger_mode) {
+	case GPIO_INT_EDGE_BOTH:
+		trig_type = MCHP_EIC_BOTH;
+		LOG_DBG("both edge");
+		break;
+	case GPIO_INT_EDGE_RISING:
+		trig_type = MCHP_EIC_RISING;
+		LOG_DBG("rising edge");
+		break;
+	case GPIO_INT_EDGE_FALLING:
+		trig_type = MCHP_EIC_FALLING;
+		LOG_DBG("falling edge");
+		break;
+
+	case GPIO_INT_LEVEL_HIGH:
+		trig_type = MCHP_EIC_HIGH;
+		LOG_DBG("level high");
+		break;
+	case GPIO_INT_LEVEL_LOW:
+		trig_type = MCHP_EIC_LOW;
+		LOG_DBG("level low");
+		break;
+	default:
+		LOG_ERR("Unknown trigger mode 0x%x", trigger_mode);
+		break;
+	}
+	return trig_type;
+}
+
+/**
+ * @brief GPIO interrupt service routine (ISR).
+ *
+ * This function is called when a GPIO interrupt occurs. It logs the interrupt event
+ * and invokes registered GPIO callbacks for the triggered pins.
+ *
+ * @param pins Bitmask indicating which GPIO pins triggered the interrupt.
+ * @param arg  Pointer to a @ref gpio_mchp_data structure containing callback and device
+ * information.
+ *
+ */
+static void gpio_mchp_isr(uint32_t pins, void *arg)
+{
+	struct gpio_mchp_data *const data = (struct gpio_mchp_data *)arg;
+
+	gpio_fire_callbacks(&data->callbacks, data->dev, pins);
+}
+/**
+ * @brief Configure interrupt for a specific GPIO pin.
+ *
+ * This function configures the interrupt mode and trigger type for a given GPIO pin
+ * on a Microchip GPIO controller. It sets up the necessary parameters and enables or
+ * disables the interrupt as requested.
+ *
+ * @param[in] dev   Pointer to the device structure for the GPIO controller.
+ * @param[in] pin   Pin number to configure.
+ * @param[in] mode  Interrupt mode (e.g., disabled, edge, level).
+ * @param[in] trig  Interrupt trigger type (e.g., rising, falling, both).
+ *
+ * @retval 0        On success.
+ * @retval -EINVAL  If an invalid trigger mode is specified.
+ * @retval <0       Other negative values may be returned from lower-level functions.
+ *
+ * @note This function relies on the device's configuration and data structures,
+ *       and uses the EIC (External Interrupt Controller) for interrupt management.
+ */
+static int gpio_mchp_pin_interrupt_configure(const struct device *dev, gpio_pin_t pin,
+					     enum gpio_int_mode mode, enum gpio_int_trig trig)
+{
+	int ret_val = 0;
+	const struct gpio_mchp_config *gpio_config = dev->config;
+	struct gpio_mchp_data *gpio_data = dev->data;
+	eic_config_params_t eic_pin_config = {0};
+	uint32_t trigger_mode =
+		(mode == GPIO_INT_MODE_DISABLED) ? GPIO_INT_MODE_DISABLED : (mode | trig);
+
+	gpio_data->dev = dev;
+	/* initialise the config params structure */
+	eic_pin_config.port_id = gpio_config->gpio_port_id;
+	eic_pin_config.pin_num = pin;
+	eic_pin_config.debounce = (gpio_data->debounce & BIT(pin)) ? true : false;
+	eic_pin_config.port_addr = gpio_config->hal_regs;
+	eic_pin_config.eic_line_callback = gpio_mchp_isr;
+	eic_pin_config.gpio_data = gpio_data;
+
+	LOG_DBG("trigger mode : 0x%x mode = 0x%x trig = 0x%x\nport address : %p", trigger_mode,
+		mode, trig, eic_pin_config.port_addr);
+
+	/*
+	 * Handle GPIO interrupt configuration based on the trigger mode.
+	 */
+	switch (trigger_mode) {
+	case GPIO_INT_MODE_DISABLED:
+		ret_val = eic_mchp_disable_interrupt(&eic_pin_config);
+		break;
+	case GPIO_INT_EDGE_RISING:
+	case GPIO_INT_EDGE_FALLING:
+	case GPIO_INT_EDGE_BOTH:
+	case GPIO_INT_LEVEL_HIGH:
+	case GPIO_INT_LEVEL_LOW:
+		eic_pin_config.trig_type = get_eic_trig_type(trigger_mode);
+		ret_val = eic_mchp_config_interrupt(&eic_pin_config);
+		break;
+	default:
+		ret_val = -EINVAL;
+		LOG_ERR("Invalid trigger mode for interrupt");
+		break;
+	}
+	LOG_DBG("retval = %d", ret_val);
+	return ret_val;
+}
+
+/**
+ * @brief Manage (add or remove) a GPIO callback for the MCHP GPIO driver.
+ *
+ * This function adds or removes a user-specified callback from the GPIO
+ * callback syslist associated with the device.
+ *
+ * @param dev Pointer to the device structure for the driver instance.
+ * @param callback Pointer to the GPIO callback structure to add or remove.
+ * @param set Boolean flag indicating whether to add (true) or remove (false) the callback.
+ *
+ * @retval 0 On success.
+ * @retval -EINVAL If the callback is invalid or not found (when removing).
+ *
+ * @note This function is typically called by higher-level GPIO API functions
+ *       to manage interrupt callbacks.
+ */
+static int gpio_mchp_manage_callback(const struct device *dev, struct gpio_callback *callback,
+				     bool set)
+{
+	struct gpio_mchp_data *const data = dev->data;
+	/**Adds or remove user specified callback on to the syslist */
+	return gpio_manage_callback(&data->callbacks, callback, set);
+}
+
+/**
+ * @brief Get pending GPIO interrupt status for the MCHP GPIO driver.
+ *
+ * This function retrieves the pending interrupt status for the specified
+ * GPIO device. It is typically used to check if any GPIO interrupts are
+ * pending, for example after waking up from low power mode.
+ *
+ * @param dev Pointer to the device structure for the driver instance.
+ *
+ * @return A bitmask indicating the pin and port numbers of pending interrupts.
+ *         Each bit set corresponds to a pending interrupt on a specific pin.
+ *
+ * @note This function calls the EIC (External Interrupt Controller) API to
+ *       obtain the pending interrupt status.
+ */
+static uint32_t gpio_mchp_get_pending_int(const struct device *dev)
+{
+	const struct gpio_mchp_config *config = dev->config;
+
+	return eic_mchp_interrupt_pending(config->gpio_port_id);
+}
+
+#endif /*CONFIG_MCHP_EIC_U2254*/
+
 /**
  * @brief GPIO driver API structure
  */
@@ -312,6 +503,11 @@ static const struct gpio_driver_api gpio_mchp_api = {
 #endif
 #ifdef CONFIG_GPIO_GET_DIRECTION
 	.port_get_direction = gpio_mchp_port_get_direction,
+#endif
+#ifdef CONFIG_MCHP_EIC_U2254
+	.pin_interrupt_configure = gpio_mchp_pin_interrupt_configure,
+	.manage_callback = gpio_mchp_manage_callback,
+	.get_pending_int = gpio_mchp_get_pending_int,
 #endif
 };
 
@@ -334,7 +530,7 @@ static int gpio_mchp_init(const struct device *dev)
 				.port_pin_mask = GPIO_PORT_PIN_MASK_FROM_DT_INST(idx),             \
 			},                                                                         \
 		.hal_regs = (hal_gpio_port_reg *)DT_INST_REG_ADDR(idx),                            \
-	};                                                                                         \
+		.gpio_port_id = MCHP_PORT_ID##idx};                                                \
 	static struct gpio_mchp_data gpio_mchp_data_##idx;                                         \
 	DEVICE_DT_DEFINE(DT_INST(idx, DT_DRV_COMPAT), gpio_mchp_init, NULL, &gpio_mchp_data_##idx, \
 			 &gpio_mchp_config_##idx, PRE_KERNEL_1, CONFIG_GPIO_INIT_PRIORITY,         \

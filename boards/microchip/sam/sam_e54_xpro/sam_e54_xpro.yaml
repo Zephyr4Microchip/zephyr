@@ -15,6 +15,7 @@ supported:
   - adc
   - dac
   - dma
+  - eic
   - gpio
   - i2c
   - nvmctrl

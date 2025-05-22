@@ -8,6 +8,7 @@
 #include <microchip/sam/sam_d5x_e5x/same54/atsame54p20a.dtsi>
 #include "sam_e54_xpro-pinctrl.dtsi"
 #include <zephyr/dt-bindings/input/input-event-codes.h>
+#include <zephyr/dt-bindings/gpio/microchip-sam-gpio.h>
 
 / {
 	model = "SAM E54 Xplained Pro";
@@ -31,7 +32,7 @@
 	buttons {
 		compatible = "gpio-keys";
 		button0: button_0 {
-			gpios = <&portb 31 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>;
+			gpios = <&portb 31 (GPIO_PULL_UP | GPIO_ACTIVE_LOW | MCHP_GPIO_DEBOUNCE)>;
 			label = "SW0";
 			zephyr,code = <INPUT_KEY_0>;
 		};
@@ -150,4 +151,3 @@
 	prescaler = <1>;
 	channels = <6>;
 };
-

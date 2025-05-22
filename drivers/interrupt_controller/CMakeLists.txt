@@ -43,6 +43,7 @@ zephyr_library_sources_ifdef(CONFIG_NXP_PINT                intc_nxp_pint.c)
 zephyr_library_sources_ifdef(CONFIG_RENESAS_RA_ICU          intc_renesas_ra_icu.c)
 zephyr_library_sources_ifdef(CONFIG_NXP_IRQSTEER            intc_nxp_irqsteer.c)
 zephyr_library_sources_ifdef(CONFIG_INTC_MTK_ADSP           intc_mtk_adsp.c)
+zephyr_library_sources_ifdef(CONFIG_MCHP_EIC_U2254          intc_mchp_eic_u2254.c)
 
 if(CONFIG_INTEL_VTD_ICTL)
   zephyr_library_include_directories(${ZEPHYR_BASE}/arch/x86/include)

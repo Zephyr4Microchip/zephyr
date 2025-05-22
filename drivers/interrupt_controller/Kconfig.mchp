@@ -1,0 +1,12 @@
+# Copyright (c) 2025 Microchip Technology Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+config MCHP_EIC_U2254
+	bool "External Interrupt Controller (EIC) Driver for Microchip devices"
+	default y
+	depends on DT_HAS_MICROCHIP_EIC_U2254_ENABLED
+	help
+	  Enable EIC driver for Microchip EIC U2254. This is required for
+	  GPIO interrupt support.
+	  This driver supports Microchip device families:
+	  - SOC_FAMILY_MCHP_SAM_D5X_E5X
