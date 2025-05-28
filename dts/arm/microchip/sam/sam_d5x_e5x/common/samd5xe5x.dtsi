@@ -310,11 +310,10 @@
 			compatible = "microchip,rtc-u2250";
 			status = "disabled";
 			reg = <0x40002400 0x1C>;
-			max-bit-width = <24>;
 			interrupts = <11 0>;
 			clocks = <&mclk CLOCK_MCHP_SAM_D5X_E5X_MCLK_APBA_RTC>,
-					<&gclk CLOCK_MCHP_SAM_D5X_E5X_OSC32KCTRL_RTC>;
-			clock-names = "mclk", "gclk";
+					<&osc32kctrl CLOCK_MCHP_SAM_D5X_E5X_OSC32KCTRL_RTC>;
+			clock-names =  "mclk" ,"osc32kctrl";
 			prescaler = <1>;
 		};
 		wdog: watchdog@40002000 {

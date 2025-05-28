@@ -19,7 +19,9 @@ supported:
   - i2c
   - nvmctrl
   - pwm
+  - rtc
   - spi
   - uart
   - watchdog
+
 vendor: microchip

@@ -25,6 +25,7 @@
 		i2c-0 = &sercom7;
 		sw0 = &button0;
 		pwm-led0 = &pwm_led0;
+		rtc = &rtc;
 	};
 
 	buttons {
@@ -116,6 +117,14 @@
 	pinctrl-0 = <&sercom6_spi_default>;
 	pinctrl-names = "default";
 
+};
+
+&rtc {
+	compatible = "microchip,rtc-u2250";
+	status = "okay";
+	prescaler = <1024>;
+	alarms-count = <2>;
+	cal-constant = <1048576>;  /*(8192 * 128 = 1048576)*/
 };
 
 &tc0 {
