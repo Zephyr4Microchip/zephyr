@@ -347,6 +347,11 @@ static int dma_mchp_config(const struct device *dev, uint32_t channel, struct dm
 			break;
 		}
 
+		/* If dma_request_channel() was not called but dma_config() is called directly,
+		 * mark the channel as used by setting the bit in the channel usage bitmap.
+		 */
+		atomic_test_and_set_bit(dev_data->dma_ctx.atomic, channel);
+
 		/* Check if the channel is already in use */
 		ch_state = hal_mchp_dma_ch_get_state(hal_dma, channel);
 		if (ch_state == DMA_MCHP_CH_ACTIVE) {
@@ -618,8 +623,6 @@ static int dma_mchp_stop(const struct device *dev, uint32_t channel)
 
 	} while (0);
 
-	printk("ret : %d\n", ret);
-
 	return ret;
 }
 
@@ -858,6 +861,62 @@ static int dma_mchp_get_status(const struct device *dev, uint32_t channel, struc
 }
 
 /**
+ * @brief DMA channel filter function.
+ *
+ * This function is used by the DMA framework to determine whether a given
+ * channel is suitable for allocation based on the optional user-provided
+ * filter parameter.
+ *
+ * If no filter parameter is provided (i.e., filter_param is NULL), the
+ * function returns true, allowing any available channel to be selected.
+ * If a filter parameter is provided, it must point to a uint32_t value
+ * representing the desired channel number. The function returns true only
+ * if the current channel matches the requested one.
+ *
+ * @param dev Pointer to the DMA device.
+ * @param channel The channel index being evaluated.
+ * @param filter_param Optional user-provided parameter (uint32_t* expected)
+ *                     specifying a preferred channel number.
+ *
+ * @return true if the channel matches the filter criteria or no filter is provided;
+ *         false otherwise.
+ */
+static bool dma_mchp_chan_filter(const struct device *dev, int channel, void *filter_param)
+{
+	uint32_t requested_channel = 0;
+	bool ret = false;
+
+	/* If no specific channel is requested, allow any available channel */
+	if (filter_param == NULL) {
+		ret = true;
+	} else {
+		requested_channel = *(uint32_t *)filter_param;
+		/* Allow only if current channel matches the requested one */
+		ret = (bool)(channel == requested_channel);
+	}
+
+	return ret;
+}
+
+/**
+ * @brief Get DMA attribute from device.
+ *
+ * This function retrieves the specified attribute related to DMA hardware constraints.
+ *
+ * @param dev Pointer to the DMA device.
+ * @param type DMA attribute type (from dma_mchp_attribute_type).
+ * @param value Pointer to the variable where the attribute value will be stored.
+ * @return 0 on success, -ENOTSUP if the attribute is not supported.
+ */
+static int dma_mchp_get_attribute(const struct device *dev, uint32_t type, uint32_t *value)
+{
+	/* Device is not used in current logic, but kept for API compatibility */
+	ARG_UNUSED(dev);
+
+	return hal_mchp_dma_get_hw_attribute((enum dma_mchp_attribute_type)type, value);
+}
+
+/**
  * @brief Initializes the Microchip DMA controller.
  *
  * This function enables the DMA clock, resets the DMA controller, initializes
@@ -971,6 +1030,8 @@ static const struct dma_driver_api dma_mchp_api = {
 	.get_status = dma_mchp_get_status,
 	.suspend = dma_mchp_suspend,
 	.resume = dma_mchp_resume,
+	.chan_filter = dma_mchp_chan_filter,
+	.get_attribute = dma_mchp_get_attribute,
 };
 
 /**
