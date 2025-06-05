@@ -1,0 +1,10 @@
+# Copyright (c) 2025 Microchip Technology Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+config RESET_MCHP_RSTC_U2239
+	bool "Microchip Reset Controller RSTC_U2239 driver"
+	default y
+	depends on DT_HAS_MICROCHIP_RSTC_U2239_ENABLED
+	help
+	  This Reset Controller (RSTC) driver supports Microchip device families:
+	  - SOC_FAMILY_MCHP_SAM_D5X_E5X

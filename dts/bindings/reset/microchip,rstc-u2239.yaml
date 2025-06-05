@@ -1,0 +1,13 @@
+# Copyright (c) 2025 Microchip Technology Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+description: Microchip RSTC U2239 Reset Controller
+
+include: base.yaml
+
+compatible: "microchip,rstc-u2239"
+
+properties:
+  reg:
+    required: true
+    description: Base address and size of the RSTC register block.
