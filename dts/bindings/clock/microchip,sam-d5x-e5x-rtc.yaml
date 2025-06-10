@@ -1,0 +1,25 @@
+# Copyright (c) 2025 Microchip Technology Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+include: [base.yaml]
+
+description: RTC clock configuration.
+compatible: "microchip,sam-d5x-e5x-rtc"
+
+properties:
+  "#clock-cells":
+    const: 1
+    type: int
+
+  clock-cells:
+    - subsystem
+
+  rtc_src:
+    type: int
+    default: 0
+    description: |
+      RTC source clock selection
+      0: ulp1k
+      1: ulp32k
+      4: osc1k
+      5: osc32k

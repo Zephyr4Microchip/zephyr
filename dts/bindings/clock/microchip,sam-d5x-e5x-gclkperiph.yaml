@@ -1,0 +1,48 @@
+# Copyright (c) 2025 Microchip Technology Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+include: [base.yaml]
+
+description: peripheral channel gclk clock configuration.
+compatible: "microchip,sam-d5x-e5x-gclkperiph"
+
+properties:
+  "#clock-cells":
+    const: 1
+    type: int
+
+clock-cells:
+  - subsystem
+
+child-binding:
+  properties:
+    subsystem:
+      type: int
+      required: true
+      description: Clock subsystem
+
+    gclkperiph_src:
+      type: string
+      enum:
+        - "gclk0"
+        - "gclk1"
+        - "gclk2"
+        - "gclk3"
+        - "gclk4"
+        - "gclk5"
+        - "gclk6"
+        - "gclk7"
+        - "gclk8"
+        - "gclk9"
+        - "gclk10"
+        - "gclk11"
+      default: "gclk0"
+      description: Generator to be used as the source of a peripheral clock
+
+    gclkperiph_en:
+      type: int
+      enum:
+        - 0
+        - 1
+      default: 0
+      description: Enable a peripheral channel

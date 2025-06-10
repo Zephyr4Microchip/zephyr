@@ -13,6 +13,7 @@
 			<PB24D_SERCOM2_PAD1>;
 		};
 	};
+
 	sercom6_spi_default: sercom6_spi_default {
 		group1 {
 			pinmux = <PC4C_SERCOM6_PAD0>,

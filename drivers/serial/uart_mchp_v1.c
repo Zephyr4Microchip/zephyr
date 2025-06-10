@@ -20,7 +20,7 @@
 #include <zephyr/drivers/clock_control.h>
 #include <string.h>
 #include <zephyr/irq.h>
-#include <zephyr/drivers/clock_control/mchp_clock_control.h>
+#include <zephyr/drivers/clock_control/mchp_clock_sam_d5x_e5x.h>
 #include "uart_mchp_v1.h"
 
 /**

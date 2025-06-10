@@ -1,0 +1,29 @@
+# Copyright (c) 2025 Microchip Technology Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+include: [base.yaml]
+
+description: Main Clock (MCLK) configuration for peripheral AHB and APB clocks.
+compatible: "microchip,sam-d5x-e5x-mclkperiph"
+
+properties:
+  "#clock-cells":
+    const: 1
+    type: int
+
+clock-cells:
+  - subsystem
+
+child-binding:
+  properties:
+    subsystem:
+      type: int
+      required: true
+      description: Clock subsystem
+    mclk_en:
+      type: int
+      enum:
+        - 0
+        - 1
+      required: true
+      description: Enable mclk to the peripheral

@@ -1,22 +1,15 @@
 # Copyright (c) 2025 Microchip Technology Inc.
 # SPDX-License-Identifier: Apache-2.0
 
-description: Microchip SAM D5x/E5x Clock System (OSCCTRL, OSC32KCTRL, MCLK, GCLK)
+include:
+  - name: base.yaml
+  - name: pinctrl-device.yaml
 
+description: Binding for Microchip SAM_D5x_E5x SOC family clock (OSCCTRL, OSC32KCTRL, GCLK, MCLK)
 compatible: "microchip,sam-d5x-e5x-clock"
 
-include: [clock-controller.yaml, base.yaml]
-
-clock-cells:
-  - id
-
 properties:
-
-  "#clock-cells":
-    const: 1
-
   on_timeout_ms:
     type: int
-    description: |
-      Timeout in mili seconds for clock on
     default: 5
+    description: Timeout in mili seconds for clock on

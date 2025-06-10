@@ -1,0 +1,147 @@
+# Copyright (c) 2025 Microchip Technology Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+include: [base.yaml]
+
+description: 32KHz Oscillators Controller configuration.
+compatible: "microchip,sam-d5x-e5x-osc32k"
+
+properties:
+  osc32k_gain_mode:
+    type: string
+    enum:
+      - "standard"
+      - "highspeed"
+    default: "standard"
+    description: control the gain of the external crystal oscillator
+
+  osc32k_write_lock_en:
+    type: int
+    enum:
+      - 0
+      - 1
+    default: 0
+    description: Locks the XOSC32K register for future writes
+
+  osc32k_startup_time:
+    type: int
+    enum:
+      - 62
+      - 125
+      - 500
+      - 1000
+      - 2000
+      - 4000
+      - 8000
+    default: 62
+    description: Oscillator Start-Up Time in ms
+
+  osc32k_on_demand_en:
+    type: int
+    enum:
+      - 0
+      - 1
+    default: 0
+    description: |
+      0: The oscillator is always on, if standby_en is true, else run in
+         Standby Sleep mode if requested by a peripheral.
+      1: Run if requested by peripheral
+      Important: Initializing it with 1, along with clock enabled, can lead to indefinite wait for
+      the clock to be on, if there is no peripheral request for the clock in the sequence of clock
+      Initialization. If required, better to turn on the clock using API, instead of enabling both
+      during startup.
+
+  osc32k_run_in_standby_en:
+    type: int
+    enum:
+      - 0
+      - 1
+    default: 0
+    description: |
+      0: Run if requested by peripheral
+      1: The oscillator is always on, if demand_en is false
+
+  osc32k_1khz_en:
+    type: int
+    enum:
+      - 0
+      - 1
+    default: 0
+    description: 1kHz Output Enable
+
+  osc32k_32khz_en:
+    type: int
+    enum:
+      - 0
+      - 1
+    default: 0
+    description: 32kHz output is enable
+
+  osc32k_xtal_en:
+    type: int
+    enum:
+      - 0
+      - 1
+    default: 0
+    description: |
+      Selects external clock or crystal oscillator
+      0 - External clock connected on XIN. XOUT can be used as general-purpose I/O.
+      1 - Crystal connected to XIN/XOUT.
+
+  osc32k_en:
+    type: int
+    enum:
+      - 0
+      - 1
+    default: 0
+    description: Oscillator Enable
+
+  osc32k_cf_backup_divideby2_en:
+    type: int
+    enum:
+      - 0
+      - 1
+    default: 0
+    description: The CFD safe clock frequency is the OSCULP32K frequency divided by 2
+
+  osc32k_switch_back_en:
+    type: int
+    enum:
+      - 0
+      - 1
+    default: 0
+    description: |
+      Controls the XOSC32K output switch back to the external clock or crystal scillator in case of
+      clock recovery
+
+  osc32k_cfd_en:
+    type: int
+    enum:
+      - 0
+      - 1
+    default: 0
+    description: Clock Failure Detector Enable
+
+  osculp32k_write_lock_en:
+    type: int
+    enum:
+      - 0
+      - 1
+    default: 0
+    description: Locks the OSCULP32K register for future writes
+
+  osculp32k_1khz_en:
+    type: int
+    enum:
+      - 0
+      - 1
+    default: 1
+    description: 1kHz Output Enable
+
+  osculp32k_32khz_en:
+    type: int
+    enum:
+      - 0
+      - 1
+    default: 1
+    description: 32kHz output is enable

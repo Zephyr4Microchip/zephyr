@@ -105,17 +105,15 @@ typedef struct mchp_uart_clock {
 	/* Clock driver */
 	const struct device *clock_dev;
 	/* Main clock subsystem. */
-	clock_control_mchp_subsys_t mclk_sys;
+	clock_control_subsys_t mclk_sys;
 	/* Generic clock subsystem. */
-	clock_control_mchp_subsys_t gclk_sys;
+	clock_control_subsys_t gclk_sys;
 } mchp_uart_clock_t;
 
 #define UART_MCHP_CLOCK_DEFN(n)                                                                    \
 	.uart_clock.clock_dev = DEVICE_DT_GET(DT_NODELABEL(clock)),                                \
-	.uart_clock.mclk_sys = {.dev = DEVICE_DT_GET(DT_INST_CLOCKS_CTLR_BY_NAME(n, mclk)),        \
-				.id = DT_INST_CLOCKS_CELL_BY_NAME(n, mclk, id)},                   \
-	.uart_clock.gclk_sys = {.dev = DEVICE_DT_GET(DT_INST_CLOCKS_CTLR_BY_NAME(n, gclk)),        \
-				.id = DT_INST_CLOCKS_CELL_BY_NAME(n, gclk, id)},
+	.uart_clock.mclk_sys = (void *)(DT_INST_CLOCKS_CELL_BY_NAME(n, mclk, subsystem)),          \
+	.uart_clock.gclk_sys = (void *)(DT_INST_CLOCKS_CELL_BY_NAME(n, gclk, subsystem)),
 
 /**
  * @brief Get the clock frequency for the UART peripheral.
@@ -127,7 +125,7 @@ typedef struct mchp_uart_clock {
  */
 #define UART_MCHP_GET_CLOCK_FREQ(dev, rate)                                                        \
 	clock_control_get_rate(((const uart_mchp_dev_cfg_t *)(dev->config))->uart_clock.clock_dev, \
-			       &(((uart_mchp_dev_cfg_t *)(dev->config))->uart_clock.gclk_sys),     \
+			       (((uart_mchp_dev_cfg_t *)(dev->config))->uart_clock.gclk_sys),      \
 			       &rate)
 
 /**
@@ -139,9 +137,9 @@ typedef struct mchp_uart_clock {
  */
 #define UART_MCHP_ENABLE_CLOCK(dev)                                                                \
 	clock_control_on(((const uart_mchp_dev_cfg_t *)(dev->config))->uart_clock.clock_dev,       \
-			 &(((uart_mchp_dev_cfg_t *)(dev->config))->uart_clock.gclk_sys));          \
+			 ((uart_mchp_dev_cfg_t *)(dev->config))->uart_clock.gclk_sys);             \
 	clock_control_on(((const uart_mchp_dev_cfg_t *)(dev->config))->uart_clock.clock_dev,       \
-			 &(((uart_mchp_dev_cfg_t *)(dev->config))->uart_clock.mclk_sys))
+			 ((uart_mchp_dev_cfg_t *)(dev->config))->uart_clock.mclk_sys)
 
 /* Include HAL file, specific to the peripheral IP */
 #include "sercom/hal_mchp_uart_sercom_u2201.h"

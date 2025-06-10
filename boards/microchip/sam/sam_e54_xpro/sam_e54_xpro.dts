@@ -72,6 +72,10 @@
 	};
 };
 
+&cpu0 {
+	clock-frequency = <120000000>;
+};
+
 &sercom2 {
 	status = "okay";
 	compatible = "microchip,sercom-u2201-uart";

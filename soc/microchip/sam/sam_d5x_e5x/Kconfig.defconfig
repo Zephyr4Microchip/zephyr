@@ -10,6 +10,6 @@ config ROM_START_OFFSET
 	default 0x400 if BOOTLOADER_MCUBOOT
 
 config SYS_CLOCK_HW_CYCLES_PER_SEC
-	default $(dt_node_int_prop_int,/soc/clock@40000800/oscctrl@40001000,dfll_frequency)
+	default $(dt_node_int_prop_int,/cpus/cpu@0,clock-frequency)
 
 endif # SOC_FAMILY_MCHP_SAM_D5X_E5X
