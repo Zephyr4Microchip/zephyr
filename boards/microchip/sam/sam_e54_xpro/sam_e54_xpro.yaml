@@ -16,6 +16,7 @@ supported:
   - dac
   - dma
   - eic
+  - entropy
   - flash
   - gpio
   - i2c
@@ -24,5 +25,4 @@ supported:
   - spi
   - uart
   - watchdog
-
 vendor: microchip
