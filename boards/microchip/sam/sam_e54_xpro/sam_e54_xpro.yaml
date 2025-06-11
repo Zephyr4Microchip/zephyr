@@ -13,6 +13,7 @@ flash: 1024
 ram: 256
 supported:
   - adc
+  - comparator
   - dac
   - dma
   - eic

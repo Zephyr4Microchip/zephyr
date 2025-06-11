@@ -1,0 +1,12 @@
+#Copyright(c) 2025 Microchip Technology Inc.
+#SPDX - License - Identifier : Apache - 2.0
+
+config COMPARATOR_MCHP_AC_U2501
+	bool "Microchip AC(Analog Comparator) Driver for AC_U2501 IP"
+	default y
+	depends on DT_HAS_MICROCHIP_AC_U2501_ENABLED
+	select PINCTRL
+	help
+	  Enable the Microchip Analog Comparator (AC) driver.
+	  This driver supports Microchip device families:
+	  - SOC_FAMILY_MCHP_SAM_D5X_E5X
