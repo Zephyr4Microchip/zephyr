@@ -147,8 +147,8 @@
 			#size-cells = <1>;
 			flash0: flash@0 {
 				compatible = "soc-nv-flash";
-				write-block-size = <512>; /* Page size in bytes */
-				erase-block-size = <8192>; /* Block size in bytes */
+				write-block-size = <8>;
+				erase-block-size = <8192>;
 			};
 		    userrow: nvmuserrow@804000 {
 				compatible = "soc-nv-flash";

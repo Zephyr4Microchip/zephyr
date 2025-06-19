@@ -14,10 +14,12 @@ config FLASH_MCHP_NVMCTRL_U2409
 	help
 	  Enable Flash driver for Microchip Non Volatile Memory Controller.
 
-config FLASH_HAS_PARTIAL_PAGE_WRITE
-	bool "Provide partial page write support"
+config FLASH_HAS_UNALIGNED_WRITE
+	bool "Provide unaligned write support"
 	help
-	  This option enhances the Zephyr flash API by enabling data
-	  to be written to flash memory not only from the start of a
-	  page but also from any offset within the available flash
-	  memory space.
+	  Enable this option to allow the Zephyr flash API to write data to flash
+	  memory at offsets that are not aligned to the device's write block size
+	  When enabled, the driver will handle unaligned writes internally, typically
+	  using read-modify-write operations to ensure data integrity. This allows
+	  applications to write data starting at any offset within the flash memory
+	  space, not just at aligned addresses.

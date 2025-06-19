@@ -206,9 +206,6 @@ typedef struct flash_mchp_dev_config {
 	/**< Flash base address */
 	uint32_t base_addr;
 
-	/**< Minimum erase block size */
-	uint32_t erase_block_size;
-
 	/**< Flash clock control */
 	flash_mchp_clock_t flash_clock;
 
@@ -253,11 +250,12 @@ typedef enum {
  * @param alignment The alignment boundary to check against. This should
  *                  be a power of two.
  *
- * @return true if the value is aligned to the specified alignment, false otherwise.
+ * @return FLASH_MCHP_SUCCESS if the value is aligned to the specified alignment,
+ *         FLASH_MCHP_FAIL otherwise.
  */
-static inline bool flash_aligned(size_t value, size_t alignment)
+static inline int flash_aligned(size_t value, size_t alignment)
 {
-	return (value & (alignment - 1)) == 0;
+	return (((value & (alignment - 1)) == 0) ? FLASH_MCHP_SUCCESS : FLASH_MCHP_FAIL);
 }
 
 /**
@@ -419,50 +417,6 @@ static inline void flash_pagebuffer_clear(const struct device *dev)
 }
 
 /**
- * @brief Write a quad word (128 bits) to flash memory.
- *
- * This function writes a quad word (typically 128 bits) to the specified flash memory address.
- * The data is written in 32-bit chunks, as required by the flash controller's page buffer.
- * The function waits for the flash to be ready before writing and checks the status after the
- * operation.
- *
- * @param dev     Pointer to the device structure representing the flash controller.
- * @param data    Pointer to the source data to be written (must be at least 128 bits).
- * @param address Destination address in flash memory where the data will be written.
- *
- * @retval FLASH_MCHP_SUCCESS if the write operation is successful.
- * @retval FLASH_MCHP_FAIL if the write operation fails.
- */
-static int flash_quadword_write(const struct device *dev, const void *data, uint32_t address)
-{
-	int ret = FLASH_MCHP_SUCCESS;
-	uint8_t num_words = FLASH_MCHP_QUAD_WORD_SIZE / 4U;
-	const uint32_t *src = (const uint32_t *)data;
-	uint32_t *dst = FLASH_MEMORY(address);
-
-	flash_pagebuffer_clear(dev);
-
-	flash_set_write_mode(dev, NVMCTRL_WMODE_AQW);
-
-	/* writing 32-bit data into the given address. Writes to the page buffer must be 32 bits */
-	for (uint8_t i = 0U; i < num_words; i++) {
-		*dst = *src;
-		dst++;
-		src++;
-	}
-
-	flash_status_ready_wait(dev);
-
-	ret = flash_get_interrupt_status_error(dev);
-	if (ret != 0) {
-		ret = FLASH_MCHP_FAIL;
-	}
-
-	return ret;
-}
-
-#ifdef CONFIG_FLASH_HAS_PARTIAL_PAGE_WRITE
-/**
  * @brief Write a double word (64 bits) to flash memory.
  *
  * This function writes a double word (typically 64 bits) to the specified flash memory address.
@@ -480,7 +434,7 @@ static int flash_quadword_write(const struct device *dev, const void *data, uint
 static int flash_doubleword_write(const struct device *dev, const void *data, uint32_t address)
 {
 	int ret = FLASH_MCHP_SUCCESS;
-	uint8_t num_words = FLASH_MCHP_DOUBLE_WORD_SIZE / 4U;
+	uint8_t num_words = FLASH_MCHP_DOUBLE_WORD_SIZE / sizeof(uint32_t);
 	const uint32_t *src = (const uint32_t *)data;
 	uint32_t *dst = FLASH_MEMORY(address);
 
@@ -498,7 +452,7 @@ static int flash_doubleword_write(const struct device *dev, const void *data, ui
 	flash_status_ready_wait(dev);
 
 	ret = flash_get_interrupt_status_error(dev);
-	if (ret != 0) {
+	if (ret != FLASH_MCHP_SUCCESS) {
 		ret = FLASH_MCHP_FAIL;
 	}
 
@@ -506,147 +460,47 @@ static int flash_doubleword_write(const struct device *dev, const void *data, ui
 }
 
 /**
- * @brief Writes a partial buffer to flash memory, handling unaligned addresses and sizes.
+ * @brief Write a quad word (128 bits) to flash memory.
  *
- * This function writes a buffer of arbitrary length to flash memory, starting at the specified
- * offset. It handles cases where the start or end of the write is not aligned to the flash
- * double-word (8 bytes) or quad-word (16 bytes) boundaries by reading, modifying, and writing
- * the necessary portions. The function uses double-word and quad-word writes as appropriate
- * to maximize efficiency and ensure data integrity.
+ * This function writes a quad word (typically 128 bits) to the specified flash memory address.
+ * The data is written in 32-bit chunks, as required by the flash controller's page buffer.
+ * The function waits for the flash to be ready before writing and checks the status after the
+ * operation.
  *
- * The function performs the following steps:
- * - Handles unaligned start by updating only the necessary bytes in the first double-word.
- * - Writes aligned double-words until the address is quad-word aligned.
- * - Writes as many quad-words as possible for efficiency.
- * - Writes any remaining double-words.
- * - Handles unaligned end by updating only the necessary bytes in the last double-word.
+ * @param dev     Pointer to the device structure representing the flash controller.
+ * @param data    Pointer to the source data to be written (must be at least 128 bits).
+ * @param address Destination address in flash memory where the data will be written.
  *
- * @param dev    Pointer to the device structure representing the flash controller.
- * @param buffer Pointer to the data buffer to be written.
- * @param len    Number of bytes to write from the buffer.
- * @param offset Offset in flash memory where the write should begin.
- *
- * @return FLASH_MCHP_SUCCESS (0) on success, or FLASH_MCHP_FAIL on failure.
+ * @retval FLASH_MCHP_SUCCESS if the write operation is successful.
+ * @retval FLASH_MCHP_FAIL if the write operation fails.
  */
-static int flash_partial_write(const struct device *dev, const uint8_t *buffer, size_t len,
-			       const uint32_t offset)
+static int flash_quadword_write(const struct device *dev, const void *data, uint32_t address)
 {
 	int ret = FLASH_MCHP_SUCCESS;
-	uint32_t addr = offset;
-	uint32_t aligned_addr = addr & (~(FLASH_MCHP_DOUBLE_WORD_SIZE - 1));
+	uint8_t num_words = FLASH_MCHP_QUAD_WORD_SIZE / sizeof(uint32_t);
+	const uint32_t *src = (const uint32_t *)data;
+	uint32_t *dst = FLASH_MEMORY(address);
 
-	do {
-		/* Handle unaligned start (if addr is not 8-byte aligned) */
-		if ((flash_aligned(addr, FLASH_MCHP_DOUBLE_WORD_SIZE) == 0) && (len > 0)) {
-			uint8_t doubleword_buf[FLASH_MCHP_DOUBLE_WORD_SIZE];
-			size_t start_offset = addr - aligned_addr;
-			size_t bytes_to_update =
-				(len < (FLASH_MCHP_DOUBLE_WORD_SIZE - start_offset))
-					? len
-					: (FLASH_MCHP_DOUBLE_WORD_SIZE - start_offset);
+	flash_pagebuffer_clear(dev);
 
-			/* Read existing data into doubleword_buf */
-			const uint8_t *src = (const uint8_t *)aligned_addr;
+	flash_set_write_mode(dev, NVMCTRL_WMODE_AQW);
 
-			for (size_t i = 0; i < FLASH_MCHP_DOUBLE_WORD_SIZE; i++) {
-				doubleword_buf[i] = src[i];
-			}
+	/* writing 32-bit data into the given address. Writes to the page buffer must be 32 bits */
+	for (uint8_t i = 0U; i < num_words; i++) {
+		*dst = *src;
+		dst++;
+		src++;
+	}
 
-			/* Overwrite the relevant bytes. */
-			for (size_t i = 0; i < bytes_to_update; i++) {
-				doubleword_buf[start_offset + i] = buffer[i];
-			}
+	flash_status_ready_wait(dev);
 
-			ret = flash_doubleword_write(dev, doubleword_buf, aligned_addr);
-			if (ret != 0) {
-				LOG_ERR("double word write failed at 0x%lx", (long)aligned_addr);
-				break;
-			}
-
-			aligned_addr += FLASH_MCHP_DOUBLE_WORD_SIZE;
-			buffer += bytes_to_update;
-			len -= bytes_to_update;
-		}
-
-		/* Do 8-byte writes until we reach a 16-byte aligned address. */
-		while ((len >= FLASH_MCHP_DOUBLE_WORD_SIZE) &&
-		       (flash_aligned(aligned_addr, FLASH_MCHP_QUAD_WORD_SIZE) == 0)) {
-			ret = flash_doubleword_write(dev, buffer, aligned_addr);
-			if (ret != 0) {
-				LOG_ERR("double word write failed at 0x%lx", (long)aligned_addr);
-				break;
-			}
-
-			aligned_addr += FLASH_MCHP_DOUBLE_WORD_SIZE;
-			buffer += FLASH_MCHP_DOUBLE_WORD_SIZE;
-			len -= FLASH_MCHP_DOUBLE_WORD_SIZE;
-		}
-
-		if (ret != 0) {
-			break;
-		}
-
-		/* Write as many 16-byte aligned chunks as possible. */
-		while ((len >= FLASH_MCHP_QUAD_WORD_SIZE) &&
-		       (flash_aligned(aligned_addr, FLASH_MCHP_QUAD_WORD_SIZE) != 0)) {
-			ret = flash_quadword_write(dev, buffer, aligned_addr);
-			if (ret != 0) {
-				LOG_ERR("quad word write failed at 0x%lx", (long)aligned_addr);
-				break;
-			}
-
-			aligned_addr += FLASH_MCHP_QUAD_WORD_SIZE;
-			buffer += FLASH_MCHP_QUAD_WORD_SIZE;
-			len -= FLASH_MCHP_QUAD_WORD_SIZE;
-		}
-
-		if (ret != 0) {
-			break;
-		}
-
-		/* Write any remaining 8-byte chunks. */
-		while (len >= FLASH_MCHP_DOUBLE_WORD_SIZE) {
-			ret = flash_doubleword_write(dev, buffer, aligned_addr);
-			if (ret != 0) {
-				LOG_ERR("double word write failed at 0x%lx", (long)aligned_addr);
-				break;
-			}
-
-			aligned_addr += FLASH_MCHP_DOUBLE_WORD_SIZE;
-			buffer += FLASH_MCHP_DOUBLE_WORD_SIZE;
-			len -= FLASH_MCHP_DOUBLE_WORD_SIZE;
-		}
-
-		if (ret != 0) {
-			break;
-		}
-
-		/* Handle unaligned end (if any bytes remain) */
-		if (len > 0) {
-			uint8_t doubleword_buf[FLASH_MCHP_DOUBLE_WORD_SIZE];
-
-			/* Read existing data into doubleword_buf */
-			const uint8_t *src = (const uint8_t *)aligned_addr;
-
-			for (size_t i = 0; i < FLASH_MCHP_DOUBLE_WORD_SIZE; i++) {
-				doubleword_buf[i] = src[i];
-			}
-			/*  Overwrite the relevant bytes */
-			for (size_t i = 0; i < len; i++) {
-				doubleword_buf[i] = buffer[i];
-			}
-
-			ret = flash_doubleword_write(dev, doubleword_buf, aligned_addr);
-			if (ret != 0) {
-				LOG_ERR("double word write failed at 0x%lx", (long)aligned_addr);
-				break;
-			}
-		}
-	} while (0);
+	ret = flash_get_interrupt_status_error(dev);
+	if (ret != FLASH_MCHP_SUCCESS) {
+		ret = FLASH_MCHP_FAIL;
+	}
 
 	return ret;
 }
-#endif /*CONFIG_FLASH_HAS_PARTIAL_PAGE_WRITE*/
 
 /**
  * @brief Erases a memory block in the Microchip NVMCTRL.
@@ -676,7 +530,7 @@ static int flash_erase_block(const struct device *dev, uint32_t address)
 	flash_status_ready_wait(dev);
 
 	ret = flash_get_interrupt_status_error(dev);
-	if (ret != 0) {
+	if (ret != FLASH_MCHP_SUCCESS) {
 		ret = FLASH_MCHP_FAIL;
 	}
 	return ret;
@@ -700,7 +554,7 @@ static int flash_erase_block(const struct device *dev, uint32_t address)
 static int flash_page_write(const struct device *dev, const void *data, uint32_t address)
 {
 	int ret = FLASH_MCHP_SUCCESS;
-	uint8_t num_words = FLASH_MCHP_PAGE_SIZE / 4U;
+	uint8_t num_words = FLASH_MCHP_PAGE_SIZE / sizeof(uint32_t);
 	const uint32_t *src = (const uint32_t *)data;
 	uint32_t *dst = FLASH_MEMORY(address);
 
@@ -718,7 +572,7 @@ static int flash_page_write(const struct device *dev, const void *data, uint32_t
 	flash_status_ready_wait(dev);
 
 	ret = flash_get_interrupt_status_error(dev);
-	if (ret != 0) {
+	if (ret != FLASH_MCHP_SUCCESS) {
 		ret = FLASH_MCHP_FAIL;
 	}
 
@@ -757,42 +611,130 @@ static int flash_valid_range(off_t offset, size_t len)
 	return ret;
 }
 
+#ifdef CONFIG_FLASH_HAS_UNALIGNED_WRITE
 /**
- * @brief Writes data to flash memory, handling page and partial-page writes.
+ * @brief Handles unaligned start of a flash write operation.
+ *
+ * This function performs a read-modify-write for the initial unaligned bytes
+ * at the start of a flash write. It updates the offset, buffer pointer, and
+ * remaining length to reflect the bytes written, so that the caller can proceed
+ * with aligned writes.
+ *
+ * @param dev     Pointer to the device structure representing the flash controller.
+ * @param offset  Pointer to the current offset in flash memory; updated by this function.
+ * @param buffer  Pointer to the current data buffer pointer; updated by this function.
+ * @param len     Pointer to the remaining length to write; updated by this function.
+ *
+ * @return FLASH_MCHP_SUCCESS (0) on success, or a negative error code on failure.
+ */
+static int flash_handle_unaligned_start(const struct device *dev, off_t *offset,
+					const uint8_t **buffer, size_t *len)
+{
+	int ret = FLASH_MCHP_SUCCESS;
+
+	if (flash_aligned(*offset, FLASH_MCHP_DOUBLE_WORD_SIZE) != FLASH_MCHP_SUCCESS) {
+
+		uint32_t aligned_addr = *offset & ~(FLASH_MCHP_DOUBLE_WORD_SIZE - 1);
+		uint8_t doubleword_buf[FLASH_MCHP_DOUBLE_WORD_SIZE];
+		size_t start_offset = (*offset - aligned_addr);
+		const uint8_t *src = (const uint8_t *)aligned_addr;
+		size_t bytes_to_update = ((*len) < (FLASH_MCHP_DOUBLE_WORD_SIZE - start_offset))
+						 ? (*len)
+						 : (FLASH_MCHP_DOUBLE_WORD_SIZE - start_offset);
+
+		/*  Read existing data. */
+		for (size_t i = 0; i < FLASH_MCHP_DOUBLE_WORD_SIZE; i++) {
+			doubleword_buf[i] = src[i];
+		}
+
+		/* Overwrite the relevant bytes. */
+		for (size_t i = 0; i < bytes_to_update; i++) {
+			doubleword_buf[start_offset + i] = (*buffer)[i];
+		}
+
+		ret = flash_doubleword_write(dev, doubleword_buf, aligned_addr);
+		if (ret != FLASH_MCHP_SUCCESS) {
+			LOG_ERR("double word write failed at 0x%lx", (long)aligned_addr);
+			return ret;
+		}
+
+		(*offset) += bytes_to_update;
+		(*buffer) += bytes_to_update;
+		(*len) -= bytes_to_update;
+	}
+
+	return ret;
+}
+
+/**
+ * @brief Handles unaligned end of a flash write operation.
+ *
+ * This function performs a read-modify-write for the final unaligned bytes
+ * at the end of a flash write. It does not update the offset, buffer, or length,
+ * as it is intended to be called after all aligned writes are complete.
+ *
+ * @param dev     Pointer to the device structure representing the flash controller.
+ * @param offset  Offset in flash memory where the unaligned write should begin.
+ * @param buffer  Pointer to the data buffer containing the bytes to write.
+ * @param len     Number of bytes to write at the end (less than a double word).
+ *
+ * @return FLASH_MCHP_SUCCESS (0) on success, or a negative error code on failure.
+ */
+static int flash_handle_unaligned_end(const struct device *dev, off_t offset, const uint8_t *buffer,
+				      size_t len)
+{
+	int ret = FLASH_MCHP_SUCCESS;
+
+	if (len > 0) {
+		uint32_t aligned_addr = offset;
+		uint8_t doubleword_buf[FLASH_MCHP_DOUBLE_WORD_SIZE];
+		const uint8_t *src = (const uint8_t *)aligned_addr;
+
+		/* Read existing data */
+		for (size_t i = 0; i < FLASH_MCHP_DOUBLE_WORD_SIZE; i++) {
+			doubleword_buf[i] = src[i];
+		}
+
+		/* Overwrite the relevant bytes. */
+		for (size_t i = 0; i < len; i++) {
+			doubleword_buf[i] = buffer[i];
+		}
+
+		ret = flash_doubleword_write(dev, doubleword_buf, aligned_addr);
+		if (ret != FLASH_MCHP_SUCCESS) {
+			LOG_ERR("double word write failed at 0x%lx", (long)aligned_addr);
+		}
+	}
+	return ret;
+}
+#endif /*CONFIG_FLASH_HAS_UNALIGNED_WRITE*/
+
+/**
+ * @brief Writes data to flash memory, handling both aligned and unaligned writes.
  *
  * This function writes a buffer of data to flash memory at the specified offset.
- * It manages alignment requirements, page boundaries, and optionally supports
- * partial page writes if enabled by configuration. The function ensures that
- * writes are performed safely by locking the flash data structure during the
- * operation and verifies the written data for correctness.
- *
- * The write process includes:
- * - Validating the write range and alignment (if partial page writes are not supported).
- * - Handling the first partial page if the offset is not page-aligned (when supported).
- * - Writing full pages as long as enough data remains.
- * - Handling the last partial page if there are remaining bytes (when supported).
- * - Verifying the written data by comparing it to the source buffer.
+ * It attempts to use the most efficient write size possible (page, quad-word, double-word)
+ * for aligned regions. If CONFIG_FLASH_HAS_UNALIGNED_WRITE is enabled, it also handles
+ * unaligned start and end regions using read-modify-write operations.
+ * The function locks the flash data structure during the operation to ensure thread safety,
+ * and verifies the written data for correctness.
  *
  * @param dev    Pointer to the device structure representing the flash controller.
  * @param offset Offset in flash memory where the write should begin (relative to base address).
- * @param data   Pointer to the data buffer to be written.
- * @param len    Number of bytes to write from the data buffer.
+ * @param data   Pointer to the buffer containing the data to be written.
+ * @param len    Number of bytes to write from the buffer.
  *
  * @return FLASH_MCHP_SUCCESS (0) on success,
- *         -EINVAL if alignment requirements are not met,
- *         -EIO if verification fails,
- *         or FLASH_MCHP_FAIL on other failures.
+ *         -EINVAL if alignment requirements are not met (when partial page write is not enabled),
+ *         or a negative error code if a write or verification operation fails.
  */
 static int flash_mchp_write(const struct device *dev, off_t offset, const void *data, size_t len)
 {
 	int ret = FLASH_MCHP_SUCCESS;
 	flash_mchp_dev_data_t *mchp_flash_data = dev->data;
-	uint32_t write_page_size = DEV_CFG(dev)->flash_param.write_block_size;
-	uint32_t remaining_length = len;
-	const uint8_t *current_data_ptr = (const uint8_t *)data;
+	const uint8_t *buffer = (const uint8_t *)data;
 
 	offset += DEV_CFG(dev)->base_addr;
-	uint32_t page_start_address = offset & ~(write_page_size - 1);
 
 	FLASH_MCHP_DATA_LOCK(&mchp_flash_data->flash_data_lock);
 
@@ -801,78 +743,89 @@ static int flash_mchp_write(const struct device *dev, off_t offset, const void *
 		if (ret != 0) {
 			break;
 		}
-#ifdef CONFIG_FLASH_HAS_PARTIAL_PAGE_WRITE
-		uint32_t write_start_offset = offset - page_start_address;
-		/* Handle the first partial page if the offset is not zero */
-		if (write_start_offset != 0) {
-			uint32_t bytes_to_write =
-				MIN((write_page_size - write_start_offset), remaining_length);
 
-			ret = flash_partial_write(dev, current_data_ptr, bytes_to_write, offset);
-			if (ret != 0) {
-				LOG_ERR("partial page write failed at 0x%lx", (long)offset);
-				break;
-			}
-
-			remaining_length -= bytes_to_write;
-			current_data_ptr += bytes_to_write;
-			page_start_address += write_page_size;
+#ifdef CONFIG_FLASH_HAS_UNALIGNED_WRITE
+		/* Handle unaligned start */
+		ret = flash_handle_unaligned_start(dev, &offset, &buffer, &len);
+		if (ret != FLASH_MCHP_SUCCESS) {
+			break;
 		}
 #else
 		ret = flash_aligned(offset, SOC_NV_FLASH_WRITE_BLOCK_SIZE);
-		if (ret == 0) {
+		if (ret != FLASH_MCHP_SUCCESS) {
 			LOG_WRN("0x%lx: not on a write block boundary", (long)offset);
 			ret = -EINVAL;
 			break;
 		}
 
 		ret = flash_aligned(len, SOC_NV_FLASH_WRITE_BLOCK_SIZE);
-		if (ret == 0) {
+		if (ret != FLASH_MCHP_SUCCESS) {
 			LOG_WRN("%zu: not a integer number of write blocks", len);
 			ret = -EINVAL;
 			break;
 		}
-#endif /*CONFIG_FLASH_HAS_PARTIAL_PAGE_WRITE*/
+#endif /*CONFIG_FLASH_HAS_UNALIGNED_WRITE*/
 
-		/* Handle full pages */
-		while (remaining_length >= write_page_size) {
-
-			ret = flash_page_write(dev, current_data_ptr, page_start_address);
-			if (ret != 0) {
-				LOG_ERR("page write failed at 0x%lx", (long)page_start_address);
-				break;
+		while (len >= FLASH_MCHP_DOUBLE_WORD_SIZE) {
+			/* 512-byte page write */
+			if ((len >= FLASH_MCHP_PAGE_SIZE) &&
+			    (flash_aligned(offset, FLASH_MCHP_PAGE_SIZE) == FLASH_MCHP_SUCCESS)) {
+				ret = flash_page_write(dev, buffer, offset);
+				if (ret != FLASH_MCHP_SUCCESS) {
+					LOG_ERR("page write failed at 0x%lx", (long)offset);
+					break;
+				}
+				offset += FLASH_MCHP_PAGE_SIZE;
+				buffer += FLASH_MCHP_PAGE_SIZE;
+				len -= FLASH_MCHP_PAGE_SIZE;
+				continue;
 			}
 
-			remaining_length -= write_page_size;
-			current_data_ptr += write_page_size;
-			page_start_address += write_page_size;
+			/* 16-byte quad-word write */
+			if ((len >= FLASH_MCHP_QUAD_WORD_SIZE) &&
+			    (flash_aligned(offset, FLASH_MCHP_QUAD_WORD_SIZE) ==
+			     FLASH_MCHP_SUCCESS)) {
+				ret = flash_quadword_write(dev, buffer, offset);
+				if (ret != FLASH_MCHP_SUCCESS) {
+					LOG_ERR("quad word write failed at 0x%lx", (long)offset);
+					break;
+				}
+				offset += FLASH_MCHP_QUAD_WORD_SIZE;
+				buffer += FLASH_MCHP_QUAD_WORD_SIZE;
+				len -= FLASH_MCHP_QUAD_WORD_SIZE;
+				continue;
+			}
+
+			/* 8-byte double-word write */
+			if ((len >= FLASH_MCHP_DOUBLE_WORD_SIZE) &&
+			    (flash_aligned(offset, FLASH_MCHP_DOUBLE_WORD_SIZE) ==
+			     FLASH_MCHP_SUCCESS)) {
+				ret = flash_doubleword_write(dev, buffer, offset);
+				if (ret != FLASH_MCHP_SUCCESS) {
+					LOG_ERR("double word write failed at 0x%lx", (long)offset);
+					break;
+				}
+				offset += FLASH_MCHP_DOUBLE_WORD_SIZE;
+				buffer += FLASH_MCHP_DOUBLE_WORD_SIZE;
+				len -= FLASH_MCHP_DOUBLE_WORD_SIZE;
+				continue;
+			}
+
+			break;
 		}
 
-#ifdef CONFIG_FLASH_HAS_PARTIAL_PAGE_WRITE
-		/* Handle the last partial page if there are remaining bytes */
-		if (remaining_length > 0) {
-
-			ret = flash_partial_write(dev, current_data_ptr, remaining_length,
-						  page_start_address);
-			if (ret != 0) {
-				LOG_ERR("partial page write failed at 0x%lx", (long)offset);
+#ifdef CONFIG_FLASH_HAS_UNALIGNED_WRITE
+		/* Handle unaligned end */
+		if (ret == FLASH_MCHP_SUCCESS) {
+			ret = flash_handle_unaligned_end(dev, offset, buffer, len);
+			if (ret != FLASH_MCHP_SUCCESS) {
 				break;
 			}
 		}
-#endif /*CONFIG_FLASH_HAS_PARTIAL_PAGE_WRITE*/
-
-		for (size_t i = 0; i < len; i++) {
-			if (((const uint8_t *)data)[i] != ((const uint8_t *)offset)[i]) {
-				LOG_ERR("verify error at offset 0x%lx", (long)offset + i);
-				ret = -EINVAL;
-				break;
-			}
-		}
-
+#endif /*CONFIG_FLASH_HAS_UNALIGNED_WRITE*/
 	} while (0);
 
 	FLASH_MCHP_DATA_UNLOCK(&mchp_flash_data->flash_data_lock);
-
 	return ret;
 }
 
@@ -899,36 +852,36 @@ static int flash_mchp_erase(const struct device *dev, off_t offset, size_t size)
 {
 	int ret = FLASH_MCHP_SUCCESS;
 	flash_mchp_dev_data_t *mchp_flash_data = dev->data;
-	uint32_t page_size = DEV_CFG(dev)->erase_block_size;
+	uint32_t page_size = SOC_NV_FLASH_ERASE_BLOCK_SIZE;
 
 	offset += DEV_CFG(dev)->base_addr;
 
+	FLASH_MCHP_DATA_LOCK(&mchp_flash_data->flash_data_lock);
+
 	do {
 		ret = flash_valid_range(offset, size);
-		if (ret != 0) {
+		if (ret != FLASH_MCHP_SUCCESS) {
 			break;
 		}
 
 		ret = flash_aligned(offset, page_size);
-		if (ret == 0) {
+		if (ret != FLASH_MCHP_SUCCESS) {
 			LOG_WRN("0x%lx: not on a erase block boundary", (long)offset);
 			ret = -EINVAL;
 			break;
 		}
 
 		ret = flash_aligned(size, page_size);
-		if (ret == 0) {
+		if (ret != FLASH_MCHP_SUCCESS) {
 			LOG_WRN("%zu: not a integer number of erase blocks", size);
 			ret = -EINVAL;
 			break;
 		}
 
-		FLASH_MCHP_DATA_LOCK(&mchp_flash_data->flash_data_lock);
-
 		while (size > 0U) {
-
 			/* Erase the block */
-			if (flash_erase_block(dev, offset) != 0) {
+			ret = flash_erase_block(dev, offset);
+			if (ret != FLASH_MCHP_SUCCESS) {
 				LOG_ERR("erase operation failed at 0x%lx", (long)offset);
 				ret = -EIO;
 				break;
@@ -1077,7 +1030,7 @@ static int flash_user_row_erase(const struct device *dev, uint32_t address)
 	flash_status_ready_wait(dev);
 
 	ret = flash_get_interrupt_status_error(dev);
-	if (ret != 0) {
+	if (ret != FLASH_MCHP_SUCCESS) {
 		ret = FLASH_MCHP_FAIL;
 	}
 	return ret;
@@ -1115,21 +1068,21 @@ static int flash_ex_op_user_row_write(const struct device *dev, const uintptr_t 
 
 	do {
 		ret = flash_aligned(address, SOC_NV_USERROW_WRITE_BLOCK_SIZE);
-		if (ret == 0) {
+		if (ret != FLASH_MCHP_SUCCESS) {
 			LOG_WRN("0x%lx: not on a write block boundary", (long)address);
 			ret = -EINVAL;
 			break;
 		}
 
 		ret = flash_aligned(len, SOC_NV_USERROW_WRITE_BLOCK_SIZE);
-		if (ret == 0) {
+		if (ret != FLASH_MCHP_SUCCESS) {
 			LOG_WRN("%zu: not a integer number of write blocks", len);
 			ret = -EINVAL;
 			break;
 		}
 
 		ret = flash_check_offset_user_range(address);
-		if (ret != 0) {
+		if (ret != FLASH_MCHP_SUCCESS) {
 			break;
 		}
 
@@ -1137,7 +1090,7 @@ static int flash_ex_op_user_row_write(const struct device *dev, const uintptr_t 
 
 		for (uint32_t write_count = 0U; write_count < num_quad_words; write_count++) {
 			ret = flash_quadword_write(dev, buffer, address);
-			if (ret != 0) {
+			if (ret != FLASH_MCHP_SUCCESS) {
 				break;
 			}
 
@@ -1172,7 +1125,8 @@ static int flash_ex_op_user_row_erase(const struct device *dev, const uintptr_t 
 	int ret = FLASH_MCHP_SUCCESS;
 
 	/* Erase the user page */
-	if (flash_user_row_erase(dev, SOC_NV_USERROW_BASE_ADDR) != 0) {
+	ret = flash_user_row_erase(dev, SOC_NV_USERROW_BASE_ADDR);
+	if (ret != FLASH_MCHP_SUCCESS) {
 		LOG_ERR("User page erase failed");
 		ret = -EIO;
 	}
@@ -1207,7 +1161,7 @@ static int flash_ex_op_region_lock(const struct device *dev, const uintptr_t in,
 		flash_process_command(dev, NVMCTRL_CTRLB_CMD_LR);
 
 		ret = flash_get_interrupt_status_error(dev);
-		if (ret != 0) {
+		if (ret != FLASH_MCHP_SUCCESS) {
 			ret = FLASH_MCHP_FAIL;
 			break;
 		}
@@ -1244,7 +1198,7 @@ static int flash_ex_op_region_unlock(const struct device *dev, const uintptr_t i
 		flash_process_command(dev, NVMCTRL_CTRLB_CMD_UR);
 
 		ret = flash_get_interrupt_status_error(dev);
-		if (ret != 0) {
+		if (ret != FLASH_MCHP_SUCCESS) {
 			ret = FLASH_MCHP_FAIL;
 			break;
 		}
@@ -1399,7 +1353,6 @@ static const struct flash_driver_api flash_mchp_driver_api = {
 	static const flash_mchp_dev_config_t flash_mchp_config_##n = {                             \
 		.regs = (nvmctrl_registers_t *)DT_INST_REG_ADDR(n),                                \
 		.base_addr = SOC_NV_FLASH_BASE_ADDRESS,                                            \
-		.erase_block_size = SOC_NV_FLASH_ERASE_BLOCK_SIZE,                                 \
 		.flash_clock.clock_dev = DEVICE_DT_GET(DT_NODELABEL(clock)),                       \
 		.flash_clock.mclk_sys = {.dev = DEVICE_DT_GET(                                     \
 						 DT_INST_CLOCKS_CTLR_BY_NAME(n, mclk)),            \

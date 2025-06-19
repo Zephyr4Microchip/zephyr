@@ -16,9 +16,9 @@ supported:
   - dac
   - dma
   - eic
+  - flash
   - gpio
   - i2c
-  - nvmctrl
   - pwm
   - rtc
   - spi
