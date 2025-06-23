@@ -21,6 +21,7 @@ supported:
   - gpio
   - i2c
   - pwm
+  - reset
   - rtc
   - spi
   - uart
