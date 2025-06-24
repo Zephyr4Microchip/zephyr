@@ -20,7 +20,7 @@
 #include <zephyr/logging/log.h>
 #include <zephyr/drivers/flash.h>
 #include <zephyr/drivers/clock_control/mchp_clock_control.h>
-#include <zephyr/drivers/flash/flash_mchp_api_extensions.h>
+#include <zephyr/drivers/flash/mchp_flash.h>
 
 LOG_MODULE_REGISTER(flash_mchp_nvmctrl_u2409);
 

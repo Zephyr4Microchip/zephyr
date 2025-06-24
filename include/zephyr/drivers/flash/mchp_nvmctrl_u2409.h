@@ -5,17 +5,21 @@
  */
 
 /**
- * @file flash_mchp_api_extensions.h
- * @brief Flash API extensions for Microchip devices.
+ * @file mchp_nvmctrl_u2409.h
+ * @brief Extended Flash Operations for Microchip NVMCTRL U2409
  *
- * This file provides additional operations for the Flash API,
- * for extending the Flash API capabilities Microchip devices.
+ * This header provides definitions and data structures for additional
+ * flash memory operations specific to the Microchip NVMCTRL U2409
+ * flash controller IP. It extends the standard flash driver capabilities
+ * by enabling advanced operations such as user row access and region
+ * locking/unlocking.
+ *
+ * @note This file is IP-specific and should only be included when targeting
+ *       devices with the NVMCTRL U2409 flash controller.
+ *
  */
-
-#ifndef FLASH_MCHP_API_EXTENSIONS_H_
-#define FLASH_MCHP_API_EXTENSIONS_H_
-
-#include <stdint.h>
+#ifndef INCLUDE_ZEPHYR_DRIVERS_FLASH_MCHP_NVMCTRL_U2409_H_
+#define INCLUDE_ZEPHYR_DRIVERS_FLASH_MCHP_NVMCTRL_U2409_H_
 
 /**
  * @brief Extended flash operation codes for MCHP flash controller.
@@ -44,4 +48,4 @@ typedef struct flash_mchp_ex_op_userrow_data {
 	off_t offset;     /**< Offset within the user row region where the operation starts. */
 } flash_mchp_ex_op_userrow_data_t;
 
-#endif /* FLASH_MCHP_API_EXTENSIONS_H_ */
+#endif /*INCLUDE_ZEPHYR_DRIVERS_FLASH_MCHP_NVMCTRL_U2409_H_*/
