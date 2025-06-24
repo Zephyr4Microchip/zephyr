@@ -332,6 +332,8 @@ static void rtc_get_clock_time(const rtc_registers_t *regs, rtc_mchp_time_t *rtc
 		(dataClockCalendar & RTC_MODE2_CLOCK_DAY_Msk) >> RTC_MODE2_CLOCK_DAY_Pos;
 }
 
+#ifdef CONFIG_RTC_ALARM
+
 /**
  * @brief Get the supported alarm mask for the RTC.
  *
@@ -603,6 +605,9 @@ static inline uint16_t rtc_supported_alarm_int_flags(const rtc_registers_t *regs
 
 	return supported_flags;
 }
+#endif /* CONFIG_RTC_ALARM */
+
+#ifdef CONFIG_RTC_CALIBRATION
 
 /**
  * @brief Set the calibration value for the RTC module.
@@ -649,6 +654,8 @@ static void mchp_rtc_get_calibration(const rtc_registers_t *regs, uint32_t *cali
 		*corr_sign = 1;
 	}
 }
+
+#endif /* CONFIG_RTC_CALIBRATION */
 
 /***********************************
  * Zephyr APIs
