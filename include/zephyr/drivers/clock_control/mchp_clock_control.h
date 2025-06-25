@@ -12,8 +12,8 @@
  * for microchip soc families
  */
 
-#ifndef MICROCHIP_MCHP_CLOCK_CONTROL_H_
-#define MICROCHIP_MCHP_CLOCK_CONTROL_H_
+#ifndef INCLUDE_ZEPHYR_DRIVERS_CLOCK_CONTROL_MCHP_CLOCK_CONTROL_H_
+#define INCLUDE_ZEPHYR_DRIVERS_CLOCK_CONTROL_MCHP_CLOCK_CONTROL_H_
 
 #include <zephyr/kernel.h>
 #include <zephyr/drivers/clock_control.h>
@@ -22,4 +22,4 @@
 #include <zephyr/drivers/clock_control/mchp_clock_sam_d5x_e5x.h>
 #endif
 
-#endif /* MICROCHIP_MCHP_CLOCK_CONTROL_H_ */
+#endif /* INCLUDE_ZEPHYR_DRIVERS_CLOCK_CONTROL_MCHP_CLOCK_CONTROL_H_ */

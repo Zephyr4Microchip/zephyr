@@ -917,17 +917,18 @@ static int pwm_mchp_init(const struct device *pwm_dev)
  *       of relevant device tree properties.
  */
 /* clang-format off */
-#define PWM_MCHP_CLOCK_ASSIGN(n)							\
-	.pwm_clock.clock_dev = DEVICE_DT_GET(DT_NODELABEL(clock)),			\
-	.pwm_clock.host_core_sync_clk = (void *)(DT_INST_CLOCKS_CELL_BY_NAME(n, mclk, subsystem)),										\
-	COND_CODE_1(DT_NODE_HAS_PROP(DT_NODELABEL(tc##n), client),			\
-	(.pwm_clock.client_core_sync_clk =  (void *)DT_CLOCKS_CELL_BY_NAME(							\
-	DT_PHANDLE(DT_NODELABEL(tc##n), client), mclk, subsystem),), ())									\
-	COND_CODE_1(DT_NODE_EXISTS(DT_INST_CLOCKS_CTLR_BY_NAME(n, rtcclk)),		\
-	(.pwm_clock.periph_async_clk = 	(void *)DT_INST_CLOCKS_CELL_BY_NAME(n, rtcclk, subsystem)\
-	,), ())									\
-	COND_CODE_1(DT_NODE_EXISTS(DT_INST_CLOCKS_CTLR_BY_NAME(n, gclk)),		\
-	(.pwm_clock.periph_async_clk = (void *)DT_INST_CLOCKS_CELL_BY_NAME(n, gclk, subsystem),), ())
+#define PWM_MCHP_CLOCK_ASSIGN(n)								\
+	.pwm_clock.clock_dev = DEVICE_DT_GET(DT_NODELABEL(clock)),				\
+	.pwm_clock.host_core_sync_clk = (void *)(DT_INST_CLOCKS_CELL_BY_NAME(n, mclk, subsystem)),\
+	COND_CODE_1(DT_NODE_HAS_PROP(DT_NODELABEL(tc##n), client),				\
+	(.pwm_clock.client_core_sync_clk = (void *)DT_CLOCKS_CELL_BY_NAME(			\
+	DT_PHANDLE(DT_NODELABEL(tc##n), client), mclk, subsystem),), ())			\
+	COND_CODE_1(DT_NODE_EXISTS(DT_INST_CLOCKS_CTLR_BY_NAME(n, rtcclk)),			\
+	(.pwm_clock.periph_async_clk = (void *)DT_INST_CLOCKS_CELL_BY_NAME(n, rtcclk, subsystem)\
+	,), ())											\
+	COND_CODE_1(DT_NODE_EXISTS(DT_INST_CLOCKS_CTLR_BY_NAME(n, gclk)),			\
+	(.pwm_clock.periph_async_clk = (void *)DT_INST_CLOCKS_CELL_BY_NAME(n, gclk, subsystem),),\
+	())
 /* clang-format on */
 
 /**

@@ -283,8 +283,8 @@
 			clocks = <&mclkperiph CLOCK_MCHP_MCLKPERIPH_ID_APBA_RTC>,
 					<&rtcclock CLOCK_MCHP_RTC_ID>;
 			clock-names = "mclk", "rtcclk";
-            prescaler = <1>;
-        };
+			prescaler = <1>;
+		};
 		sercom0: sercom@40003000 {
 			compatible = "microchip,sercom-u2201";
 			status = "disabled";

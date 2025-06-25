@@ -434,17 +434,17 @@ static int pwm_mchp_init(const struct device *pwm_dev)
  * @note This macro conditionally includes  peripheral asynchronous clock configurations based on
  * the presence of relevant device tree properties.
  */
-#define PWM_MCHP_CLOCK_ASSIGN(n)                                                                   \
-	.pwm_clock.clock_dev = DEVICE_DT_GET(DT_NODELABEL(clock)),                                 \
-	.pwm_clock.host_core_sync_clk = (void *)(DT_INST_CLOCKS_CELL_BY_NAME(n, mclk, subsystem)), \
-	COND_CODE_1(DT_NODE_EXISTS(DT_INST_CLOCKS_CTLR_BY_NAME(n, rtcclk)),         \
-			(.pwm_clock.periph_async_clk = (void *)(DT_INST_CLOCKS_CELL_BY_NAME(n, rtcclk, subsystem)),),                                                                  \
-			())             \
-			 COND_CODE_1(\
-	DT_NODE_EXISTS\
-	(DT_INST_CLOCKS_CTLR_BY_NAME(n, gclk)),               \
-	(.pwm_clock.periph_async_clk = (void *)(DT_INST_CLOCKS_CELL_BY_NAME(n, gclk, subsystem)),),                                                                  \
+/* clang-format off */
+#define PWM_MCHP_CLOCK_ASSIGN(n)                                         \
+	.pwm_clock.clock_dev = DEVICE_DT_GET(DT_NODELABEL(clock)),           \
+	.pwm_clock.host_core_sync_clk = (void *)(DT_INST_CLOCKS_CELL_BY_NAME(n, mclk, subsystem)),\
+	COND_CODE_1(DT_NODE_EXISTS(DT_INST_CLOCKS_CTLR_BY_NAME(n, rtcclk)),			\
+	(.pwm_clock.periph_async_clk =								\
+	 (void *)(DT_INST_CLOCKS_CELL_BY_NAME(n, rtcclk, subsystem)),),				\
+	()) COND_CODE_1(DT_NODE_EXISTS(DT_INST_CLOCKS_CTLR_BY_NAME(n, gclk)),               \
+	(.pwm_clock.periph_async_clk = (void *)(DT_INST_CLOCKS_CELL_BY_NAME(n, gclk, subsystem)),),\
 	())
+/* clang-format on */
 
 /**
  * @brief Macro to define the PWM configuration structure for a specific instance.

@@ -12,9 +12,8 @@
  * for sam_d5x_e5x family
  */
 
-#ifndef MICROCHIP_MCHP_CLOCK_SAM_D5X_E5X_H_
-#define MICROCHIP_MCHP_CLOCK_SAM_D5X_E5X_H_
-
+#ifndef INCLUDE_ZEPHYR_DRIVERS_CLOCK_CONTROL_MCHP_CLOCK_SAM_D5X_E5X_H_
+#define INCLUDE_ZEPHYR_DRIVERS_CLOCK_CONTROL_MCHP_CLOCK_SAM_D5X_E5X_H_
 
 #include <zephyr/dt-bindings/clock/mchp_sam_d5x_e5x_clock.h>
 
@@ -83,7 +82,7 @@ typedef enum {
 	CLOCK_MCHP_FDPLL_SRC_XOSC0,
 	CLOCK_MCHP_FDPLL_SRC_XOSC1,
 
-	CLOCK_MCHP_FDPLL_SRC_COUNT
+	CLOCK_MCHP_FDPLL_SRC_MAX = CLOCK_MCHP_FDPLL_SRC_XOSC1
 } clock_mchp_fdpll_src_clock_t;
 
 typedef struct {
@@ -143,7 +142,7 @@ typedef enum {
 	CLOCK_MCHP_GCLK_SRC_FDPLL0,
 	CLOCK_MCHP_GCLK_SRC_FDPLL1,
 
-	CLOCK_MCHP_GCLK_SRC_COUNT
+	CLOCK_MCHP_GCLK_SRC_MAX = CLOCK_MCHP_GCLK_SRC_FDPLL1
 } clock_mchp_gclk_src_clock_t;
 
 typedef struct {
@@ -156,7 +155,7 @@ typedef struct {
 	/** @brief Represent a division value for the corresponding Generator. The actual division
 	 * factor is dependent on the state of div_select (gclk1 0 - 65535, others 0 - 255)
 	 */
-	uint32_t div_factor;
+	uint16_t div_factor;
 } clock_mchp_subsys_gclkgen_config_t;
 
 typedef struct {
@@ -192,4 +191,4 @@ typedef struct {
  */
 typedef uint32_t *clock_mchp_rate_t;
 
-#endif /* MICROCHIP_MCHP_CLOCK_SAM_D5X_E5X_H_ */
+#endif /* INCLUDE_ZEPHYR_DRIVERS_CLOCK_CONTROL_MCHP_CLOCK_SAM_D5X_E5X_H_ */

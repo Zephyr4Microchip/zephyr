@@ -133,7 +133,7 @@ typedef struct mchp_spi_clock {
 
 #define SPI_MCHP_ENABLE_CLOCK(dev)                                                                 \
 	clock_control_on(((const spi_mchp_dev_config_t *)(dev->config))->spi_clock.clock_dev,      \
-			 (((spi_mchp_dev_config_t *)(dev->config))->spi_clock.gclk_sys));         \
+			 (((spi_mchp_dev_config_t *)(dev->config))->spi_clock.gclk_sys));          \
 	clock_control_on(((const spi_mchp_dev_config_t *)(dev->config))->spi_clock.clock_dev,      \
 			 (((spi_mchp_dev_config_t *)(dev->config))->spi_clock.mclk_sys))
 

@@ -13,21 +13,38 @@
 #include <stdbool.h>
 #include <string.h>
 #include <zephyr/drivers/pinctrl.h>
+#include <zephyr/logging/log.h>
 
 #include <zephyr/drivers/clock_control/mchp_clock_control.h>
 
 /******************************************************************************
  * @brief Macro definitions
  *****************************************************************************/
+#define DT_DRV_COMPAT microchip_sam_d5x_e5x_clock
+LOG_MODULE_REGISTER(clock_mchp_sam_d5x_e5x, CONFIG_CLOCK_CONTROL_LOG_LEVEL);
+
 #define CLOCK_NODE DT_NODELABEL(clock)
 
-#define FREQ_32KHZ            32768
-#define FREQ_1KHZ             1024
-#define FREQ_DFLL_48MHZ       48000000
-#define GCLK_IO_COUNT         8
-#define GPH_MAX               47
-#define MMASK_MAX             31
+#define CLOCK_SUCCESS 0
+
+#define FREQ_32KHZ      32768
+#define FREQ_1KHZ       1024
+#define FREQ_DFLL_48MHZ 48000000
+
+/* maximum value for gclk pin I/O channel, 0 - 7 */
+#define GCLK_IO_MAX 7
+
+/* gclk peripheral channel max, 0 - 47 */
+#define GPH_MAX 47
+
+/* maximum value for mask bit position, 0 - 31 */
+#define MMASK_MAX 31
+
+/* maximum value for div, when div_select is clock source frequency divided by 2^(N+1) */
 #define GCLKGEN_POWER_DIV_MAX 29
+
+/* init iteration count, so that, the source clocks are initialized before executing init */
+#define CLOCK_INIT_ITERATION_COUNT 3
 
 /* mclkbus Not Applicable for a clock subsystem ID */
 #define MBUS_NA  (0x3f)
@@ -46,15 +63,15 @@
 #define SUBSYS_TYPE_GCLKPERIPH (6)
 #define SUBSYS_TYPE_MCLKCPU    (7)
 #define SUBSYS_TYPE_MCLKPERIPH (8)
-#define SUBSYS_TYPE_COUNT      (9)
+#define SUBSYS_TYPE_MAX        (8)
 
 /* mclk bus */
-#define MBUS_AHB   (0)
-#define MBUS_APBA  (1)
-#define MBUS_APBB  (2)
-#define MBUS_APBC  (3)
-#define MBUS_APBD  (4)
-#define MBUS_COUNT (5)
+#define MBUS_AHB  (0)
+#define MBUS_APBA (1)
+#define MBUS_APBB (2)
+#define MBUS_APBC (3)
+#define MBUS_APBD (4)
+#define MBUS_MAX  (4)
 
 /* XOSC instances */
 #define INST_XOSC0 0
@@ -202,7 +219,7 @@ typedef struct {
 
 /*
  * - 00..14 (15 bits): clock_mchp_gclkgen_t/clock_mchp_fdpll_src_clock_t
- * - 15..23 (9 bits): CLOCK_MCHP_FDPLL_SRC_COUNT+clock_mchp_gclk_src_clock_t
+ * - 15..23 (9 bits): CLOCK_MCHP_FDPLL_SRC_MAX+1+clock_mchp_gclk_src_clock_t
  */
 typedef enum {
 	ON_BITPOS_GCLK0 = CLOCK_MCHP_FDPLL_SRC_GCLK0,
@@ -220,32 +237,37 @@ typedef enum {
 	ON_BITPOS_XOSC32K_ = CLOCK_MCHP_FDPLL_SRC_XOSC32K,
 	ON_BITPOS_XOSC0_ = CLOCK_MCHP_FDPLL_SRC_XOSC0,
 	ON_BITPOS_XOSC1_ = CLOCK_MCHP_FDPLL_SRC_XOSC1,
-	ON_BITPOS_XOSC0 = CLOCK_MCHP_FDPLL_SRC_COUNT + CLOCK_MCHP_GCLK_SRC_XOSC0,
-	ON_BITPOS_XOSC1 = CLOCK_MCHP_FDPLL_SRC_COUNT + CLOCK_MCHP_GCLK_SRC_XOSC1,
-	ON_BITPOS_GCLKPIN = CLOCK_MCHP_FDPLL_SRC_COUNT + CLOCK_MCHP_GCLK_SRC_GCLKPIN,
-	ON_BITPOS_GCLKGEN1 = CLOCK_MCHP_FDPLL_SRC_COUNT + CLOCK_MCHP_GCLK_SRC_GCLKGEN1,
-	ON_BITPOS_OSCULP32K = CLOCK_MCHP_FDPLL_SRC_COUNT + CLOCK_MCHP_GCLK_SRC_OSCULP32K,
-	ON_BITPOS_XOSC32K = CLOCK_MCHP_FDPLL_SRC_COUNT + CLOCK_MCHP_GCLK_SRC_XOSC32K,
-	ON_BITPOS_DFLL = CLOCK_MCHP_FDPLL_SRC_COUNT + CLOCK_MCHP_GCLK_SRC_DFLL,
-	ON_BITPOS_FDPLL0 = CLOCK_MCHP_FDPLL_SRC_COUNT + CLOCK_MCHP_GCLK_SRC_FDPLL0,
-	ON_BITPOS_FDPLL1 = CLOCK_MCHP_FDPLL_SRC_COUNT + CLOCK_MCHP_GCLK_SRC_FDPLL1
+	ON_BITPOS_XOSC0 = CLOCK_MCHP_FDPLL_SRC_MAX + 1 + CLOCK_MCHP_GCLK_SRC_XOSC0,
+	ON_BITPOS_XOSC1 = CLOCK_MCHP_FDPLL_SRC_MAX + 1 + CLOCK_MCHP_GCLK_SRC_XOSC1,
+	ON_BITPOS_GCLKPIN = CLOCK_MCHP_FDPLL_SRC_MAX + 1 + CLOCK_MCHP_GCLK_SRC_GCLKPIN,
+	ON_BITPOS_GCLKGEN1 = CLOCK_MCHP_FDPLL_SRC_MAX + 1 + CLOCK_MCHP_GCLK_SRC_GCLKGEN1,
+	ON_BITPOS_OSCULP32K = CLOCK_MCHP_FDPLL_SRC_MAX + 1 + CLOCK_MCHP_GCLK_SRC_OSCULP32K,
+	ON_BITPOS_XOSC32K = CLOCK_MCHP_FDPLL_SRC_MAX + 1 + CLOCK_MCHP_GCLK_SRC_XOSC32K,
+	ON_BITPOS_DFLL = CLOCK_MCHP_FDPLL_SRC_MAX + 1 + CLOCK_MCHP_GCLK_SRC_DFLL,
+	ON_BITPOS_FDPLL0 = CLOCK_MCHP_FDPLL_SRC_MAX + 1 + CLOCK_MCHP_GCLK_SRC_FDPLL0,
+	ON_BITPOS_FDPLL1 = CLOCK_MCHP_FDPLL_SRC_MAX + 1 + CLOCK_MCHP_GCLK_SRC_FDPLL1
 } clock_mchp_on_bitpos_t;
 
 /** @brief clock driver data structure. */
 typedef struct {
 #if CONFIG_CLOCK_CONTROL_MCHP_ASYNC_ON
+	/* To indicate if async on is triggered and interrupt is yet to occur */
 	bool is_async_in_progress;
+
+	/* subsystem for which async on is triggered */
 	clock_mchp_subsys_t async_subsys;
+
+	/* async on call back function and user argument */
 	clock_control_cb_t async_cb;
 	void *async_cb_user_data;
 #endif /* CONFIG_CLOCK_CONTROL_MCHP_ASYNC_ON */
 
-	uint32_t xosc_crystal_freq[CLOCK_MCHP_XOSC_ID_COUNT];
-	uint32_t gclkpin_freq[GCLK_IO_COUNT];
+	uint32_t xosc_crystal_freq[CLOCK_MCHP_XOSC_ID_MAX + 1];
+	uint32_t gclkpin_freq[GCLK_IO_MAX + 1];
 
 	/*
 	 * - 00..14 (15 bits): clock_mchp_gclkgen_t/clock_mchp_fdpll_src_clock_t
-	 * - 15..23 (9 bits): CLOCK_MCHP_FDPLL_SRC_COUNT+clock_mchp_gclk_src_clock_t
+	 * - 15..23 (9 bits): CLOCK_MCHP_FDPLL_SRC_MAX+1+clock_mchp_gclk_src_clock_t
 	 */
 	uint32_t src_on_status;
 	clock_mchp_gclk_src_clock_t gclk0_src;
@@ -267,12 +289,12 @@ static enum clock_control_status clock_mchp_get_status(const struct device *dev,
 /**
  * @brief check if subsystem type and id are valid.
  */
-static int clock_mchp_check_subsys(clock_mchp_subsys_t subsys)
+static int clock_check_subsys(clock_mchp_subsys_t subsys)
 {
 	int ret_val;
 	uint32_t inst_max, gclkperiph_max, mclkbus_max, mclkmaskbit_max;
 
-	ret_val = -1;
+	ret_val = -EINVAL;
 	inst_max = 0;
 	gclkperiph_max = GPH_NA;
 	mclkbus_max = MBUS_NA;
@@ -284,53 +306,54 @@ static int clock_mchp_check_subsys(clock_mchp_subsys_t subsys)
 		}
 
 		/* Check if the specified subsystem was found. */
-		if (subsys.bits.type >= SUBSYS_TYPE_COUNT) {
+		if (subsys.bits.type > SUBSYS_TYPE_MAX) {
 			break;
 		}
 
 		switch (subsys.bits.type) {
-		case SUBSYS_TYPE_XOSC: {
-			inst_max = CLOCK_MCHP_XOSC_ID_COUNT;
+		case SUBSYS_TYPE_XOSC:
+			inst_max = CLOCK_MCHP_XOSC_ID_MAX;
 			break;
-		}
-		case SUBSYS_TYPE_DFLL: {
-			inst_max = CLOCK_MCHP_DFLL_COUNT;
-			gclkperiph_max = CLOCK_MCHP_DFLL_COUNT - 1;
+
+		case SUBSYS_TYPE_DFLL:
+			inst_max = CLOCK_MCHP_DFLL_MAX;
+			gclkperiph_max = CLOCK_MCHP_DFLL_MAX;
 			break;
-		}
-		case SUBSYS_TYPE_FDPLL: {
-			inst_max = CLOCK_MCHP_FDPLL_ID_COUNT;
-			gclkperiph_max = CLOCK_MCHP_FDPLL_ID_COUNT;
+
+		case SUBSYS_TYPE_FDPLL:
+			inst_max = CLOCK_MCHP_FDPLL_ID_MAX;
+			gclkperiph_max = CLOCK_MCHP_FDPLL_ID_MAX;
 			break;
-		}
-		case SUBSYS_TYPE_RTC: {
-			inst_max = CLOCK_MCHP_RTC_ID_COUNT;
+
+		case SUBSYS_TYPE_RTC:
+			inst_max = CLOCK_MCHP_RTC_ID_MAX;
 			break;
-		}
-		case SUBSYS_TYPE_OSC32K: {
-			inst_max = CLOCK_MCHP_OSC32K_ID_COUNT;
+
+		case SUBSYS_TYPE_OSC32K:
+			inst_max = CLOCK_MCHP_OSC32K_ID_MAX;
 			break;
-		}
-		case SUBSYS_TYPE_GCLKGEN: {
-			inst_max = CLOCK_MCHP_GCLKGEN_ID_COUNT;
+
+		case SUBSYS_TYPE_GCLKGEN:
+			inst_max = CLOCK_MCHP_GCLKGEN_ID_MAX;
 			break;
-		}
-		case SUBSYS_TYPE_GCLKPERIPH: {
-			inst_max = CLOCK_MCHP_GCLKPERIPH_ID_COUNT;
+
+		case SUBSYS_TYPE_GCLKPERIPH:
+			inst_max = CLOCK_MCHP_GCLKPERIPH_ID_MAX;
 			gclkperiph_max = GPH_MAX;
 			break;
-		}
-		case SUBSYS_TYPE_MCLKCPU: {
-			inst_max = CLOCK_MCHP_MCLKCPU_COUNT;
+
+		case SUBSYS_TYPE_MCLKCPU:
+			inst_max = CLOCK_MCHP_MCLKCPU_MAX;
 			break;
-		}
-		case SUBSYS_TYPE_MCLKPERIPH: {
-			inst_max = CLOCK_MCHP_MCLKPERIPH_ID_COUNT;
-			mclkbus_max = MBUS_COUNT - 1;
+
+		case SUBSYS_TYPE_MCLKPERIPH:
+			inst_max = CLOCK_MCHP_MCLKPERIPH_ID_MAX;
+			mclkbus_max = MBUS_MAX;
 			mclkmaskbit_max = MMASK_MAX;
 			break;
-		}
+
 		default:
+			LOG_ERR("Unsupported SUBSYS_TYPE");
 		}
 
 		/* Check if the specified id is valid. */
@@ -340,7 +363,7 @@ static int clock_mchp_check_subsys(clock_mchp_subsys_t subsys)
 			break;
 		}
 
-		ret_val = 0;
+		ret_val = CLOCK_SUCCESS;
 	} while (0);
 
 	return ret_val;
@@ -370,6 +393,7 @@ __IO uint32_t *get_mclkbus_mask_reg(mclk_registers_t *mclk_regs, uint32_t bus)
 		reg32 = &mclk_regs->MCLK_APBDMASK;
 		break;
 	default:
+		LOG_ERR("Unsupported mclkbus");
 		break;
 	}
 	return reg32;
@@ -384,29 +408,28 @@ void clock_disable_interrupt(const clock_mchp_config_t *config, const clock_mchp
 	oscctrl_registers_t *oscctrl_regs = config->oscctrl_regs;
 
 	switch (subsys.bits.type) {
-	case SUBSYS_TYPE_XOSC: {
+	case SUBSYS_TYPE_XOSC:
 		oscctrl_regs->OSCCTRL_INTENCLR = (subsys.bits.inst == INST_XOSC0)
 							 ? OSCCTRL_INTENCLR_XOSCRDY0_Msk
 							 : OSCCTRL_INTENCLR_XOSCRDY1_Msk;
 		break;
-	}
-	case SUBSYS_TYPE_FDPLL: {
+
+	case SUBSYS_TYPE_FDPLL:
 		oscctrl_regs->OSCCTRL_INTENCLR = (subsys.bits.inst == INST_FDPLL0)
 							 ? OSCCTRL_INTENCLR_DPLL0LCKR_Msk
 							 : OSCCTRL_INTENCLR_DPLL1LCKR_Msk;
 		break;
-	}
-	case SUBSYS_TYPE_DFLL: {
+
+	case SUBSYS_TYPE_DFLL:
 		oscctrl_regs->OSCCTRL_INTENCLR = OSCCTRL_INTENCLR_DFLLRDY_Msk;
 		break;
-	}
-	case SUBSYS_TYPE_OSC32K: {
+
+	case SUBSYS_TYPE_OSC32K:
 		config->osc32kctrl_regs->OSC32KCTRL_INTENCLR |= OSC32KCTRL_INTENCLR_XOSC32KRDY_Msk;
 		break;
-	}
-	default: {
+
+	default:
 		break;
-	}
 	}
 }
 
@@ -418,29 +441,28 @@ void clock_clear_interrupt(const clock_mchp_config_t *config, const clock_mchp_s
 	oscctrl_registers_t *oscctrl_regs = config->oscctrl_regs;
 
 	switch (subsys.bits.type) {
-	case SUBSYS_TYPE_XOSC: {
+	case SUBSYS_TYPE_XOSC:
 		oscctrl_regs->OSCCTRL_INTFLAG = (subsys.bits.inst == INST_XOSC0)
 							? OSCCTRL_INTFLAG_XOSCRDY0_Msk
 							: OSCCTRL_INTFLAG_XOSCRDY1_Msk;
 		break;
-	}
-	case SUBSYS_TYPE_FDPLL: {
+
+	case SUBSYS_TYPE_FDPLL:
 		oscctrl_regs->OSCCTRL_INTFLAG = (subsys.bits.inst == INST_FDPLL0)
 							? OSCCTRL_INTFLAG_DPLL0LCKR_Msk
 							: OSCCTRL_INTFLAG_DPLL1LCKR_Msk;
 		break;
-	}
-	case SUBSYS_TYPE_DFLL: {
+
+	case SUBSYS_TYPE_DFLL:
 		oscctrl_regs->OSCCTRL_INTFLAG = OSCCTRL_INTFLAG_DFLLRDY_Msk;
 		break;
-	}
-	case SUBSYS_TYPE_OSC32K: {
+
+	case SUBSYS_TYPE_OSC32K:
 		config->osc32kctrl_regs->OSC32KCTRL_INTFLAG |= OSC32KCTRL_INTFLAG_XOSC32KRDY_Msk;
 		break;
-	}
-	default: {
+
+	default:
 		break;
-	}
 	}
 }
 
@@ -452,29 +474,28 @@ void clock_enable_interrupt(const clock_mchp_config_t *config, const clock_mchp_
 	oscctrl_registers_t *oscctrl_regs = config->oscctrl_regs;
 
 	switch (subsys.bits.type) {
-	case SUBSYS_TYPE_XOSC: {
+	case SUBSYS_TYPE_XOSC:
 		oscctrl_regs->OSCCTRL_INTENSET = (subsys.bits.inst == INST_XOSC0)
 							 ? OSCCTRL_INTENSET_XOSCRDY0_Msk
 							 : OSCCTRL_INTENSET_XOSCRDY1_Msk;
 		break;
-	}
-	case SUBSYS_TYPE_FDPLL: {
+
+	case SUBSYS_TYPE_FDPLL:
 		oscctrl_regs->OSCCTRL_INTENSET = (subsys.bits.inst == INST_FDPLL0)
 							 ? OSCCTRL_INTENSET_DPLL0LCKR_Msk
 							 : OSCCTRL_INTENSET_DPLL1LCKR_Msk;
 		break;
-	}
-	case SUBSYS_TYPE_DFLL: {
+
+	case SUBSYS_TYPE_DFLL:
 		oscctrl_regs->OSCCTRL_INTENSET = OSCCTRL_INTENSET_DFLLRDY_Msk;
 		break;
-	}
-	case SUBSYS_TYPE_OSC32K: {
+
+	case SUBSYS_TYPE_OSC32K:
 		config->osc32kctrl_regs->OSC32KCTRL_INTENSET |= OSC32KCTRL_INTENSET_XOSC32KRDY_Msk;
 		break;
-	}
-	default: {
+
+	default:
 		break;
-	}
 	}
 }
 #endif /* CONFIG_CLOCK_CONTROL_MCHP_ASYNC_ON */
@@ -482,8 +503,8 @@ void clock_enable_interrupt(const clock_mchp_config_t *config, const clock_mchp_
 /**
  * @brief function to set/clear clock subsystem enable bit.
  */
-static inline int clock_on_off(const clock_mchp_config_t *config, const clock_mchp_subsys_t subsys,
-			       bool on)
+static int clock_on_off(const clock_mchp_config_t *config, const clock_mchp_subsys_t subsys,
+			bool on)
 {
 	oscctrl_registers_t *oscctrl_regs = config->oscctrl_regs;
 	osc32kctrl_registers_t *osc32kctrl_regs = config->osc32kctrl_regs;
@@ -497,7 +518,7 @@ static inline int clock_on_off(const clock_mchp_config_t *config, const clock_mc
 	__IO uint8_t *reg8 = NULL;
 	uint8_t reg8_val, inst;
 
-	ret_val = 0;
+	ret_val = CLOCK_SUCCESS;
 	inst = subsys.bits.inst;
 	switch (subsys.bits.type) {
 	case SUBSYS_TYPE_XOSC:
@@ -560,7 +581,7 @@ static inline int clock_on_off(const clock_mchp_config_t *config, const clock_mc
 		break;
 	}
 
-	if (ret_val == 0) {
+	if (ret_val == CLOCK_SUCCESS) {
 		if (reg32 != NULL) {
 			if (on == true) {
 				*reg32 |= reg32_val;
@@ -602,7 +623,7 @@ static int clock_get_rate_gclkgen(const struct device *dev, clock_mchp_gclkgen_t
 	uint16_t gclkgen_div;
 	bool power_div;
 
-	ret_val = 0;
+	ret_val = CLOCK_SUCCESS;
 	power_div = (((gclk_regs->GCLK_GENCTRL[gclkgen_id] & GCLK_GENCTRL_DIVSEL_Msk) >>
 		      GCLK_GENCTRL_DIVSEL_Pos) == GCLK_GENCTRL_DIVSEL_DIV1_Val)
 			    ? false
@@ -626,53 +647,50 @@ static int clock_get_rate_gclkgen(const struct device *dev, clock_mchp_gclkgen_t
 		}
 
 		switch (gclkgen_src) {
-		case CLOCK_MCHP_GCLK_SRC_XOSC0: {
+		case CLOCK_MCHP_GCLK_SRC_XOSC0:
 			gclkgen_src_freq = data->xosc_crystal_freq[INST_XOSC0];
 			break;
-		}
-		case CLOCK_MCHP_GCLK_SRC_XOSC1: {
+
+		case CLOCK_MCHP_GCLK_SRC_XOSC1:
 			gclkgen_src_freq = data->xosc_crystal_freq[INST_XOSC1];
 			break;
-		}
-		case CLOCK_MCHP_GCLK_SRC_DFLL: {
+
+		case CLOCK_MCHP_GCLK_SRC_DFLL:
 			ret_val = clock_get_rate_dfll(dev, &gclkgen_src_freq);
 			break;
-		}
-		case CLOCK_MCHP_GCLK_SRC_FDPLL0: {
+
+		case CLOCK_MCHP_GCLK_SRC_FDPLL0:
 			ret_val = clock_get_rate_fdpll(dev, INST_FDPLL0, &gclkgen_src_freq);
 			break;
-		}
+
 		case CLOCK_MCHP_GCLK_SRC_FDPLL1: {
 			ret_val = clock_get_rate_fdpll(dev, INST_FDPLL1, &gclkgen_src_freq);
 			break;
 		}
 		case CLOCK_MCHP_GCLK_SRC_OSCULP32K:
-		case CLOCK_MCHP_GCLK_SRC_XOSC32K: {
+		case CLOCK_MCHP_GCLK_SRC_XOSC32K:
 			gclkgen_src_freq = FREQ_32KHZ;
 			break;
-		}
-		case CLOCK_MCHP_GCLK_SRC_GCLKPIN: {
-			if (gclkgen_id < GCLK_IO_COUNT) {
+
+		case CLOCK_MCHP_GCLK_SRC_GCLKPIN:
+			if (gclkgen_id <= GCLK_IO_MAX) {
 				gclkgen_src_freq = data->xosc_crystal_freq[gclkgen_id];
 			} else {
 				ret_val = -ENOTSUP;
 			}
 			break;
-		}
-		case CLOCK_MCHP_GCLK_SRC_GCLKGEN1: {
-			if (gclkgen_id == CLOCK_MCHP_GCLKGEN_GEN1) {
-				ret_val = -ELOOP;
-				break;
-			}
-			ret_val = clock_get_rate_gclkgen(dev, CLOCK_MCHP_GCLKGEN_GEN1,
-							 CLOCK_MCHP_GCLK_SRC_COUNT,
-							 &gclkgen_src_freq);
+
+		case CLOCK_MCHP_GCLK_SRC_GCLKGEN1:
+			ret_val = (gclkgen_id == CLOCK_MCHP_GCLKGEN_GEN1)
+					  ? -ELOOP
+					  : clock_get_rate_gclkgen(dev, CLOCK_MCHP_GCLKGEN_GEN1,
+								   CLOCK_MCHP_GCLK_SRC_MAX + 1,
+								   &gclkgen_src_freq);
 			break;
 		default:
 			break;
 		}
-		}
-		if (ret_val != 0) {
+		if (ret_val != CLOCK_SUCCESS) {
 			break;
 		}
 		/* get gclk generator clock divider*/
@@ -694,7 +712,7 @@ static int clock_get_rate_gclkgen(const struct device *dev, clock_mchp_gclkgen_t
 		} else {
 			/* if DIV value is 0, has same effect as DIV value 1 */
 			if (gclkgen_div == 0) {
-				gclkgen_div++;
+				gclkgen_div = 1;
 			}
 		}
 		*freq = gclkgen_src_freq / gclkgen_div;
@@ -713,7 +731,7 @@ static int clock_get_rate_dfll(const struct device *dev, uint32_t *freq)
 	uint32_t multiply_factor, gclkgen_freq;
 	clock_mchp_gclkgen_t src_gclkgen;
 
-	ret_val = 0;
+	ret_val = CLOCK_SUCCESS;
 	if ((oscctrl_regs->OSCCTRL_STATUS & OSCCTRL_STATUS_DFLLRDY_Msk) == 0) {
 		/* Return rate as 0, if clock is not on */
 		*freq = 0;
@@ -730,7 +748,7 @@ static int clock_get_rate_dfll(const struct device *dev, uint32_t *freq)
 
 		ret_val = clock_get_rate_gclkgen(dev, src_gclkgen, CLOCK_MCHP_GCLK_SRC_DFLL,
 						 &gclkgen_freq);
-		if (ret_val == 0) {
+		if (ret_val == CLOCK_SUCCESS) {
 			*freq = multiply_factor * gclkgen_freq;
 		}
 	}
@@ -751,7 +769,7 @@ static int clock_get_rate_fdpll(const struct device *dev, uint8_t fdpll_id, uint
 	uint8_t ref_clk_type;
 	bool div_en;
 
-	ret_val = 0;
+	ret_val = CLOCK_SUCCESS;
 	do {
 		/* Return rate as 0, if clock is not on */
 		if (clock_mchp_get_status(dev, (clock_control_subsys_t)MCHP_CLOCK_DERIVE_ID(
@@ -768,30 +786,29 @@ static int clock_get_rate_fdpll(const struct device *dev, uint8_t fdpll_id, uint
 		div_en = false;
 
 		switch (ref_clk_type) {
-		case OSCCTRL_DPLLCTRLB_REFCLK_GCLK_Val: {
+		case OSCCTRL_DPLLCTRLB_REFCLK_GCLK_Val:
 			src_gclkgen = (config->gclk_regs->GCLK_PCHCTRL[fdpll_id + 1] &
 				       GCLK_PCHCTRL_GEN_Msk) >>
 				      GCLK_PCHCTRL_GEN_Pos;
 			ret_val = clock_get_rate_gclkgen(
 				dev, src_gclkgen, CLOCK_MCHP_GCLK_SRC_FDPLL0 + fdpll_id, &src_freq);
 			break;
-		}
-		case OSCCTRL_DPLLCTRLB_REFCLK_XOSC32_Val: {
+
+		case OSCCTRL_DPLLCTRLB_REFCLK_XOSC32_Val:
 			src_freq = FREQ_32KHZ;
 			break;
-		}
-		case OSCCTRL_DPLLCTRLB_REFCLK_XOSC0_Val: {
+
+		case OSCCTRL_DPLLCTRLB_REFCLK_XOSC0_Val:
 			src_freq = data->xosc_crystal_freq[0];
 			div_en = true;
 			break;
-		}
-		case OSCCTRL_DPLLCTRLB_REFCLK_XOSC1_Val: {
+
+		case OSCCTRL_DPLLCTRLB_REFCLK_XOSC1_Val:
 			src_freq = data->xosc_crystal_freq[1];
 			div_en = true;
 			break;
 		}
-		}
-		if (ret_val != 0) {
+		if (ret_val != CLOCK_SUCCESS) {
 			break;
 		}
 		if (div_en == true) {
@@ -808,7 +825,7 @@ static int clock_get_rate_fdpll(const struct device *dev, uint8_t fdpll_id, uint
 			    OSCCTRL_DPLLRATIO_LDRFRAC_Pos;
 
 		frac_mult_max = OSCCTRL_DPLLRATIO_LDRFRAC_Msk >> OSCCTRL_DPLLRATIO_LDRFRAC_Pos;
-		*freq = src_freq * (((mult_int + 1) * (frac_mult_max + 1)) + mult_frac) /
+		*freq = (src_freq * (((mult_int + 1) * (frac_mult_max + 1)) + mult_frac)) /
 			(frac_mult_max + 1);
 	} while (0);
 
@@ -852,6 +869,7 @@ static void clock_mchp_isr(const struct device *dev)
  * @return 0 if the clock is successfully turned on
  * @return -ENOTSUP If the requested operation is not supported.
  * @return -ETIMEDOUT If the requested operation is timedout.
+ * @return -EALREADY If clock is already on.
  */
 static int clock_mchp_on(const struct device *dev, clock_control_subsys_t sys)
 {
@@ -867,12 +885,19 @@ static int clock_mchp_on(const struct device *dev, clock_control_subsys_t sys)
 	ret_val = -ENOTSUP;
 	do {
 		/* Validate subsystem. */
-		if (0 != clock_mchp_check_subsys(subsys)) {
+		if (CLOCK_SUCCESS != clock_check_subsys(subsys)) {
+			break;
+		}
+
+		status = clock_mchp_get_status(dev, sys);
+		if (status == CLOCK_CONTROL_STATUS_ON) {
+			/* clock is already on. */
+			ret_val = -EALREADY;
 			break;
 		}
 
 		/* Check if the clock on operation is successful. */
-		if (clock_on_off(config, subsys, true) == 0) {
+		if (clock_on_off(config, subsys, true) == CLOCK_SUCCESS) {
 			is_wait = true;
 		}
 	} while (0);
@@ -882,7 +907,7 @@ static int clock_mchp_on(const struct device *dev, clock_control_subsys_t sys)
 		status = clock_mchp_get_status(dev, sys);
 		if (status == CLOCK_CONTROL_STATUS_ON) {
 			/* Successfully turned on clock. */
-			ret_val = 0;
+			ret_val = CLOCK_SUCCESS;
 			break;
 		}
 		if (on_timeout_ms < config->on_timeout_ms) {
@@ -910,6 +935,7 @@ static int clock_mchp_on(const struct device *dev, clock_control_subsys_t sys)
  *
  * @return 0 if the clock is successfully turned off
  * @return -ENOTSUP If the requested operation is not supported.
+ * @return -EALREADY If clock is already off.
  */
 static int clock_mchp_off(const struct device *dev, clock_control_subsys_t sys)
 {
@@ -918,12 +944,19 @@ static int clock_mchp_off(const struct device *dev, clock_control_subsys_t sys)
 
 	/* Return value for the operation status. */
 	int ret_val;
+	enum clock_control_status status;
 
 	subsys.val = (uint32_t)sys;
 	ret_val = -ENOTSUP;
 	do {
 		/* Validate subsystem. */
-		if (0 != clock_mchp_check_subsys(subsys)) {
+		if (CLOCK_SUCCESS != clock_check_subsys(subsys)) {
+			break;
+		}
+		status = clock_mchp_get_status(dev, sys);
+		if (status == CLOCK_CONTROL_STATUS_OFF) {
+			/* clock is already off. */
+			ret_val = -EALREADY;
 			break;
 		}
 
@@ -975,7 +1008,7 @@ static enum clock_control_status clock_mchp_get_status(const struct device *dev,
 
 	do {
 		/* Validate subsystem. */
-		if (0 != clock_mchp_check_subsys(subsys)) {
+		if (CLOCK_SUCCESS != clock_check_subsys(subsys)) {
 			break;
 		}
 
@@ -1145,7 +1178,7 @@ static int clock_mchp_async_on(const struct device *dev, clock_control_subsys_t 
 			break;
 		}
 		/* Validate subsystem. */
-		if (0 != clock_mchp_check_subsys(subsys)) {
+		if (CLOCK_SUCCESS != clock_check_subsys(subsys)) {
 			break;
 		}
 
@@ -1163,7 +1196,7 @@ static int clock_mchp_async_on(const struct device *dev, clock_control_subsys_t 
 		case SUBSYS_TYPE_XOSC:
 		case SUBSYS_TYPE_FDPLL:
 		case SUBSYS_TYPE_DFLL:
-		case SUBSYS_TYPE_OSC32K: {
+		case SUBSYS_TYPE_OSC32K:
 			/* Clear the interrupt before enabling */
 			clock_clear_interrupt(config, subsys);
 			clock_enable_interrupt(config, subsys);
@@ -1177,15 +1210,14 @@ static int clock_mchp_async_on(const struct device *dev, clock_control_subsys_t 
 			/* Clock interrupt is enabled, attempt to turn it on. */
 			ret_val = clock_on_off(config, subsys, true);
 			break;
-		}
-		default: {
+
+		default:
 			/* if interrupt is not supported, turn on clock and invoke callback here */
 			ret_val = clock_on_off(config, subsys, true);
-			if ((ret_val == 0) && (cb != NULL)) {
+			if ((ret_val == CLOCK_SUCCESS) && (cb != NULL)) {
 				cb(dev, (clock_control_subsys_t)subsys.val, user_data);
 			}
 			break;
-		}
 		}
 
 	} while (0);
@@ -1218,11 +1250,11 @@ static int clock_mchp_get_rate(const struct device *dev, clock_control_subsys_t 
 	clock_mchp_subsys_t subsys;
 
 	subsys.val = (uint32_t)sys;
-	ret_val = 0;
+	ret_val = CLOCK_SUCCESS;
 	inst = subsys.bits.inst;
 	do {
 		/* Validate subsystem. */
-		if (0 != clock_mchp_check_subsys(subsys)) {
+		if (CLOCK_SUCCESS != clock_check_subsys(subsys)) {
 			ret_val = -ENOTSUP;
 			break;
 		}
@@ -1234,19 +1266,19 @@ static int clock_mchp_get_rate(const struct device *dev, clock_control_subsys_t 
 		}
 
 		switch (subsys.bits.type) {
-		case SUBSYS_TYPE_XOSC: {
+		case SUBSYS_TYPE_XOSC:
 			*freq = data->xosc_crystal_freq[inst];
 			break;
-		}
-		case SUBSYS_TYPE_DFLL: {
+
+		case SUBSYS_TYPE_DFLL:
 			ret_val = clock_get_rate_dfll(dev, freq);
 			break;
-		}
-		case SUBSYS_TYPE_FDPLL: {
+
+		case SUBSYS_TYPE_FDPLL:
 			ret_val = clock_get_rate_fdpll(dev, inst, freq);
 			break;
-		}
-		case SUBSYS_TYPE_RTC: {
+
+		case SUBSYS_TYPE_RTC:
 			/* get rtc source clock*/
 			rtc_src = config->osc32kctrl_regs->OSC32KCTRL_RTCCTRL &
 				  OSC32KCTRL_RTCCTRL_RTCSEL_Msk;
@@ -1261,8 +1293,8 @@ static int clock_mchp_get_rate(const struct device *dev, clock_control_subsys_t 
 				ret_val = -ENOTSUP;
 			}
 			break;
-		}
-		case SUBSYS_TYPE_OSC32K: {
+
+		case SUBSYS_TYPE_OSC32K:
 			if ((inst == INST_OSC32K_OSCULP1K) || (inst == INST_OSC32K_XOSC1K)) {
 				*freq = FREQ_1KHZ;
 
@@ -1271,26 +1303,26 @@ static int clock_mchp_get_rate(const struct device *dev, clock_control_subsys_t 
 				*freq = FREQ_32KHZ;
 			}
 			break;
-		}
-		case SUBSYS_TYPE_GCLKGEN: {
-			ret_val =
-				clock_get_rate_gclkgen(dev, inst, CLOCK_MCHP_GCLK_SRC_COUNT, freq);
+
+		case SUBSYS_TYPE_GCLKGEN:
+			ret_val = clock_get_rate_gclkgen(dev, inst, CLOCK_MCHP_GCLK_SRC_MAX + 1,
+							 freq);
 			break;
-		}
-		case SUBSYS_TYPE_GCLKPERIPH: {
+
+		case SUBSYS_TYPE_GCLKPERIPH:
 			gclkperiph_src = (config->gclk_regs->GCLK_PCHCTRL[subsys.bits.gclkperiph] &
 					  GCLK_PCHCTRL_GEN_Msk) >>
 					 GCLK_PCHCTRL_GEN_Pos;
 			ret_val = clock_get_rate_gclkgen(dev, gclkperiph_src,
-							 CLOCK_MCHP_GCLK_SRC_COUNT, freq);
+							 CLOCK_MCHP_GCLK_SRC_MAX + 1, freq);
 			break;
-		}
+
 		case SUBSYS_TYPE_MCLKCPU:
-		case SUBSYS_TYPE_MCLKPERIPH: {
+		case SUBSYS_TYPE_MCLKPERIPH:
 			/* source for mclk is always gclk0 */
-			ret_val = clock_get_rate_gclkgen(dev, 0, CLOCK_MCHP_GCLK_SRC_COUNT,
+			ret_val = clock_get_rate_gclkgen(dev, 0, CLOCK_MCHP_GCLK_SRC_MAX + 1,
 							 &gclkgen_src_freq);
-			if (ret_val == 0) {
+			if (ret_val == CLOCK_SUCCESS) {
 				cpu_div = (config->mclk_regs->MCLK_CPUDIV & MCLK_CPUDIV_DIV_Msk) >>
 					  MCLK_CPUDIV_DIV_Pos;
 				if (cpu_div != 0) {
@@ -1298,7 +1330,6 @@ static int clock_mchp_get_rate(const struct device *dev, clock_control_subsys_t 
 				}
 			}
 			break;
-		}
 		}
 	} while (0);
 
@@ -1338,198 +1369,200 @@ static int clock_mchp_set_rate(const struct device *dev, clock_control_subsys_t 
 	bool div_en, power_div;
 
 	subsys.val = (uint32_t)sys;
-	ret_val = ENOTSUP;
-	do {
-		/* Validate subsystem. */
-		if (0 != clock_mchp_check_subsys(subsys)) {
-			break;
-		}
+	ret_val = -ENOTSUP;
 
-		inst = subsys.bits.inst;
-		switch (subsys.bits.type) {
-		case SUBSYS_TYPE_XOSC:
-		case SUBSYS_TYPE_RTC:
-		case SUBSYS_TYPE_OSC32K:
-		case SUBSYS_TYPE_MCLKPERIPH:
-		case SUBSYS_TYPE_GCLKPERIPH: {
-			break;
-		}
-		case SUBSYS_TYPE_DFLL: {
-			if ((oscctrl_regs->OSCCTRL_DFLLCTRLB & OSCCTRL_DFLLCTRLB_MODE_Msk) == 0) {
-				/* in open loop mode*/
-				break;
-			}
+	/* Validate subsystem. */
+	if (CLOCK_SUCCESS != clock_check_subsys(subsys)) {
+		/* Has to return from here, else compliance check give many leading tabs error */
+		return ret_val;
+	}
+
+	/* check if rate is 0 */
+	if (rate == 0) {
+		/* Has to return from here, else compliance check give many leading tabs error */
+		return ret_val;
+	}
+
+	inst = subsys.bits.inst;
+	switch (subsys.bits.type) {
+	case SUBSYS_TYPE_XOSC:
+	case SUBSYS_TYPE_RTC:
+	case SUBSYS_TYPE_OSC32K:
+	case SUBSYS_TYPE_MCLKPERIPH:
+	case SUBSYS_TYPE_GCLKPERIPH:
+		break;
+	case SUBSYS_TYPE_DFLL:
+		if ((oscctrl_regs->OSCCTRL_DFLLCTRLB & OSCCTRL_DFLLCTRLB_MODE_Msk) != 0) {
 			/* in closed loop mode*/
 			/* PCHCTRL_0 is for DFLL*/
 			src_gclkgen = (gclk_regs->GCLK_PCHCTRL[0] & GCLK_PCHCTRL_GEN_Msk) >>
 				      GCLK_PCHCTRL_GEN_Pos;
 
-			if (0 == clock_get_rate_gclkgen(dev, src_gclkgen, CLOCK_MCHP_GCLK_SRC_DFLL,
-							&src_freq)) {
+			if (CLOCK_SUCCESS == clock_get_rate_gclkgen(dev, src_gclkgen,
+								    CLOCK_MCHP_GCLK_SRC_DFLL,
+								    &src_freq)) {
+				if (src_freq == 0) {
+					break;
+				}
 				mult_int = rate / src_freq;
-				if (((rate % src_freq) == 0) && (mult_int < 0xFFFF)) {
+				if (((rate % src_freq) == 0) && (mult_int <= 0xFFFF)) {
 					oscctrl_regs->OSCCTRL_DFLLMUL &= ~OSCCTRL_DFLLMUL_MUL_Msk;
 					oscctrl_regs->OSCCTRL_DFLLMUL |=
 						OSCCTRL_DFLLMUL_MUL(mult_int);
-					ret_val = 0;
+					ret_val = CLOCK_SUCCESS;
 				}
 			}
-			break;
-		}
-		case SUBSYS_TYPE_FDPLL: {
-			ref_clk_type = (oscctrl_regs->DPLL[inst].OSCCTRL_DPLLCTRLB &
-					OSCCTRL_DPLLCTRLB_REFCLK_Msk) >>
-				       OSCCTRL_DPLLCTRLB_REFCLK_Pos;
-			div_en = false;
-			if (ref_clk_type == OSCCTRL_DPLLCTRLB_REFCLK_GCLK_Val) {
-				src_gclkgen = (gclk_regs->GCLK_PCHCTRL[inst + 1] &
-					       GCLK_PCHCTRL_GEN_Msk) >>
-					      GCLK_PCHCTRL_GEN_Pos;
-				if (clock_get_rate_gclkgen(dev, src_gclkgen,
-							   CLOCK_MCHP_GCLK_SRC_FDPLL0 + inst,
-							   &src_freq) != 0) {
-					break;
-				}
-			} else if (ref_clk_type == OSCCTRL_DPLLCTRLB_REFCLK_XOSC32_Val) {
-				src_freq = FREQ_32KHZ;
-			} else if (ref_clk_type == OSCCTRL_DPLLCTRLB_REFCLK_XOSC0_Val) {
-				src_freq = data->xosc_crystal_freq[0];
-				div_en = true;
-			} else if (ref_clk_type == OSCCTRL_DPLLCTRLB_REFCLK_XOSC1_Val) {
-				src_freq = data->xosc_crystal_freq[1];
-				div_en = true;
-			} else {
+		} /* else in open loop mode & have fixed rate */
+		break;
+
+	case SUBSYS_TYPE_FDPLL:
+		ref_clk_type = (oscctrl_regs->DPLL[inst].OSCCTRL_DPLLCTRLB &
+				OSCCTRL_DPLLCTRLB_REFCLK_Msk) >>
+			       OSCCTRL_DPLLCTRLB_REFCLK_Pos;
+		div_en = false;
+		if (ref_clk_type == OSCCTRL_DPLLCTRLB_REFCLK_GCLK_Val) {
+			src_gclkgen = (gclk_regs->GCLK_PCHCTRL[inst + 1] & GCLK_PCHCTRL_GEN_Msk) >>
+				      GCLK_PCHCTRL_GEN_Pos;
+			if (clock_get_rate_gclkgen(dev, src_gclkgen,
+						   CLOCK_MCHP_GCLK_SRC_FDPLL0 + inst,
+						   &src_freq) != CLOCK_SUCCESS) {
 				break;
 			}
+		} else if (ref_clk_type == OSCCTRL_DPLLCTRLB_REFCLK_XOSC32_Val) {
+			src_freq = FREQ_32KHZ;
+		} else if (ref_clk_type == OSCCTRL_DPLLCTRLB_REFCLK_XOSC0_Val) {
+			src_freq = data->xosc_crystal_freq[0];
+			div_en = true;
+		} else if (ref_clk_type == OSCCTRL_DPLLCTRLB_REFCLK_XOSC1_Val) {
+			src_freq = data->xosc_crystal_freq[1];
+			div_en = true;
+		} else {
+			break;
+		}
 
-			/* Range of values to write in register is from 0, which have "+ 1" effect
-			 */
-			int_mult_max = OSCCTRL_DPLLRATIO_LDR_Msk >> OSCCTRL_DPLLRATIO_LDR_Pos;
-			frac_mult_max =
-				OSCCTRL_DPLLRATIO_LDRFRAC_Msk >> OSCCTRL_DPLLRATIO_LDRFRAC_Pos;
-			div_max = OSCCTRL_DPLLCTRLB_DIV_Msk >> OSCCTRL_DPLLCTRLB_DIV_Pos;
+		/* Range of values to write in register is from 0, which have "+ 1" effect
+		 */
+		int_mult_max = OSCCTRL_DPLLRATIO_LDR_Msk >> OSCCTRL_DPLLRATIO_LDR_Pos;
+		frac_mult_max = OSCCTRL_DPLLRATIO_LDRFRAC_Msk >> OSCCTRL_DPLLRATIO_LDRFRAC_Pos;
+		div_max = OSCCTRL_DPLLCTRLB_DIV_Msk >> OSCCTRL_DPLLCTRLB_DIV_Pos;
 
-			div = 0;
-			do {
-				calc_freq_in =
-					(div_en == true) ? (src_freq / (2 * (div + 1))) : src_freq;
-				for (mult_int = 0; mult_int <= int_mult_max; mult_int++) {
-					if (((calc_freq_in * (mult_int + 1)) > rate) ||
-					    (ret_val == 0)) {
+		div = 0;
+		do {
+			calc_freq_in = (div_en == true) ? (src_freq / (2 * (div + 1))) : src_freq;
+			/* iterate to find correct mult_int and mult_frac */
+			for (mult_int = 0; mult_int <= int_mult_max; mult_int++) {
+				if (((calc_freq_in * (mult_int + 1)) > rate) ||
+				    (ret_val == CLOCK_SUCCESS)) {
+					/* break if value is above required freq */
+					break;
+				}
+				for (mult_frac = 0; mult_frac <= frac_mult_max; mult_frac++) {
+					calc = calc_freq_in *
+					       (((mult_int + 1) * (frac_mult_max + 1)) +
+						mult_frac) /
+					       (frac_mult_max + 1);
+					if ((calc == rate) && (div_en == true)) {
+						oscctrl_regs->DPLL[inst].OSCCTRL_DPLLCTRLB &=
+							~OSCCTRL_DPLLCTRLB_DIV_Msk;
+						oscctrl_regs->DPLL[inst].OSCCTRL_DPLLCTRLB |=
+							OSCCTRL_DPLLCTRLB_DIV(div);
+					}
+					if (calc == rate) {
+						/* found matching values */
+						oscctrl_regs->DPLL[inst].OSCCTRL_DPLLRATIO =
+							OSCCTRL_DPLLRATIO_LDR(mult_int) |
+							OSCCTRL_DPLLRATIO_LDRFRAC(mult_frac);
+						ret_val = CLOCK_SUCCESS;
 						break;
 					}
-					for (mult_frac = 0; mult_frac <= frac_mult_max;
-					     mult_frac++) {
-						calc = calc_freq_in *
-						       (((mult_int + 1) * (frac_mult_max + 1)) +
-							mult_frac) /
-						       (frac_mult_max + 1);
-						if ((calc == rate) && (div_en == true)) {
-							oscctrl_regs->DPLL[inst]
-								.OSCCTRL_DPLLCTRLB &=
-								~OSCCTRL_DPLLCTRLB_DIV_Msk;
-							oscctrl_regs->DPLL[inst]
-								.OSCCTRL_DPLLCTRLB |=
-								OSCCTRL_DPLLCTRLB_DIV(div);
-						}
-						if (calc == rate) {
-							oscctrl_regs->DPLL[inst].OSCCTRL_DPLLRATIO =
-								OSCCTRL_DPLLRATIO_LDR(mult_int) |
-								OSCCTRL_DPLLRATIO_LDRFRAC(
-									mult_frac);
-							ret_val = 0;
-							break;
-						}
-					}
 				}
-				div++;
-			} while ((div_en == true) && (div <= div_max) && (ret_val != 0));
-			break;
-		}
-		case SUBSYS_TYPE_GCLKGEN: {
-			if (clock_get_rate_gclkgen(dev, inst, CLOCK_MCHP_GCLK_SRC_COUNT,
-						   &src_freq) != 0) {
-				break;
 			}
-			power_div = (((gclk_regs->GCLK_GENCTRL[inst] & GCLK_GENCTRL_DIVSEL_Msk) >>
-				      GCLK_GENCTRL_DIVSEL_Pos) == GCLK_GENCTRL_DIVSEL_DIV1_Val)
-					    ? false
-					    : true;
-			div = (gclk_regs->GCLK_GENCTRL[inst] & GCLK_GENCTRL_DIV_Msk) >>
-			      GCLK_GENCTRL_DIV_Pos;
-			if (power_div == true) {
-				src_freq = src_freq << (div + 1);
-			} else {
-				if (div == 0) {
-					div++;
-				}
-				src_freq *= div;
-			}
+			div++;
+		} while ((div_en == true) && (div <= div_max) && (ret_val != CLOCK_SUCCESS));
+		break;
 
-			div = src_freq / rate;
-			div_max = GCLK_GENCTRL_DIV_Msk >> GCLK_GENCTRL_DIV_Pos;
-			/*
-			 * For gclk1, 8 division factor bits - DIV[7:0]
-			 * others, 16 division factor bits - DIV[15:0]
-			 */
-			if (inst != CLOCK_MCHP_GCLKGEN_GEN1) {
-				div_max = div_max & 0xFF;
-			}
-			if (power_div == false) {
-				if (((src_freq % rate) == 0) && (div <= div_max)) {
-					gclk_regs->GCLK_GENCTRL[inst] &= ~GCLK_GENCTRL_DIV_Msk;
-					gclk_regs->GCLK_GENCTRL[inst] |= GCLK_GENCTRL_DIV(div);
-					ret_val = 0;
-				}
-			} else {
-				/* Check if div is power of 2 */
-				if (((src_freq % rate) == 0) && ((div & (div - 1)) == 0)) {
-					calc = 0;
-					while (div > 1) {
-						div >>= 1;
-						calc++;
-					}
-					gclk_regs->GCLK_GENCTRL[inst] &= ~GCLK_GENCTRL_DIV_Msk;
-					gclk_regs->GCLK_GENCTRL[inst] |= GCLK_GENCTRL_DIV(calc - 1);
-					ret_val = 0;
-				}
-			}
+	case SUBSYS_TYPE_GCLKGEN:
+		if (clock_get_rate_gclkgen(dev, inst, CLOCK_MCHP_GCLK_SRC_MAX + 1, &src_freq) !=
+		    CLOCK_SUCCESS) {
 			break;
 		}
-		case SUBSYS_TYPE_MCLKCPU: {
-			/* source for mclk is always gclk0 */
-			if (clock_get_rate_gclkgen(dev, 0, CLOCK_MCHP_GCLK_SRC_COUNT, &src_freq) !=
-			    0) {
+		power_div = (((gclk_regs->GCLK_GENCTRL[inst] & GCLK_GENCTRL_DIVSEL_Msk) >>
+			      GCLK_GENCTRL_DIVSEL_Pos) == GCLK_GENCTRL_DIVSEL_DIV1_Val)
+				    ? false
+				    : true;
+		div = (gclk_regs->GCLK_GENCTRL[inst] & GCLK_GENCTRL_DIV_Msk) >>
+		      GCLK_GENCTRL_DIV_Pos;
+		if (power_div == true) {
+			src_freq = src_freq << (div + 1);
+		} else {
+			if (div == 0) {
+				div++;
+			}
+			src_freq *= div;
+		}
+
+		div = src_freq / rate;
+		div_max = GCLK_GENCTRL_DIV_Msk >> GCLK_GENCTRL_DIV_Pos;
+		/*
+		 * For gclk1, 8 division factor bits - DIV[7:0]
+		 * others, 16 division factor bits - DIV[15:0]
+		 */
+		if (inst != CLOCK_MCHP_GCLKGEN_GEN1) {
+			div_max = div_max & 0xFF;
+		}
+		if (power_div == false) {
+			if (((src_freq % rate) == 0) && (div <= div_max)) {
+				gclk_regs->GCLK_GENCTRL[inst] &= ~GCLK_GENCTRL_DIV_Msk;
+				gclk_regs->GCLK_GENCTRL[inst] |= GCLK_GENCTRL_DIV(div);
+				ret_val = CLOCK_SUCCESS;
+			}
+		} else {
+			/* Check if div is power of 2 */
+			if (((src_freq % rate) == 0) && ((div & (div - 1)) == 0)) {
+				calc = 0;
+				while (div > 1) {
+					div >>= 1;
+					calc++;
+				}
+				gclk_regs->GCLK_GENCTRL[inst] &= ~GCLK_GENCTRL_DIV_Msk;
+				gclk_regs->GCLK_GENCTRL[inst] |= GCLK_GENCTRL_DIV(calc - 1);
+				ret_val = CLOCK_SUCCESS;
+			}
+		}
+		break;
+
+	case SUBSYS_TYPE_MCLKCPU:
+		/* source for mclk is always gclk0 */
+		if (clock_get_rate_gclkgen(dev, 0, CLOCK_MCHP_GCLK_SRC_MAX + 1, &src_freq) !=
+		    CLOCK_SUCCESS) {
+			break;
+		}
+		div = src_freq / rate;
+		if ((src_freq % rate) == 0) {
+			switch (div) {
+			case MCLK_CPUDIV_DIV_DIV1_Val:
+			case MCLK_CPUDIV_DIV_DIV2_Val:
+			case MCLK_CPUDIV_DIV_DIV4_Val:
+			case MCLK_CPUDIV_DIV_DIV8_Val:
+			case MCLK_CPUDIV_DIV_DIV16_Val:
+			case MCLK_CPUDIV_DIV_DIV32_Val:
+			case MCLK_CPUDIV_DIV_DIV64_Val:
+			case MCLK_CPUDIV_DIV_DIV128_Val:
+				config->mclk_regs->MCLK_CPUDIV = MCLK_CPUDIV_DIV(div);
+				ret_val = CLOCK_SUCCESS;
 				break;
+			default:
 			}
-			div = src_freq / rate;
-			if ((src_freq % rate) == 0) {
-				switch (div) {
-				case MCLK_CPUDIV_DIV_DIV1_Val:
-				case MCLK_CPUDIV_DIV_DIV2_Val:
-				case MCLK_CPUDIV_DIV_DIV4_Val:
-				case MCLK_CPUDIV_DIV_DIV8_Val:
-				case MCLK_CPUDIV_DIV_DIV16_Val:
-				case MCLK_CPUDIV_DIV_DIV32_Val:
-				case MCLK_CPUDIV_DIV_DIV64_Val:
-				case MCLK_CPUDIV_DIV_DIV128_Val:
-					config->mclk_regs->MCLK_CPUDIV = MCLK_CPUDIV_DIV(div);
-					ret_val = 0;
-					break;
-				default:
-				}
-			}
-			break;
 		}
-		}
-	} while (0);
+		break;
+	}
 
 	return ret_val;
 }
 #endif /* CONFIG_CLOCK_CONTROL_MCHP_SET_RATE */
 #endif /* CONFIG_CLOCK_CONTROL_MCHP_GET_RATE */
 
-#if CLOCK_CONTROL_MCHP_CONFIG_RUNTIME
+#if CONFIG_CLOCK_CONTROL_MCHP_CONFIG_RUNTIME
 /**
  * @brief Configure the clock for a specified subsystem.
  *
@@ -1561,31 +1594,33 @@ static int clock_mchp_configure(const struct device *dev, clock_control_subsys_t
 	val = 0;
 	inst = subsys.bits.inst;
 
-	ret_val = 0;
+	ret_val = CLOCK_SUCCESS;
 	do {
 		if (req_config == NULL) {
 			ret_val = -EINVAL;
 			break;
 		}
 		/* Validate subsystem. */
-		if (0 != clock_mchp_check_subsys(subsys)) {
+		if (CLOCK_SUCCESS != clock_check_subsys(subsys)) {
 			ret_val = -ENOTSUP;
 			break;
 		}
 
 		switch (subsys.bits.type) {
-		case SUBSYS_TYPE_XOSC: {
+		case SUBSYS_TYPE_XOSC:
 			clock_mchp_subsys_xosc_config_t *xosc_config =
 				(clock_mchp_subsys_xosc_config_t *)req_config;
 			reg_val = oscctrl_regs->OSCCTRL_XOSCCTRL[inst];
-			val |= (xosc_config->run_in_standby_en ? OSCCTRL_XOSCCTRL_RUNSTDBY(1) : 0);
-			val |= (xosc_config->on_demand_en ? OSCCTRL_XOSCCTRL_ONDEMAND(1) : 0);
-			reg_val &= ~val;
+			reg_val &= ~(OSCCTRL_XOSCCTRL_RUNSTDBY_Msk | OSCCTRL_XOSCCTRL_ONDEMAND_Msk);
+			val |= ((xosc_config->run_in_standby_en != 0) ? OSCCTRL_XOSCCTRL_RUNSTDBY(1)
+								      : 0);
+			val |= ((xosc_config->on_demand_en != 0) ? OSCCTRL_XOSCCTRL_ONDEMAND(1)
+								 : 0);
 			reg_val |= val;
 			oscctrl_regs->OSCCTRL_XOSCCTRL[inst] = reg_val;
 			break;
-		}
-		case SUBSYS_TYPE_DFLL: {
+
+		case SUBSYS_TYPE_DFLL:
 			clock_mchp_subsys_dfll_config_t *dfll_config =
 				(clock_mchp_subsys_dfll_config_t *)req_config;
 			/* GCLK_PCHCTRL[0] is for DFLL48 input clock source */
@@ -1607,38 +1642,41 @@ static int clock_mchp_configure(const struct device *dev, clock_control_subsys_t
 			}
 
 			reg_val = oscctrl_regs->OSCCTRL_DFLLCTRLA;
-			val |= (dfll_config->run_in_standby_en ? OSCCTRL_DFLLCTRLA_RUNSTDBY(1) : 0);
-			val |= (dfll_config->on_demand_en ? OSCCTRL_DFLLCTRLA_ONDEMAND(1) : 0);
-			reg_val &= ~val;
+			reg_val &=
+				~(OSCCTRL_DFLLCTRLA_RUNSTDBY_Msk | OSCCTRL_DFLLCTRLA_ONDEMAND_Msk);
+			val |= ((dfll_config->run_in_standby_en != 0)
+					? OSCCTRL_DFLLCTRLA_RUNSTDBY(1)
+					: 0);
+			val |= ((dfll_config->on_demand_en != 0) ? OSCCTRL_DFLLCTRLA_ONDEMAND(1)
+								 : 0);
 			reg_val |= val;
 			oscctrl_regs->OSCCTRL_DFLLCTRLA = reg_val;
 			break;
-		}
-		case SUBSYS_TYPE_FDPLL: {
+
+		case SUBSYS_TYPE_FDPLL:
 			clock_mchp_subsys_fdpll_config_t *fdpll_config =
 				(clock_mchp_subsys_fdpll_config_t *)req_config;
 			if (fdpll_config->src <= CLOCK_MCHP_FDPLL_SRC_XOSC1) {
 				switch (fdpll_config->src) {
-				case CLOCK_MCHP_FDPLL_SRC_XOSC32K: {
+				case CLOCK_MCHP_FDPLL_SRC_XOSC32K:
 					val |= OSCCTRL_DPLLCTRLB_REFCLK_XOSC32;
 					break;
-				}
-				case CLOCK_MCHP_FDPLL_SRC_XOSC0: {
-					break;
+
+				case CLOCK_MCHP_FDPLL_SRC_XOSC0:
 					val |= OSCCTRL_DPLLCTRLB_REFCLK_XOSC0;
-				}
-				case CLOCK_MCHP_FDPLL_SRC_XOSC1: {
+					break;
+
+				case CLOCK_MCHP_FDPLL_SRC_XOSC1:
 					val |= OSCCTRL_DPLLCTRLB_REFCLK_XOSC1;
 					break;
-				}
-				default: {
+
+				default:
 					val |= OSCCTRL_DPLLCTRLB_REFCLK_GCLK;
 					/* source is gclk*/
 					gclk_regs->GCLK_PCHCTRL[inst + 1] &= ~GCLK_PCHCTRL_GEN_Msk;
 					gclk_regs->GCLK_PCHCTRL[inst + 1] |=
 						GCLK_PCHCTRL_GEN(fdpll_config->src);
 					break;
-				}
 				}
 				reg_val = oscctrl_regs->DPLL[inst].OSCCTRL_DPLLCTRLB;
 				reg_val &= ~OSCCTRL_DPLLCTRLB_REFCLK_Msk;
@@ -1660,55 +1698,62 @@ static int clock_mchp_configure(const struct device *dev, clock_control_subsys_t
 			/* DPLLCTRLA */
 			val = 0;
 			reg_val = oscctrl_regs->DPLL[inst].OSCCTRL_DPLLCTRLA;
-			val |= (fdpll_config->run_in_standby_en ? OSCCTRL_DPLLCTRLA_RUNSTDBY(1)
-								: 0);
-			val |= (fdpll_config->on_demand_en ? OSCCTRL_DPLLCTRLA_ONDEMAND(1) : 0);
-			reg_val &= ~val;
+			reg_val &=
+				~(OSCCTRL_DPLLCTRLA_RUNSTDBY_Msk | OSCCTRL_DPLLCTRLA_ONDEMAND_Msk);
+			val |= ((fdpll_config->run_in_standby_en != 0)
+					? OSCCTRL_DPLLCTRLA_RUNSTDBY(1)
+					: 0);
+			val |= ((fdpll_config->on_demand_en != 0) ? OSCCTRL_DPLLCTRLA_ONDEMAND(1)
+								  : 0);
 			reg_val |= val;
 			oscctrl_regs->DPLL[inst].OSCCTRL_DPLLCTRLA = reg_val;
 			break;
-		}
-		case SUBSYS_TYPE_RTC: {
+
+		case SUBSYS_TYPE_RTC:
 			clock_mchp_subsys_rtc_config_t *rtc_config =
 				(clock_mchp_subsys_rtc_config_t *)req_config;
 			osc32kctrl_regs->OSC32KCTRL_RTCCTRL =
 				OSC32KCTRL_RTCCTRL_RTCSEL(rtc_config->src);
 			break;
-		}
-		case SUBSYS_TYPE_OSC32K: {
+
+		case SUBSYS_TYPE_OSC32K:
 			clock_mchp_subsys_osc32k_config_t *osc32k_config =
 				(clock_mchp_subsys_osc32k_config_t *)req_config;
 
 			reg_val = osc32kctrl_regs->OSC32KCTRL_XOSC32K;
-			val |= (osc32k_config->run_in_standby_en ? OSC32KCTRL_XOSC32K_RUNSTDBY(1)
-								 : 0);
-			val |= (osc32k_config->on_demand_en ? OSC32KCTRL_XOSC32K_ONDEMAND(1) : 0);
-			reg_val &= ~val;
+			reg_val &= ~(OSC32KCTRL_XOSC32K_RUNSTDBY_Msk |
+				     OSC32KCTRL_XOSC32K_ONDEMAND_Msk);
+			val |= ((osc32k_config->run_in_standby_en != 0)
+					? OSC32KCTRL_XOSC32K_RUNSTDBY(1)
+					: 0);
+			val |= ((osc32k_config->on_demand_en != 0) ? OSC32KCTRL_XOSC32K_ONDEMAND(1)
+								   : 0);
 			reg_val |= val;
 			osc32kctrl_regs->OSC32KCTRL_XOSC32K = reg_val;
 			break;
-		}
-		case SUBSYS_TYPE_GCLKGEN: {
+
+		case SUBSYS_TYPE_GCLKGEN:
 			clock_mchp_subsys_gclkgen_config_t *gclkgen_config =
 				(clock_mchp_subsys_gclkgen_config_t *)req_config;
 
 			reg_val = gclk_regs->GCLK_GENCTRL[inst];
-			val |= (gclkgen_config->run_in_standby_en ? GCLK_GENCTRL_RUNSTDBY(1) : 0);
-			reg_val &= ~val;
-			reg_val &= ~GCLK_GENCTRL_SRC_Msk;
-			reg_val &= ~GCLK_GENCTRL_DIV_Msk;
+			reg_val &= ~(GCLK_GENCTRL_RUNSTDBY_Msk | GCLK_GENCTRL_SRC_Msk |
+				     GCLK_GENCTRL_DIV_Msk);
+			val |= ((gclkgen_config->run_in_standby_en != 0) ? GCLK_GENCTRL_RUNSTDBY(1)
+									 : 0);
 
 			val |= GCLK_GENCTRL_SRC(gclkgen_config->src);
 			/* check range for div_factor, gclk1: 0 - 65535, others: 0 - 255 */
-			if ((inst == 1) || (gclkgen_config->div_factor <= 0xFF)) {
+			if ((inst == CLOCK_MCHP_GCLKGEN_GEN1) ||
+			    (gclkgen_config->div_factor <= 0xFF)) {
 				val |= GCLK_GENCTRL_DIV(gclkgen_config->div_factor);
 			}
 			reg_val |= val;
 
 			gclk_regs->GCLK_GENCTRL[inst] = reg_val;
 			break;
-		}
-		case SUBSYS_TYPE_GCLKPERIPH: {
+
+		case SUBSYS_TYPE_GCLKPERIPH:
 			clock_mchp_subsys_gclkperiph_config_t *gclkperiph_config =
 				(clock_mchp_subsys_gclkperiph_config_t *)req_config;
 			reg_val = gclk_regs->GCLK_PCHCTRL[subsys.bits.gclkperiph];
@@ -1716,14 +1761,14 @@ static int clock_mchp_configure(const struct device *dev, clock_control_subsys_t
 			reg_val |= GCLK_PCHCTRL_GEN(gclkperiph_config->src);
 			gclk_regs->GCLK_PCHCTRL[subsys.bits.gclkperiph] = reg_val;
 			break;
-		}
-		case SUBSYS_TYPE_MCLKCPU: {
+
+		case SUBSYS_TYPE_MCLKCPU:
 			clock_mchp_subsys_mclkcpu_config_t *mclkcpu_config =
 				(clock_mchp_subsys_mclkcpu_config_t *)req_config;
 			config->mclk_regs->MCLK_CPUDIV =
 				MCLK_CPUDIV_DIV(mclkcpu_config->division_factor);
 			break;
-		}
+
 		default:
 			ret_val = -ENOTSUP;
 			break;
@@ -1752,40 +1797,44 @@ void clock_xosc_init(const struct device *dev, clock_xosc_init_t *xosc_init)
 	uint32_t rdy_mask;
 
 	inst = xosc_init->subsys.bits.inst;
-	if (data->src_on_status & (1 << (CLOCK_MCHP_FDPLL_SRC_COUNT + inst))) {
-		return;
-	}
-
-	data->xosc_crystal_freq[inst] = xosc_init->frequency;
-
-	/* XOSCCTRL */
-	val = 0;
-	val |= (xosc_init->clock_switch_en ? OSCCTRL_XOSCCTRL_SWBEN(1) : 0);
-	val |= (xosc_init->clock_failure_detection_en ? OSCCTRL_XOSCCTRL_CFDEN(1) : 0);
-	val |= (xosc_init->automatic_loop_control_en ? OSCCTRL_XOSCCTRL_ENALC(1) : 0);
-	val |= (xosc_init->low_buffer_gain_en ? OSCCTRL_XOSCCTRL_LOWBUFGAIN(1) : 0);
-	val |= (xosc_init->run_in_standby_en ? OSCCTRL_XOSCCTRL_RUNSTDBY(1) : 0);
-	val |= (xosc_init->xtal_en ? OSCCTRL_XOSCCTRL_XTALEN(1) : 0);
-	val |= OSCCTRL_XOSCCTRL_STARTUP(xosc_init->startup_time);
-	val |= OSCCTRL_XOSCCTRL_IMULT(4U) | OSCCTRL_XOSCCTRL_IPTAT(3U);
-	val |= (xosc_init->enable ? OSCCTRL_XOSCCTRL_ENABLE(1) : 0);
-
-	/* Important: Initializing it with 1, along with clock enabled, can lead to
-	 * indefinite wait for the clock to be on, if there is no peripheral request for the
-	 * clock in the sequence of clock Initialization. If required, better to turn on the
-	 * clock using API, instead of enabling both (on_demand_en & enable) during startup.
-	 */
-	val |= (xosc_init->on_demand_en ? OSCCTRL_XOSCCTRL_ONDEMAND(1) : 0);
-
-	oscctrl_regs->OSCCTRL_XOSCCTRL[inst] = val;
-	if (xosc_init->enable) {
-		rdy_mask = (inst == INST_XOSC0) ? OSCCTRL_STATUS_XOSCRDY0_Msk
-						: OSCCTRL_STATUS_XOSCRDY1_Msk;
-		while ((oscctrl_regs->OSCCTRL_STATUS & rdy_mask) == 0) {
+	do {
+		if ((data->src_on_status & (1 << (CLOCK_MCHP_FDPLL_SRC_MAX + 1 + inst))) != 0) {
+			break;
 		}
-		data->src_on_status |= (1 << (ON_BITPOS_XOSC0 + inst));
-		data->src_on_status |= (1 << (ON_BITPOS_XOSC0_ + inst));
-	}
+
+		data->xosc_crystal_freq[inst] = xosc_init->frequency;
+
+		/* XOSCCTRL */
+		val = 0;
+		val |= ((xosc_init->clock_switch_en != 0) ? OSCCTRL_XOSCCTRL_SWBEN(1) : 0);
+		val |= ((xosc_init->clock_failure_detection_en != 0) ? OSCCTRL_XOSCCTRL_CFDEN(1)
+								     : 0);
+		val |= ((xosc_init->automatic_loop_control_en != 0) ? OSCCTRL_XOSCCTRL_ENALC(1)
+								    : 0);
+		val |= ((xosc_init->low_buffer_gain_en != 0) ? OSCCTRL_XOSCCTRL_LOWBUFGAIN(1) : 0);
+		val |= ((xosc_init->run_in_standby_en != 0) ? OSCCTRL_XOSCCTRL_RUNSTDBY(1) : 0);
+		val |= ((xosc_init->xtal_en != 0) ? OSCCTRL_XOSCCTRL_XTALEN(1) : 0);
+		val |= OSCCTRL_XOSCCTRL_STARTUP(xosc_init->startup_time);
+		val |= OSCCTRL_XOSCCTRL_IMULT(4U) | OSCCTRL_XOSCCTRL_IPTAT(3U);
+		val |= ((xosc_init->enable != 0) ? OSCCTRL_XOSCCTRL_ENABLE(1) : 0);
+
+		/* Important: Initializing it with 1, along with clock enabled, can lead to
+		 * indefinite wait for the clock to be on, if there is no peripheral request for the
+		 * clock in the sequence of clock Initialization. If required, better to turn on the
+		 * clock using API, instead of enabling both (on_demand_en & enable) during startup.
+		 */
+		val |= ((xosc_init->on_demand_en != 0) ? OSCCTRL_XOSCCTRL_ONDEMAND(1) : 0);
+
+		oscctrl_regs->OSCCTRL_XOSCCTRL[inst] = val;
+		if (xosc_init->enable != 0) {
+			rdy_mask = (inst == INST_XOSC0) ? OSCCTRL_STATUS_XOSCRDY0_Msk
+							: OSCCTRL_STATUS_XOSCRDY1_Msk;
+			while ((oscctrl_regs->OSCCTRL_STATUS & rdy_mask) == 0) {
+			}
+			data->src_on_status |=
+				(1 << (ON_BITPOS_XOSC0 + inst)) | (1 << (ON_BITPOS_XOSC0_ + inst));
+		}
+	} while (0);
 }
 
 /**
@@ -1799,73 +1848,83 @@ void clock_dfll_init(const struct device *dev, clock_dfll_init_t *dfll_init)
 	gclk_registers_t *gclk_regs = config->gclk_regs;
 
 	int gclkgen_index;
-	uint32_t val;
+	uint8_t val8;
+	uint32_t val32;
 
-	if (data->src_on_status & (1 << ON_BITPOS_DFLL)) {
-		return;
-	}
+	do {
+		if ((data->src_on_status & (1 << ON_BITPOS_DFLL)) != 0) {
+			break;
+		}
 
-	gclkgen_index = dfll_init->src_gclk;
-	if ((data->src_on_status & (1 << gclkgen_index)) == 0) {
-		return;
-	}
+		gclkgen_index = dfll_init->src_gclk;
+		if ((data->src_on_status & (1 << gclkgen_index)) == 0) {
+			break;
+		}
 
-	/* To avoid changing dfll, while gclk0 is driven by it. Else will affect CPU */
-	if (data->gclk0_src == CLOCK_MCHP_GCLK_SRC_DFLL) {
-		return;
-	}
+		/* To avoid changing dfll, while gclk0 is driven by it. Else will affect CPU */
+		if (data->gclk0_src == CLOCK_MCHP_GCLK_SRC_DFLL) {
+			break;
+		}
 
-	/* GCLK_PCHCTRL[0] is for DFLL48 input clock source */
-	gclk_regs->GCLK_PCHCTRL[0] &= ~(GCLK_PCHCTRL_GEN_Msk);
-	gclk_regs->GCLK_PCHCTRL[0] |= (GCLK_PCHCTRL_GEN(gclkgen_index) | GCLK_PCHCTRL_CHEN_Msk);
+		/* GCLK_PCHCTRL[0] is for DFLL48 input clock source */
+		gclk_regs->GCLK_PCHCTRL[0] &= ~(GCLK_PCHCTRL_GEN_Msk);
+		gclk_regs->GCLK_PCHCTRL[0] |=
+			(GCLK_PCHCTRL_GEN(gclkgen_index) | GCLK_PCHCTRL_CHEN_Msk);
 
-	if (dfll_init->closed_loop_en == true) {
-		/* DFLLCTRLB */
-		val = 0;
-		val |= (dfll_init->wait_lock_en ? OSCCTRL_DFLLCTRLB_WAITLOCK(1) : 0);
-		val |= (dfll_init->bypass_coarse_lock_en ? OSCCTRL_DFLLCTRLB_BPLCKC(1) : 0);
-		val |= (dfll_init->quick_lock_dis ? OSCCTRL_DFLLCTRLB_QLDIS(1) : 0);
-		val |= (dfll_init->chill_cycle_dis ? OSCCTRL_DFLLCTRLB_CCDIS(1) : 0);
-		val |= (dfll_init->usb_recovery_en ? OSCCTRL_DFLLCTRLB_USBCRM(1) : 0);
-		val |= (dfll_init->lose_lock_en ? OSCCTRL_DFLLCTRLB_LLAW(1) : 0);
-		val |= (dfll_init->stable_freq_en ? OSCCTRL_DFLLCTRLB_STABLE(1) : 0);
-		val |= OSCCTRL_DFLLCTRLB_MODE(1);
+		if (dfll_init->closed_loop_en == true) {
+			/* DFLLCTRLB */
+			val8 = 0;
+			val8 |= ((dfll_init->wait_lock_en != 0) ? OSCCTRL_DFLLCTRLB_WAITLOCK(1)
+								: 0);
+			val8 |= ((dfll_init->bypass_coarse_lock_en != 0)
+					 ? OSCCTRL_DFLLCTRLB_BPLCKC(1)
+					 : 0);
+			val8 |= ((dfll_init->quick_lock_dis != 0) ? OSCCTRL_DFLLCTRLB_QLDIS(1) : 0);
+			val8 |= ((dfll_init->chill_cycle_dis != 0) ? OSCCTRL_DFLLCTRLB_CCDIS(1)
+								   : 0);
+			val8 |= ((dfll_init->usb_recovery_en != 0) ? OSCCTRL_DFLLCTRLB_USBCRM(1)
+								   : 0);
+			val8 |= ((dfll_init->lose_lock_en != 0) ? OSCCTRL_DFLLCTRLB_LLAW(1) : 0);
+			val8 |= ((dfll_init->stable_freq_en != 0) ? OSCCTRL_DFLLCTRLB_STABLE(1)
+								  : 0);
+			val8 |= OSCCTRL_DFLLCTRLB_MODE(1);
 
-		oscctrl_regs->OSCCTRL_DFLLCTRLB = val;
+			oscctrl_regs->OSCCTRL_DFLLCTRLB = val8;
+			while (oscctrl_regs->OSCCTRL_DFLLSYNC) {
+			}
+
+			/* DFLLMUL */
+			val32 = 0;
+			val32 |= OSCCTRL_DFLLMUL_CSTEP(dfll_init->coarse_max_step);
+			val32 |= OSCCTRL_DFLLMUL_FSTEP(dfll_init->fine_max_step);
+			val32 |= OSCCTRL_DFLLMUL_MUL(dfll_init->multiply_factor);
+
+			oscctrl_regs->OSCCTRL_DFLLMUL = val32;
+			while (oscctrl_regs->OSCCTRL_DFLLSYNC) {
+			}
+		}
+
+		/* DFLLCTRLA */
+		val8 = 0;
+		val8 |= ((dfll_init->run_in_standby_en != 0) ? OSCCTRL_DFLLCTRLA_RUNSTDBY(1) : 0);
+		val8 |= ((dfll_init->enable != 0) ? OSCCTRL_DFLLCTRLA_ENABLE(1) : 0);
+
+		/* Important: Initializing it with 1, along with clock enabled, can lead to
+		 * indefinite wait for the clock to be on, if there is no peripheral request for the
+		 * clock in the sequence of clock Initialization. If required, better to turn on the
+		 * clock using API, instead of enabling both (on_demand_en & enable) during startup.
+		 */
+		val8 |= ((dfll_init->on_demand_en != 0) ? OSCCTRL_DFLLCTRLA_ONDEMAND(1) : 0);
+
+		oscctrl_regs->OSCCTRL_DFLLCTRLA = val8;
 		while (oscctrl_regs->OSCCTRL_DFLLSYNC) {
 		}
-
-		/* DFLLMUL */
-		val = 0;
-		val |= OSCCTRL_DFLLMUL_CSTEP(dfll_init->coarse_max_step);
-		val |= OSCCTRL_DFLLMUL_FSTEP(dfll_init->fine_max_step);
-		val |= OSCCTRL_DFLLMUL_MUL(dfll_init->multiply_factor);
-
-		oscctrl_regs->OSCCTRL_DFLLMUL = val;
-		while (oscctrl_regs->OSCCTRL_DFLLSYNC) {
+		if (dfll_init->enable != 0) {
+			while ((oscctrl_regs->OSCCTRL_STATUS & OSCCTRL_STATUS_DFLLRDY_Msk) == 0) {
+			}
+			data->src_on_status |= (1 << ON_BITPOS_DFLL);
 		}
-	}
-
-	/* DFLLCTRLA */
-	val = 0;
-	val |= (dfll_init->run_in_standby_en ? OSCCTRL_DFLLCTRLA_RUNSTDBY(1) : 0);
-	val |= (dfll_init->enable ? OSCCTRL_DFLLCTRLA_ENABLE(1) : 0);
-
-	/* Important: Initializing it with 1, along with clock enabled, can lead to
-	 * indefinite wait for the clock to be on, if there is no peripheral request for the
-	 * clock in the sequence of clock Initialization. If required, better to turn on the
-	 * clock using API, instead of enabling both (on_demand_en & enable) during startup.
-	 */
-	val |= (dfll_init->on_demand_en ? OSCCTRL_DFLLCTRLA_ONDEMAND(1) : 0);
-
-	oscctrl_regs->OSCCTRL_DFLLCTRLA = val;
-	while (oscctrl_regs->OSCCTRL_DFLLSYNC) {
-	}
-	if (dfll_init->enable) {
-		while ((oscctrl_regs->OSCCTRL_STATUS & OSCCTRL_STATUS_DFLLRDY_Msk) == 0) {
-		}
-		data->src_on_status |= (1 << ON_BITPOS_DFLL);
-	}
+	} while (0);
 }
 
 /**
@@ -1878,70 +1937,74 @@ void clock_fdpll_init(const struct device *dev, clock_fdpll_init_t *fdpll_init)
 	oscctrl_registers_t *oscctrl_regs = config->oscctrl_regs;
 	gclk_registers_t *gclk_regs = config->gclk_regs;
 
+	uint8_t val8;
 	int inst, src;
-	uint32_t val, mask;
+	uint32_t val32, mask;
 
 	inst = fdpll_init->subsys.bits.inst;
-	if (data->src_on_status & (1 << (ON_BITPOS_FDPLL0 + inst))) {
-		return;
-	}
-
-	src = fdpll_init->src;
-	if ((data->src_on_status & (1 << src)) == 0) {
-		return;
-	}
-
-	/* program gclkph if source is gclk & enable */
-	if (src <= CLOCK_MCHP_FDPLL_SRC_GCLK11) {
-		gclk_regs->GCLK_PCHCTRL[inst + 1] |=
-			(GCLK_PCHCTRL_GEN(src) | GCLK_PCHCTRL_CHEN_Msk);
-		while ((gclk_regs->GCLK_PCHCTRL[inst + 1] & GCLK_PCHCTRL_CHEN_Msk) == 0) {
+	do {
+		if (data->src_on_status & (1 << (ON_BITPOS_FDPLL0 + inst))) {
+			break;
 		}
-	}
 
-	/* DPLLCTRLB */
-	val = 0;
-	val |= OSCCTRL_DPLLCTRLB_DCOFILTER(fdpll_init->dco_filter_select);
-	val |= OSCCTRL_DPLLCTRLB_REFCLK(
-		(src > CLOCK_MCHP_FDPLL_SRC_GCLK11) ? (src - CLOCK_MCHP_FDPLL_SRC_GCLK11) : 0);
-	val |= OSCCTRL_DPLLCTRLB_FILTER(fdpll_init->pi_filter_type);
-	val |= (fdpll_init->dco_en ? OSCCTRL_DPLLCTRLB_DCOEN(1) : 0);
-	val |= (fdpll_init->lock_bypass_en ? OSCCTRL_DPLLCTRLB_LBYPASS(1) : 0);
-	val |= (fdpll_init->wakeup_fast_en ? OSCCTRL_DPLLCTRLB_WUF(1) : 0);
-	val |= OSCCTRL_DPLLCTRLB_DIV(fdpll_init->xosc_clock_divider);
-
-	oscctrl_regs->DPLL[inst].OSCCTRL_DPLLCTRLB = val;
-
-	/* DPLLRATIO */
-	val = 0;
-	val |= OSCCTRL_DPLLRATIO_LDR(fdpll_init->divider_ratio_int);
-	val |= OSCCTRL_DPLLRATIO_LDRFRAC(fdpll_init->divider_ratio_frac);
-
-	oscctrl_regs->DPLL[inst].OSCCTRL_DPLLRATIO = val;
-	while (oscctrl_regs->DPLL[inst].OSCCTRL_DPLLSYNCBUSY) {
-	}
-
-	/* DPLLCTRLA */
-	val = 0;
-	val |= (fdpll_init->run_in_standby_en ? OSCCTRL_DPLLCTRLA_RUNSTDBY(1) : 0);
-	val |= (fdpll_init->enable ? OSCCTRL_DPLLCTRLA_ENABLE(1) : 0);
-
-	/* Important: Initializing it with 1, along with clock enabled, can lead to
-	 * indefinite wait for the clock to be on, if there is no peripheral request for the
-	 * clock in the sequence of clock Initialization. If required, better to turn on the
-	 * clock using API, instead of enabling both (on_demand_en & enable) during startup.
-	 */
-	val |= (fdpll_init->on_demand_en ? OSCCTRL_DPLLCTRLA_ONDEMAND(1) : 0);
-
-	oscctrl_regs->DPLL[inst].OSCCTRL_DPLLCTRLA = val;
-	while (oscctrl_regs->DPLL[inst].OSCCTRL_DPLLSYNCBUSY) {
-	}
-	if (fdpll_init->enable) {
-		mask = OSCCTRL_DPLLSTATUS_LOCK_Msk | OSCCTRL_DPLLSTATUS_CLKRDY_Msk;
-		while ((oscctrl_regs->DPLL[inst].OSCCTRL_DPLLSTATUS & mask) != mask) {
+		src = fdpll_init->src;
+		if ((data->src_on_status & (1 << src)) == 0) {
+			break;
 		}
-		data->src_on_status |= (1 << (ON_BITPOS_FDPLL0 + inst));
-	}
+
+		/* program gclkph if source is gclk & enable */
+		if (src <= CLOCK_MCHP_FDPLL_SRC_GCLK11) {
+			gclk_regs->GCLK_PCHCTRL[inst + 1] |=
+				(GCLK_PCHCTRL_GEN(src) | GCLK_PCHCTRL_CHEN_Msk);
+			while ((gclk_regs->GCLK_PCHCTRL[inst + 1] & GCLK_PCHCTRL_CHEN_Msk) == 0) {
+			}
+		}
+
+		/* DPLLCTRLB */
+		val32 = 0;
+		val32 |= OSCCTRL_DPLLCTRLB_DCOFILTER(fdpll_init->dco_filter_select);
+		val32 |= OSCCTRL_DPLLCTRLB_REFCLK((src > CLOCK_MCHP_FDPLL_SRC_GCLK11)
+							  ? (src - CLOCK_MCHP_FDPLL_SRC_GCLK11)
+							  : 0);
+		val32 |= OSCCTRL_DPLLCTRLB_FILTER(fdpll_init->pi_filter_type);
+		val32 |= ((fdpll_init->dco_en != 0) ? OSCCTRL_DPLLCTRLB_DCOEN(1) : 0);
+		val32 |= ((fdpll_init->lock_bypass_en != 0) ? OSCCTRL_DPLLCTRLB_LBYPASS(1) : 0);
+		val32 |= ((fdpll_init->wakeup_fast_en != 0) ? OSCCTRL_DPLLCTRLB_WUF(1) : 0);
+		val32 |= OSCCTRL_DPLLCTRLB_DIV(fdpll_init->xosc_clock_divider);
+
+		oscctrl_regs->DPLL[inst].OSCCTRL_DPLLCTRLB = val32;
+
+		/* DPLLRATIO */
+		val32 = 0;
+		val32 |= OSCCTRL_DPLLRATIO_LDR(fdpll_init->divider_ratio_int);
+		val32 |= OSCCTRL_DPLLRATIO_LDRFRAC(fdpll_init->divider_ratio_frac);
+
+		oscctrl_regs->DPLL[inst].OSCCTRL_DPLLRATIO = val32;
+		while (oscctrl_regs->DPLL[inst].OSCCTRL_DPLLSYNCBUSY) {
+		}
+
+		/* DPLLCTRLA */
+		val8 = 0;
+		val8 |= ((fdpll_init->run_in_standby_en != 0) ? OSCCTRL_DPLLCTRLA_RUNSTDBY(1) : 0);
+		val8 |= ((fdpll_init->enable != 0) ? OSCCTRL_DPLLCTRLA_ENABLE(1) : 0);
+
+		/* Important: Initializing it with 1, along with clock enabled, can lead to
+		 * indefinite wait for the clock to be on, if there is no peripheral request for the
+		 * clock in the sequence of clock Initialization. If required, better to turn on the
+		 * clock using API, instead of enabling both (on_demand_en & enable) during startup.
+		 */
+		val8 |= ((fdpll_init->on_demand_en != 0) ? OSCCTRL_DPLLCTRLA_ONDEMAND(1) : 0);
+
+		oscctrl_regs->DPLL[inst].OSCCTRL_DPLLCTRLA = val8;
+		while (oscctrl_regs->DPLL[inst].OSCCTRL_DPLLSYNCBUSY) {
+		}
+		if (fdpll_init->enable != 0) {
+			mask = OSCCTRL_DPLLSTATUS_LOCK_Msk | OSCCTRL_DPLLSTATUS_CLKRDY_Msk;
+			while ((oscctrl_regs->DPLL[inst].OSCCTRL_DPLLSTATUS & mask) != mask) {
+			}
+			data->src_on_status |= (1 << (ON_BITPOS_FDPLL0 + inst));
+		}
+	} while (0);
 }
 
 /**
@@ -1963,61 +2026,71 @@ void clock_osc32k_init(const struct device *dev, clock_osc32k_init_t *osc32k_ini
 	clock_mchp_data_t *data = dev->data;
 	osc32kctrl_registers_t *osc32kctrl_regs = config->osc32kctrl_regs;
 
-	uint32_t val;
+	uint8_t val8;
+	uint16_t val16;
+	uint32_t val32;
 
-	if (data->src_on_status & ((1 << ON_BITPOS_XOSC32K) | (1 << ON_BITPOS_OSCULP32K))) {
-		return;
-	}
-
-	/* CFDCTRL */
-	val = 0;
-	val |= (osc32k_init->cf_backup_divideby2_en ? OSC32KCTRL_CFDCTRL_CFDPRESC(1) : 0);
-	val |= (osc32k_init->switch_back_en ? OSC32KCTRL_CFDCTRL_SWBACK(1) : 0);
-	val |= (osc32k_init->cfd_en ? OSC32KCTRL_CFDCTRL_CFDEN(1) : 0);
-
-	osc32kctrl_regs->OSC32KCTRL_CFDCTRL = val;
-
-	/* OSCULP32K */
-	val = 0;
-	val |= (osc32k_init->osculp32k_write_lock_en ? OSC32KCTRL_OSCULP32K_WRTLOCK(1) : 0);
-	val |= (osc32k_init->osculp32k_1khz_en ? OSC32KCTRL_OSCULP32K_EN1K(1) : 0);
-	val |= (osc32k_init->osculp32k_32khz_en ? OSC32KCTRL_OSCULP32K_EN32K(1) : 0);
-
-	osc32kctrl_regs->OSC32KCTRL_OSCULP32K = val;
-	if (osc32k_init->osculp32k_32khz_en) {
-		data->src_on_status |= (1 << ON_BITPOS_OSCULP32K);
-	}
-
-	/* XOSC32K */
-	val = 0;
-	if (osc32k_init->gain_mode == 0) { /* standard */
-		val |= OSC32KCTRL_XOSC32K_CGM(OSC32KCTRL_XOSC32K_CGM_XT_Val);
-	} else { /* highspeed */
-		val |= OSC32KCTRL_XOSC32K_CGM(OSC32KCTRL_XOSC32K_CGM_HS_Val);
-	}
-	val |= (osc32k_init->write_lock_en ? OSC32KCTRL_XOSC32K_WRTLOCK(1) : 0);
-	val |= (osc32k_init->run_in_standby_en ? OSC32KCTRL_XOSC32K_RUNSTDBY(1) : 0);
-	val |= (osc32k_init->osc32k_1khz_en ? OSC32KCTRL_XOSC32K_EN1K(1) : 0);
-	val |= (osc32k_init->osc32k_32khz_en ? OSC32KCTRL_XOSC32K_EN32K(1) : 0);
-	val |= (osc32k_init->xtal_en ? OSC32KCTRL_XOSC32K_XTALEN(1) : 0);
-	val |= OSC32KCTRL_XOSC32K_STARTUP(osc32k_init->startup_time);
-	val |= (osc32k_init->enable ? OSC32KCTRL_XOSC32K_ENABLE(1) : 0);
-
-	/* Important: Initializing it with 1, along with clock enabled, can lead to
-	 * indefinite wait for the clock to be on, if there is no peripheral request for the
-	 * clock in the sequence of clock Initialization. If required, better to turn on the
-	 * clock using API, instead of enabling both (on_demand_en & enable) during startup.
-	 */
-	val |= (osc32k_init->on_demand_en ? OSC32KCTRL_XOSC32K_ONDEMAND(1) : 0);
-
-	osc32kctrl_regs->OSC32KCTRL_XOSC32K = val;
-	if (osc32k_init->osc32k_32khz_en) {
-		while ((osc32kctrl_regs->OSC32KCTRL_STATUS & OSC32KCTRL_STATUS_XOSC32KRDY_Msk) ==
-		       0) {
+	do {
+		if ((data->src_on_status &
+		     ((1 << ON_BITPOS_XOSC32K) | (1 << ON_BITPOS_OSCULP32K))) != 0) {
+			break;
 		}
-		data->src_on_status |= (1 << ON_BITPOS_XOSC32K);
-		data->src_on_status |= (1 << ON_BITPOS_XOSC32K_);
-	}
+
+		/* CFDCTRL */
+		val8 = 0;
+		val8 |= ((osc32k_init->cf_backup_divideby2_en != 0) ? OSC32KCTRL_CFDCTRL_CFDPRESC(1)
+								    : 0);
+		val8 |= ((osc32k_init->switch_back_en != 0) ? OSC32KCTRL_CFDCTRL_SWBACK(1) : 0);
+		val8 |= ((osc32k_init->cfd_en != 0) ? OSC32KCTRL_CFDCTRL_CFDEN(1) : 0);
+
+		osc32kctrl_regs->OSC32KCTRL_CFDCTRL = val8;
+
+		/* OSCULP32K */
+		val32 = 0;
+		val32 |= ((osc32k_init->osculp32k_write_lock_en != 0)
+				  ? OSC32KCTRL_OSCULP32K_WRTLOCK(1)
+				  : 0);
+		val32 |= ((osc32k_init->osculp32k_1khz_en != 0) ? OSC32KCTRL_OSCULP32K_EN1K(1) : 0);
+		val32 |= ((osc32k_init->osculp32k_32khz_en != 0) ? OSC32KCTRL_OSCULP32K_EN32K(1)
+								 : 0);
+
+		osc32kctrl_regs->OSC32KCTRL_OSCULP32K = val32;
+		if (osc32k_init->osculp32k_32khz_en != 0) {
+			data->src_on_status |= (1 << ON_BITPOS_OSCULP32K);
+		}
+
+		/* XOSC32K */
+		val16 = 0;
+		if (osc32k_init->gain_mode == 0) { /* standard */
+			val16 |= OSC32KCTRL_XOSC32K_CGM(OSC32KCTRL_XOSC32K_CGM_XT_Val);
+		} else { /* highspeed */
+			val16 |= OSC32KCTRL_XOSC32K_CGM(OSC32KCTRL_XOSC32K_CGM_HS_Val);
+		}
+		val16 |= ((osc32k_init->write_lock_en != 0) ? OSC32KCTRL_XOSC32K_WRTLOCK(1) : 0);
+		val16 |= ((osc32k_init->run_in_standby_en != 0) ? OSC32KCTRL_XOSC32K_RUNSTDBY(1)
+								: 0);
+		val16 |= ((osc32k_init->osc32k_1khz_en != 0) ? OSC32KCTRL_XOSC32K_EN1K(1) : 0);
+		val16 |= ((osc32k_init->osc32k_32khz_en != 0) ? OSC32KCTRL_XOSC32K_EN32K(1) : 0);
+		val16 |= ((osc32k_init->xtal_en != 0) ? OSC32KCTRL_XOSC32K_XTALEN(1) : 0);
+		val16 |= OSC32KCTRL_XOSC32K_STARTUP(osc32k_init->startup_time);
+		val16 |= ((osc32k_init->enable != 0) ? OSC32KCTRL_XOSC32K_ENABLE(1) : 0);
+
+		/* Important: Initializing it with 1, along with clock enabled, can lead to
+		 * indefinite wait for the clock to be on, if there is no peripheral request for the
+		 * clock in the sequence of clock Initialization. If required, better to turn on the
+		 * clock using API, instead of enabling both (on_demand_en & enable) during startup.
+		 */
+		val16 |= ((osc32k_init->on_demand_en != 0) ? OSC32KCTRL_XOSC32K_ONDEMAND(1) : 0);
+
+		osc32kctrl_regs->OSC32KCTRL_XOSC32K = val16;
+		if (osc32k_init->osc32k_32khz_en != 0) {
+			while ((osc32kctrl_regs->OSC32KCTRL_STATUS &
+				OSC32KCTRL_STATUS_XOSC32KRDY_Msk) == 0) {
+			}
+			data->src_on_status |= (1 << ON_BITPOS_XOSC32K);
+			data->src_on_status |= (1 << ON_BITPOS_XOSC32K_);
+		}
+	} while (0);
 }
 
 /**
@@ -2032,48 +2105,52 @@ void clock_gclkgen_init(const struct device *dev, clock_gclkgen_init_t *gclkgen_
 	uint32_t val;
 
 	inst = gclkgen_init->subsys.bits.inst;
-	if (data->src_on_status & (1 << inst)) {
-		return;
-	}
-	if ((data->src_on_status & (1 << (ON_BITPOS_XOSC0 + gclkgen_init->src))) == 0) {
-		return;
-	}
+	do {
+		if ((data->src_on_status & (1 << inst)) != 0) {
+			/* Already initialized */
+			break;
+		}
+		if ((data->src_on_status & (1 << (ON_BITPOS_XOSC0 + gclkgen_init->src))) == 0) {
+			/* Source is not on */
+			break;
+		}
 
-	if (inst < GCLK_IO_COUNT) {
-		data->gclkpin_freq[inst] = gclkgen_init->pin_src_freq;
-	}
+		if (inst <= GCLK_IO_MAX) {
+			data->gclkpin_freq[inst] = gclkgen_init->pin_src_freq;
+		}
 
-	/* GENCTRL */
-	val = 0;
-	if (gclkgen_init->div_select == 0) { /* div-factor */
-		val |= GCLK_GENCTRL_DIVSEL(GCLK_GENCTRL_DIVSEL_DIV1_Val);
-	} else { /* div-factor-power */
-		val |= GCLK_GENCTRL_DIVSEL(GCLK_GENCTRL_DIVSEL_DIV2_Val);
-	}
-	val |= GCLK_GENCTRL_OOV(gclkgen_init->pin_output_off_val);
-	val |= GCLK_GENCTRL_SRC(gclkgen_init->src);
-	val |= (gclkgen_init->run_in_standby_en ? GCLK_GENCTRL_RUNSTDBY(1) : 0);
-	val |= (gclkgen_init->pin_output_en ? GCLK_GENCTRL_OE(1) : 0);
-	val |= (gclkgen_init->duty_50_50_en ? GCLK_GENCTRL_IDC(1) : 0);
-	/* check range for div_factor, gclk1: 0 - 65535, others: 0 - 255 */
-	if ((inst == 1) || (gclkgen_init->div_factor <= 0xFF)) {
-		val |= GCLK_GENCTRL_DIV(gclkgen_init->div_factor);
-	}
-	val |= (gclkgen_init->enable ? GCLK_GENCTRL_GENEN(1) : 0);
+		/* GENCTRL */
+		val = 0;
+		if (gclkgen_init->div_select == 0) { /* div-factor */
+			val |= GCLK_GENCTRL_DIVSEL(GCLK_GENCTRL_DIVSEL_DIV1_Val);
+		} else { /* div-factor-power */
+			val |= GCLK_GENCTRL_DIVSEL(GCLK_GENCTRL_DIVSEL_DIV2_Val);
+		}
+		val |= GCLK_GENCTRL_OOV(gclkgen_init->pin_output_off_val);
+		val |= GCLK_GENCTRL_SRC(gclkgen_init->src);
+		val |= ((gclkgen_init->run_in_standby_en != 0) ? GCLK_GENCTRL_RUNSTDBY(1) : 0);
+		val |= ((gclkgen_init->pin_output_en != 0) ? GCLK_GENCTRL_OE(1) : 0);
+		val |= ((gclkgen_init->duty_50_50_en != 0) ? GCLK_GENCTRL_IDC(1) : 0);
+		/* check range for div_factor, gclk1: 0 - 65535, others: 0 - 255 */
+		if ((inst == 1) || (gclkgen_init->div_factor <= 0xFF)) {
+			val |= GCLK_GENCTRL_DIV(gclkgen_init->div_factor);
+		}
+		val |= ((gclkgen_init->enable != 0) ? GCLK_GENCTRL_GENEN(1) : 0);
 
-	config->gclk_regs->GCLK_GENCTRL[inst] = val;
-	while (config->gclk_regs->GCLK_SYNCBUSY) {
-	}
+		config->gclk_regs->GCLK_GENCTRL[inst] = val;
+		while (config->gclk_regs->GCLK_SYNCBUSY != 0) {
+		}
 
-	/* To avoid changing dfll, while gclk0 is driven by it. Else will affect CPU */
-	if (inst == CLOCK_MCHP_GCLKGEN_GEN0) {
-		data->gclk0_src = gclkgen_init->src;
-	}
+		/* To avoid changing dfll, while gclk0 is driven by it. Else will affect CPU */
+		if (inst == CLOCK_MCHP_GCLKGEN_GEN0) {
+			data->gclk0_src = gclkgen_init->src;
+		}
 
-	data->src_on_status |= (1 << inst);
-	if (inst == CLOCK_MCHP_GCLKGEN_GEN0) {
-		data->src_on_status |= (1 << ON_BITPOS_GCLKGEN1);
-	}
+		data->src_on_status |= (1 << inst);
+		if (inst == CLOCK_MCHP_GCLKGEN_GEN0) {
+			data->src_on_status |= (1 << ON_BITPOS_GCLKGEN1);
+		}
+	} while (0);
 }
 
 /**
@@ -2090,7 +2167,7 @@ void clock_gclkperiph_init(const struct device *dev, uint32_t subsys_val, uint8_
 
 	/* PCHCTRL */
 	val = 0;
-	val |= (enable ? GCLK_PCHCTRL_CHEN(1) : 0);
+	val |= ((enable != 0) ? GCLK_PCHCTRL_CHEN(1) : 0);
 	val |= GCLK_PCHCTRL_GEN(pch_src);
 
 	config->gclk_regs->GCLK_PCHCTRL[subsys.bits.gclkperiph] = val;
@@ -2252,36 +2329,36 @@ static int clock_mchp_init(const struct device *dev)
 
 	/* iteration-1 */
 	{
-		clock_xosc_init_t xosc_init;
+		clock_xosc_init_t xosc_init = {0};
 
 		DT_FOREACH_CHILD(DT_NODELABEL(xosc), CLOCK_MCHP_ITERATE_XOSC);
 	}
 	{
-		clock_osc32k_init_t osc32k_init;
+		clock_osc32k_init_t osc32k_init = {0};
 
 		CLOCK_MCHP_PROCESS_OSC32K(DT_NODELABEL(osc32k));
 	}
 
 	config->gclk_regs->GCLK_CTRLA = GCLK_CTRLA_SWRST(1);
-	while (config->gclk_regs->GCLK_SYNCBUSY) {
+	while (config->gclk_regs->GCLK_SYNCBUSY != 0) {
 	}
 
 	/* To avoid changing dfll, while gclk0 is driven by it. Else will affect CPU */
 	data->gclk0_src = CLOCK_MCHP_GCLK_SRC_DFLL;
 
-	for (int i = 0; i < 3; i++) {
+	for (int i = 0; i < CLOCK_INIT_ITERATION_COUNT; i++) {
 		{
-			clock_gclkgen_init_t gclkgen_init;
+			clock_gclkgen_init_t gclkgen_init = {0};
 
 			DT_FOREACH_CHILD(DT_NODELABEL(gclkgen), CLOCK_MCHP_ITERATE_GCLKGEN);
 		}
 		{
-			clock_dfll_init_t dfll_init;
+			clock_dfll_init_t dfll_init = {0};
 
 			CLOCK_MCHP_PROCESS_DFLL(DT_NODELABEL(dfll));
 		}
 		{
-			clock_fdpll_init_t fdpll_init;
+			clock_fdpll_init_t fdpll_init = {0};
 
 			DT_FOREACH_CHILD(DT_NODELABEL(fdpll), CLOCK_MCHP_ITERATE_FDPLL);
 		}
@@ -2294,8 +2371,8 @@ static int clock_mchp_init(const struct device *dev)
 	CLOCK_MCHP_PROCESS_MCLKCPU(DT_NODELABEL(mclkcpu));
 #endif /* CONFIG_CLOCK_CONTROL_MCHP_CONFIG_BOOTUP */
 
-	/* Return 0 indicating successful initialization. */
-	return 0;
+	/* Return CLOCK_SUCCESS indicating successful initialization. */
+	return CLOCK_SUCCESS;
 }
 
 /******************************************************************************
@@ -2314,14 +2391,12 @@ static const struct clock_control_driver_api clock_mchp_driver_api = {
 	.set_rate = clock_mchp_set_rate,
 #endif /* CONFIG_CLOCK_CONTROL_MCHP_SET_RATE */
 #endif /* CONFIG_CLOCK_CONTROL_MCHP_GET_RATE */
-#if CLOCK_CONTROL_MCHP_CONFIG_RUNTIME
+#if CONFIG_CLOCK_CONTROL_MCHP_CONFIG_RUNTIME
 	.configure = clock_mchp_configure,
 #endif /* CONFIG_CLOCK_CONTROL_MCHP_CONFIG_RUNTIME */
 };
 
-#define DT_DRV_COMPAT microchip_sam_d5x_e5x_clock
-
-#define CLOCK_MCHP_CONFIG_DEFN(n)                                                                  \
+#define CLOCK_MCHP_CONFIG_DEFN()                                                                   \
 	static const clock_mchp_config_t clock_mchp_config = {                                     \
 		.on_timeout_ms = DT_PROP_OR(CLOCK_NODE, on_timeout_ms, 5),                         \
 		.mclk_regs = (mclk_registers_t *)DT_REG_ADDR_BY_IDX(CLOCK_NODE, 0),                \
@@ -2329,11 +2404,11 @@ static const struct clock_control_driver_api clock_mchp_driver_api = {
 		.osc32kctrl_regs = (osc32kctrl_registers_t *)DT_REG_ADDR_BY_IDX(CLOCK_NODE, 2),    \
 		.gclk_regs = (gclk_registers_t *)DT_REG_ADDR_BY_IDX(CLOCK_NODE, 3)}
 
-#define CLOCK_MCHP_DATA_DEFN(n) static clock_mchp_data_t clock_mchp_data;
+#define CLOCK_MCHP_DATA_DEFN() static clock_mchp_data_t clock_mchp_data;
 
 #define CLOCK_MCHP_DEVICE_INIT(n)                                                                  \
-	CLOCK_MCHP_CONFIG_DEFN(n);                                                                 \
-	CLOCK_MCHP_DATA_DEFN(n);                                                                   \
+	CLOCK_MCHP_CONFIG_DEFN();                                                                  \
+	CLOCK_MCHP_DATA_DEFN();                                                                    \
 	DEVICE_DT_INST_DEFINE(n, clock_mchp_init, NULL, &clock_mchp_data, &clock_mchp_config,      \
 			      PRE_KERNEL_1, CONFIG_CLOCK_CONTROL_INIT_PRIORITY,                    \
 			      &clock_mchp_driver_api);

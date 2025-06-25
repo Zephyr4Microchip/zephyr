@@ -188,7 +188,7 @@ typedef struct mchp_dac_clock {
  */
 #define DAC_MCHP_ENABLE_CLOCK(dev)                                                                 \
 	clock_control_on(((const dac_mchp_dev_config_t *)(dev->config))->dac_clock.clock_dev,      \
-			 (((dac_mchp_dev_config_t *)(dev->config))->dac_clock.gclk_sys));         \
+			 (((dac_mchp_dev_config_t *)(dev->config))->dac_clock.gclk_sys));          \
 	clock_control_on(((const dac_mchp_dev_config_t *)(dev->config))->dac_clock.clock_dev,      \
 			 (((dac_mchp_dev_config_t *)(dev->config))->dac_clock.mclk_sys))
 
