@@ -132,11 +132,11 @@ typedef struct mchp_counter_clock {
 	const struct device *clock_dev;
 
 	/* Main clock subsystem. */
-	clock_control_mchp_subsys_t host_core_sync_clk;
-	clock_control_mchp_subsys_t client_core_sync_clk;
+	clock_control_subsys_t host_core_sync_clk;
+	clock_control_subsys_t client_core_sync_clk;
 
 	/* Generic clock subsystem. */
-	clock_control_mchp_subsys_t periph_async_clk;
+	clock_control_subsys_t periph_async_clk;
 } pwm_mchp_clock_t;
 
 /**
@@ -805,7 +805,7 @@ static int pwm_mchp_get_cycles_per_sec(const struct device *pwm_dev, uint32_t ch
 		/* clang-format off */
 		clock_control_get_rate(
 			mchp_pwm_cfg->pwm_clock.clock_dev,
-			(clock_control_subsys_t)&(mchp_pwm_cfg->pwm_clock.periph_async_clk),
+			mchp_pwm_cfg->pwm_clock.periph_async_clk,
 			&periph_clk_freq);
 		/* clang-format on */
 		*cycles = periph_clk_freq / mchp_pwm_cfg->prescaler;
@@ -851,16 +851,14 @@ static int pwm_mchp_init(const struct device *pwm_dev)
 
 	MCHP_PWM_DATA_LOCK_INIT(&mchp_pwm_data->lock);
 	do {
-		ret_val = clock_control_on(
-			mchp_pwm_cfg->pwm_clock.clock_dev,
-			(clock_control_subsys_t)&mchp_pwm_cfg->pwm_clock.periph_async_clk);
+		ret_val = clock_control_on(mchp_pwm_cfg->pwm_clock.clock_dev,
+					   mchp_pwm_cfg->pwm_clock.periph_async_clk);
 		if (ret_val < 0) {
 			LOG_ERR("Failed to enable the periph_async_clk for PWM: %d", ret_val);
 			break;
 		}
-		ret_val = clock_control_on(
-			mchp_pwm_cfg->pwm_clock.clock_dev,
-			(clock_control_subsys_t)&mchp_pwm_cfg->pwm_clock.host_core_sync_clk);
+		ret_val = clock_control_on(mchp_pwm_cfg->pwm_clock.clock_dev,
+					   mchp_pwm_cfg->pwm_clock.host_core_sync_clk);
 		if (ret_val < 0) {
 			LOG_ERR("Failed to enable the host_core_sync_clk for PWM: %d", ret_val);
 			break;
@@ -872,10 +870,8 @@ static int pwm_mchp_init(const struct device *pwm_dev)
 		 */
 		if ((mchp_pwm_cfg->max_bit_width == BIT_MODE_32) &&
 		    ((mchp_pwm_cfg->id) <= PERIPH_ID_MAX) && (((mchp_pwm_cfg->id) & 1) == 0)) {
-			ret_val = clock_control_on(
-				mchp_pwm_cfg->pwm_clock.clock_dev,
-				(clock_control_subsys_t) &
-					(mchp_pwm_cfg->pwm_clock.client_core_sync_clk));
+			ret_val = clock_control_on(mchp_pwm_cfg->pwm_clock.clock_dev,
+						   (mchp_pwm_cfg->pwm_clock.client_core_sync_clk));
 			if (ret_val < 0) {
 				LOG_ERR("Failed to enable the client_core_sync_clk for PWM: %d",
 					ret_val);
@@ -923,27 +919,15 @@ static int pwm_mchp_init(const struct device *pwm_dev)
 /* clang-format off */
 #define PWM_MCHP_CLOCK_ASSIGN(n)							\
 	.pwm_clock.clock_dev = DEVICE_DT_GET(DT_NODELABEL(clock)),			\
-	.pwm_clock.host_core_sync_clk = {						\
-		.dev = DEVICE_DT_GET(DT_INST_CLOCKS_CTLR_BY_NAME(n, mclk)),		\
-		.id = DT_INST_CLOCKS_CELL_BY_NAME(n, mclk, id)				\
-	},										\
+	.pwm_clock.host_core_sync_clk = (void *)(DT_INST_CLOCKS_CELL_BY_NAME(n, mclk, subsystem)),										\
 	COND_CODE_1(DT_NODE_HAS_PROP(DT_NODELABEL(tc##n), client),			\
-	(.pwm_clock.client_core_sync_clk = {						\
-	.dev = DEVICE_DT_GET(DT_CLOCKS_CTLR_BY_NAME(					\
-	DT_PHANDLE(DT_NODELABEL(tc##n), client), mclk)),				\
-	.id = DT_CLOCKS_CELL_BY_NAME(							\
-	DT_PHANDLE(DT_NODELABEL(tc##n), client), mclk, id)				\
-	},), ())									\
-	COND_CODE_1(DT_NODE_EXISTS(DT_INST_CLOCKS_CTLR_BY_NAME(n, osc32kctrl)),		\
-	(.pwm_clock.periph_async_clk = {						\
-	.dev = DEVICE_DT_GET(DT_INST_CLOCKS_CTLR_BY_NAME(n, osc32kctrl)),		\
-	.id = DT_INST_CLOCKS_CELL_BY_NAME(n, osc32kctrl, id)				\
-	},), ())									\
+	(.pwm_clock.client_core_sync_clk =  (void *)DT_CLOCKS_CELL_BY_NAME(							\
+	DT_PHANDLE(DT_NODELABEL(tc##n), client), mclk, subsystem),), ())									\
+	COND_CODE_1(DT_NODE_EXISTS(DT_INST_CLOCKS_CTLR_BY_NAME(n, rtcclk)),		\
+	(.pwm_clock.periph_async_clk = 	(void *)DT_INST_CLOCKS_CELL_BY_NAME(n, rtcclk, subsystem)\
+	,), ())									\
 	COND_CODE_1(DT_NODE_EXISTS(DT_INST_CLOCKS_CTLR_BY_NAME(n, gclk)),		\
-	(.pwm_clock.periph_async_clk = {						\
-		.dev = DEVICE_DT_GET(DT_INST_CLOCKS_CTLR_BY_NAME(n, gclk)),		\
-		.id = DT_INST_CLOCKS_CELL_BY_NAME(n, gclk, id)				\
-	},), ())
+	(.pwm_clock.periph_async_clk = (void *)DT_INST_CLOCKS_CELL_BY_NAME(n, gclk, subsystem),), ())
 /* clang-format on */
 
 /**

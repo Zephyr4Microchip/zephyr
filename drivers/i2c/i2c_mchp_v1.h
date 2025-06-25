@@ -13,8 +13,7 @@
 /* Define compatible sting */
 #define DT_DRV_COMPAT microchip_sercom_u2201_i2c
 
-#define I2C_MCHP_HAL_DEFN(n)                                                                      \
-	.hal.regs = (sercom_registers_t *)DT_INST_REG_ADDR(n), 
+#define I2C_MCHP_HAL_DEFN(n) .hal.regs = (sercom_registers_t *)DT_INST_REG_ADDR(n),
 
 /* Do the peripheral interrupt related configuration */
 #if DT_INST_IRQ_HAS_IDX(0, 3)
@@ -38,29 +37,27 @@ typedef struct mchp_i2c_clock {
 	/* Clock driver */
 	const struct device *clock_dev;
 	/* Main clock subsystem. */
-	clock_control_mchp_subsys_t mclk_sys;
+	clock_control_subsys_t mclk_sys;
 	/* Generic clock subsystem. */
-	clock_control_mchp_subsys_t gclk_sys;
+	clock_control_subsys_t gclk_sys;
 } mchp_i2c_clock_t;
 
 #define I2C_MCHP_CLOCK_DEFN(n)                                                                     \
 	.i2c_clock.clock_dev = DEVICE_DT_GET(DT_NODELABEL(clock)),                                 \
-	.i2c_clock.mclk_sys = {.dev = DEVICE_DT_GET(DT_INST_CLOCKS_CTLR_BY_NAME(n, mclk)),         \
-			       .id = DT_INST_CLOCKS_CELL_BY_NAME(n, mclk, id)},                    \
-	.i2c_clock.gclk_sys = {.dev = DEVICE_DT_GET(DT_INST_CLOCKS_CTLR_BY_NAME(n, gclk)),         \
-			       .id = DT_INST_CLOCKS_CELL_BY_NAME(n, gclk, id)},
+	.i2c_clock.mclk_sys = (void *)(DT_INST_CLOCKS_CELL_BY_NAME(n, mclk, subsystem)),           \
+	.i2c_clock.gclk_sys = (void *)(DT_INST_CLOCKS_CELL_BY_NAME(n, gclk, subsystem)),
 
 /* Do the peripheral clock related configuration */
 #define I2C_MCHP_GET_CLOCK_FREQ(dev, rate)                                                         \
 	clock_control_get_rate(                                                                    \
 		((const i2c_mchp_dev_config_t *)(dev->config))->i2c_clock.clock_dev,               \
-		&(((i2c_mchp_dev_config_t *)(dev->config))->i2c_clock.gclk_sys), &rate)
+		(((i2c_mchp_dev_config_t *)(dev->config))->i2c_clock.gclk_sys), &rate)
 
 #define I2C_MCHP_ENABLE_CLOCK(dev)                                                                 \
 	clock_control_on(((const i2c_mchp_dev_config_t *)(dev->config))->i2c_clock.clock_dev,      \
-			 &(((i2c_mchp_dev_config_t *)(dev->config))->i2c_clock.gclk_sys));         \
+			 (((i2c_mchp_dev_config_t *)(dev->config))->i2c_clock.gclk_sys));          \
 	clock_control_on(((const i2c_mchp_dev_config_t *)(dev->config))->i2c_clock.clock_dev,      \
-			 &(((i2c_mchp_dev_config_t *)(dev->config))->i2c_clock.mclk_sys))
+			 (((i2c_mchp_dev_config_t *)(dev->config))->i2c_clock.mclk_sys))
 
 /* Hardware abstraction layer (HAL) structure for MCHP I2C peripheral */
 typedef struct hal_mchp_i2c {

@@ -143,8 +143,7 @@ typedef struct hal_mchp_wdt {
  */
 #define WDT_MCHP_CLOCK_DEFN(n)                                                                     \
 	.wdt_clock.clock_dev = DEVICE_DT_GET(DT_NODELABEL(clock)),                                 \
-	.wdt_clock.mclk_sys = {.dev = DEVICE_DT_GET(DT_INST_CLOCKS_CTLR_BY_NAME(n, mclk)),         \
-			       .id = DT_INST_CLOCKS_CELL_BY_NAME(n, mclk, id)}
+	.wdt_clock.mclk_sys = (void *)(DT_INST_CLOCKS_CELL_BY_NAME(n, mclk, subsystem))
 
 /**
  * @brief Macro to enable the clock for the Watchdog Timer (WDT).
@@ -158,22 +157,18 @@ typedef struct hal_mchp_wdt {
  */
 #define MCHP_WDT_ENABLE_CLOCK(wdt_dev)                                                             \
 	clock_control_on(((const wdt_mchp_dev_cfg_t *)(wdt_dev->config))->wdt_clock.clock_dev,     \
-			 &(((wdt_mchp_dev_cfg_t *)(wdt_dev->config))->wdt_clock.mclk_sys));
+			 (((wdt_mchp_dev_cfg_t *)(wdt_dev->config))->wdt_clock.mclk_sys));
 
 /**
  * @struct mchp_wdt_clock
  * @brief Structure to hold device clock configuration.
  */
 typedef struct mchp_wdt_clock {
-
 	/* Clock driver */
 	const struct device *clock_dev;
 
 	/* Main clock subsystem. */
-	clock_control_mchp_subsys_t mclk_sys;
-
-	/* Generic clock subsystem. */
-	clock_control_mchp_subsys_t gclk_sys;
+	clock_control_subsys_t mclk_sys;
 
 } mchp_wdt_clock_t;
 

@@ -112,8 +112,7 @@ typedef struct hal_dma_mchp_status {
 #define DMA_MCHP_HAL_DEFN(n)                                                                       \
 	.hal_dma.regs = ((dmac_registers_t *)DT_INST_REG_ADDR(n)),                                 \
 	.hal_dma.num_irq = DT_NUM_IRQS(DT_DRV_INST(n)),                                            \
-	.hal_dma.mclk_sys = {.dev = DEVICE_DT_GET(DT_INST_CLOCKS_CTLR_BY_NAME(n, mclk)),           \
-			     .id = DT_INST_CLOCKS_CELL_BY_NAME(n, mclk, id)}
+	.hal_dma.mclk_sys = (void *)(DT_INST_CLOCKS_CELL_BY_NAME(n, mclk, subsystem))
 
 /**
  * @brief Enable the clock for the Microchip DMA controller.
@@ -124,7 +123,7 @@ typedef struct hal_dma_mchp_status {
  */
 #define DMA_MCHP_ENABLE_CLOCK(dev)                                                                 \
 	clock_control_on(((const dma_mchp_dev_config_t *)(dev->config))->clock_dev,                \
-			 &(((dma_mchp_dev_config_t *)(dev->config))->hal_dma.mclk_sys))
+			 (((dma_mchp_dev_config_t *)(dev->config))->hal_dma.mclk_sys))
 
 /**
  * @brief Structure representing the DMA hardware abstraction layer (HAL).
@@ -141,7 +140,7 @@ typedef struct hal_mchp_dma {
 	uint8_t num_irq;
 
 	/* Contains the clock control configuration for the DMA subsystem. */
-	clock_control_mchp_subsys_t mclk_sys;
+	clock_control_subsys_t mclk_sys;
 
 	/* Reference to DMA HAL data */
 	void *data;

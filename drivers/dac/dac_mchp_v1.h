@@ -153,10 +153,10 @@ typedef struct mchp_dac_clock {
 	const struct device *clock_dev;
 
 	/* Main clock subsystem. */
-	clock_control_mchp_subsys_t mclk_sys;
+	clock_control_subsys_t mclk_sys;
 
 	/* Generic clock subsystem. */
-	clock_control_mchp_subsys_t gclk_sys;
+	clock_control_subsys_t gclk_sys;
 
 } mchp_dac_clock_t;
 
@@ -177,10 +177,8 @@ typedef struct mchp_dac_clock {
  */
 #define DAC_MCHP_CLOCK_DEFN(n)                                                                     \
 	.dac_clock.clock_dev = DEVICE_DT_GET(DT_NODELABEL(clock)),                                 \
-	.dac_clock.mclk_sys = {.dev = DEVICE_DT_GET(DT_INST_CLOCKS_CTLR_BY_NAME(n, mclk)),         \
-			       .id = DT_INST_CLOCKS_CELL_BY_NAME(n, mclk, id)},                    \
-	.dac_clock.gclk_sys = {.dev = DEVICE_DT_GET(DT_INST_CLOCKS_CTLR_BY_NAME(n, gclk)),         \
-			       .id = DT_INST_CLOCKS_CELL_BY_NAME(n, gclk, id)}
+	.dac_clock.mclk_sys = (void *)DT_INST_CLOCKS_CELL_BY_NAME(n, mclk, subsystem),             \
+	.dac_clock.gclk_sys = (void *)(DT_INST_CLOCKS_CELL_BY_NAME(n, gclk, subsystem))
 
 /**
  * @brief Macros for handling DAC peripheral clock configuration.
@@ -190,9 +188,9 @@ typedef struct mchp_dac_clock {
  */
 #define DAC_MCHP_ENABLE_CLOCK(dev)                                                                 \
 	clock_control_on(((const dac_mchp_dev_config_t *)(dev->config))->dac_clock.clock_dev,      \
-			 &(((dac_mchp_dev_config_t *)(dev->config))->dac_clock.gclk_sys));         \
+			 (((dac_mchp_dev_config_t *)(dev->config))->dac_clock.gclk_sys));         \
 	clock_control_on(((const dac_mchp_dev_config_t *)(dev->config))->dac_clock.clock_dev,      \
-			 &(((dac_mchp_dev_config_t *)(dev->config))->dac_clock.mclk_sys))
+			 (((dac_mchp_dev_config_t *)(dev->config))->dac_clock.mclk_sys))
 
 #include "dac/hal_mchp_dac_u2502.h"
 

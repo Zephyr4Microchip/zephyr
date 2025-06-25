@@ -15,8 +15,7 @@
 #ifndef MICROCHIP_MCHP_CLOCK_SAM_D5X_E5X_H_
 #define MICROCHIP_MCHP_CLOCK_SAM_D5X_E5X_H_
 
-#include <zephyr/kernel.h>
-#include <zephyr/drivers/clock_control.h>
+
 #include <zephyr/dt-bindings/clock/mchp_sam_d5x_e5x_clock.h>
 
 typedef struct {

@@ -282,7 +282,7 @@
 			interrupts = <11 0>;
 			clocks = <&mclkperiph CLOCK_MCHP_MCLKPERIPH_ID_APBA_RTC>,
 					<&rtcclock CLOCK_MCHP_RTC_ID>;
-			clock-names = "mclk", "osc32kctrl";
+			clock-names = "mclk", "rtcclk";
             prescaler = <1>;
         };
 		sercom0: sercom@40003000 {

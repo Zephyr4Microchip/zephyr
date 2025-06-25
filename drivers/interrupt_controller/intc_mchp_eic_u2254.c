@@ -73,10 +73,10 @@ typedef struct mchp_eic_clock {
 	const struct device *clock_dev;
 
 	/* Main clock subsystem. */
-	clock_control_mchp_subsys_t mclk_sys;
+	clock_control_subsys_t mclk_sys;
 
 	/* Generic clock subsystem. */
-	clock_control_mchp_subsys_t gclk_sys;
+	clock_control_subsys_t gclk_sys;
 
 } mchp_eic_clock_t;
 
@@ -401,14 +401,14 @@ static int eic_mchp_init(const struct device *dev)
 	int ret_val = 0;
 
 	do {
-		ret_val = clock_control_on(eic_cfg->eic_clock.clock_dev,
-					   (clock_control_subsys_t)&eic_cfg->eic_clock.mclk_sys);
+		ret_val =
+			clock_control_on(eic_cfg->eic_clock.clock_dev, eic_cfg->eic_clock.mclk_sys);
 		if ((ret_val < 0) && (ret_val != -EALREADY)) {
 			LOG_ERR("Clock control on failed for mclk %d", ret_val);
 			break;
 		}
-		ret_val = clock_control_on(eic_cfg->eic_clock.clock_dev,
-					   (clock_control_subsys_t)&eic_cfg->eic_clock.gclk_sys);
+		ret_val =
+			clock_control_on(eic_cfg->eic_clock.clock_dev, eic_cfg->eic_clock.gclk_sys);
 		if ((ret_val < 0) && (ret_val != -EALREADY)) {
 			LOG_ERR("Clock control on failed for gclk %d", ret_val);
 			break;
@@ -477,10 +477,8 @@ static int eic_mchp_init(const struct device *dev)
  */
 #define EIC_MCHP_CLOCK_DEFN(n)                                                                     \
 	.eic_clock.clock_dev = DEVICE_DT_GET(DT_NODELABEL(clock)),                                 \
-	.eic_clock.mclk_sys = {.dev = DEVICE_DT_GET(DT_INST_CLOCKS_CTLR_BY_NAME(n, mclk)),         \
-			       .id = DT_INST_CLOCKS_CELL_BY_NAME(n, mclk, id)},                    \
-	.eic_clock.gclk_sys = {.dev = DEVICE_DT_GET(DT_INST_CLOCKS_CTLR_BY_NAME(n, gclk)),         \
-			       .id = DT_INST_CLOCKS_CELL_BY_NAME(n, gclk, id)}
+	.eic_clock.mclk_sys = (void *)DT_INST_CLOCKS_CELL_BY_NAME(n, mclk, subsystem),             \
+	.eic_clock.gclk_sys = (void *)DT_INST_CLOCKS_CELL_BY_NAME(n, gclk, subsystem)
 
 /*
  * Define the EIC device configuration for instance n.
@@ -519,7 +517,7 @@ static int eic_mchp_init(const struct device *dev)
 			EIC_MCHP_IRQ_CONNECT, \
 			(), \
 			n\
-		)                                                                          \
+		)                                                                         \
 	}
 /*
  * Create interrupt handlers for each IRQ of the EIC instance. Listify

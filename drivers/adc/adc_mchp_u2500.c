@@ -141,10 +141,10 @@ typedef struct mchp_adc_clock {
 	const struct device *clock_dev;
 
 	/* Main clock subsystem. */
-	clock_control_mchp_subsys_t mclk_sys;
+	clock_control_subsys_t mclk_sys;
 
 	/* Generic clock subsystem. */
-	clock_control_mchp_subsys_t gclk_sys;
+	clock_control_subsys_t gclk_sys;
 
 } mchp_adc_clock_t;
 
@@ -1243,18 +1243,16 @@ static int adc_mchp_init(const struct device *dev)
 
 	/* Enable the ADC Clock */
 	LOG_DBG("Clock dev: %p, gclk id: %d, mclk id: %d", dev_cfg->adc_clock.clock_dev,
-		dev_cfg->adc_clock.gclk_sys.id, dev_cfg->adc_clock.mclk_sys.id);
+		(uint32_t)(dev_cfg->adc_clock.gclk_sys), (uint32_t)(dev_cfg->adc_clock.mclk_sys));
 	do {
 		/* On Global clock for ADC */
-		ret = clock_control_on(dev_cfg->adc_clock.clock_dev,
-				       (clock_control_subsys_t)&dev_cfg->adc_clock.gclk_sys);
+		ret = clock_control_on(dev_cfg->adc_clock.clock_dev, dev_cfg->adc_clock.gclk_sys);
 		if (ret != 0) {
 			LOG_ERR("Failed to enable the GCLK for ADC: %d", ret);
 			break;
 		}
 		/* On Main clock for ADC */
-		ret = clock_control_on(dev_cfg->adc_clock.clock_dev,
-				       (clock_control_subsys_t)&dev_cfg->adc_clock.mclk_sys);
+		ret = clock_control_on(dev_cfg->adc_clock.clock_dev, dev_cfg->adc_clock.mclk_sys);
 		if (ret != 0) {
 			LOG_ERR("Failed to enable the MCLK for ADC: %d", ret);
 			break;
@@ -1263,7 +1261,7 @@ static int adc_mchp_init(const struct device *dev)
 		/* Get ADC Clock Frequency */
 		ret = clock_control_get_rate(
 			((const adc_mchp_dev_config_t *)(dev->config))->adc_clock.clock_dev,
-			&(((adc_mchp_dev_config_t *)(dev->config))->adc_clock.mclk_sys),
+			(((adc_mchp_dev_config_t *)(dev->config))->adc_clock.mclk_sys),
 			(uint32_t *)&dev_cfg->freq);
 
 		if (ret != 0) {
@@ -1405,10 +1403,8 @@ static inline void adc_init_factory_calib_value(const struct device *dev, int n)
 		.prescaler = DT_INST_PROP(n, prescaler),                                           \
 		.num_channels = DT_INST_PROP(n, num_channels),                                     \
 		.adc_clock.clock_dev = DEVICE_DT_GET(DT_NODELABEL(clock)),                         \
-		.adc_clock.mclk_sys = {.dev = DEVICE_DT_GET(DT_INST_CLOCKS_CTLR_BY_NAME(n, mclk)), \
-				       .id = DT_INST_CLOCKS_CELL_BY_NAME(n, mclk, id)},            \
-		.adc_clock.gclk_sys = {.dev = DEVICE_DT_GET(DT_INST_CLOCKS_CTLR_BY_NAME(n, gclk)), \
-				       .id = DT_INST_CLOCKS_CELL_BY_NAME(n, gclk, id)}}
+		.adc_clock.mclk_sys = (void *)(DT_INST_CLOCKS_CELL_BY_NAME(n, mclk, subsystem)),   \
+		.adc_clock.gclk_sys = (void *)(DT_INST_CLOCKS_CELL_BY_NAME(n, gclk, subsystem))}
 
 /**
  * @brief Instantiates the ADC device for instance @p n.

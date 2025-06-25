@@ -173,8 +173,8 @@ LOG_MODULE_REGISTER(flash_mchp_nvmctrl_u2409);
  * @brief Structure to hold device clock configuration.
  */
 typedef struct flash_mchp_clock {
-	const struct device *clock_dev;       /**< Clock driver */
-	clock_control_mchp_subsys_t mclk_sys; /**< Main clock subsystem. */
+	const struct device *clock_dev;  /**< Clock driver */
+	clock_control_subsys_t mclk_sys; /**< Main clock subsystem. */
 } flash_mchp_clock_t;
 
 /**
@@ -1284,7 +1284,7 @@ static int flash_mchp_init(const struct device *dev)
 	FLASH_MCHP_DATA_MUTEX_INIT(&(mchp_flash_data->flash_data_lock));
 
 	clock_control_on(mchp_flash_cfg->flash_clock.clock_dev,
-			 (clock_control_subsys_t)&mchp_flash_cfg->flash_clock.mclk_sys);
+			 mchp_flash_cfg->flash_clock.mclk_sys);
 
 	mchp_flash_cfg->irq_config_func(dev);
 	flash_controller_init(dev);
@@ -1354,9 +1354,7 @@ static const struct flash_driver_api flash_mchp_driver_api = {
 		.regs = (nvmctrl_registers_t *)DT_INST_REG_ADDR(n),                                \
 		.base_addr = SOC_NV_FLASH_BASE_ADDRESS,                                            \
 		.flash_clock.clock_dev = DEVICE_DT_GET(DT_NODELABEL(clock)),                       \
-		.flash_clock.mclk_sys = {.dev = DEVICE_DT_GET(                                     \
-						 DT_INST_CLOCKS_CTLR_BY_NAME(n, mclk)),            \
-					 .id = DT_INST_CLOCKS_CELL_BY_NAME(n, mclk, id)},          \
+		.flash_clock.mclk_sys = (void *)(DT_INST_CLOCKS_CELL_BY_NAME(n, mclk, subsystem)), \
 		.irq_config_func = flash_mchp_irq_config_##n,                                      \
 		.flash_param = {.write_block_size = SOC_NV_FLASH_WRITE_BLOCK_SIZE,                 \
 				.caps = {.no_explicit_erase = false},                              \

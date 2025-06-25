@@ -14,7 +14,7 @@
 #include <string.h>
 #include <zephyr/drivers/pinctrl.h>
 
-#include <zephyr/drivers/clock_control/mchp_clock_sam_d5x_e5x.h>
+#include <zephyr/drivers/clock_control/mchp_clock_control.h>
 
 /******************************************************************************
  * @brief Macro definitions

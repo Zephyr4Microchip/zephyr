@@ -57,7 +57,7 @@ LOG_MODULE_REGISTER(entropy_mchp_trng_u2242, CONFIG_INTC_LOG_LEVEL);
 
 typedef struct entropy_mchp_clock {
 	const struct device *clock_dev;
-	clock_control_mchp_subsys_t mclk_sys;
+	clock_control_subsys_t mclk_sys;
 } entropy_mchp_clock_t;
 
 /**
@@ -249,9 +249,8 @@ static int entropy_mchp_init(const struct device *dev)
 	int ret_val = 0;
 
 	do {
-		ret_val = clock_control_on(
-			entropy_cfg->entropy_clock.clock_dev,
-			(clock_control_subsys_t)&entropy_cfg->entropy_clock.mclk_sys);
+		ret_val = clock_control_on(entropy_cfg->entropy_clock.clock_dev,
+					   entropy_cfg->entropy_clock.mclk_sys);
 
 		if ((ret_val < 0) && (ret_val != -EALREADY)) {
 			LOG_ERR("Clock control on failed for mclk %d", ret_val);
@@ -284,8 +283,7 @@ static const struct entropy_driver_api entropy_mchp_driver_api = {
 		.regs = (trng_registers_t *)DT_INST_REG_ADDR(n),                                   \
 		.entropy_clock = {                                                                 \
 			.clock_dev = DEVICE_DT_GET(DT_NODELABEL(clock)),                           \
-			.mclk_sys = {.dev = DEVICE_DT_GET(DT_INST_CLOCKS_CTLR_BY_NAME(n, mclk)),   \
-				     .id = DT_INST_CLOCKS_CELL_BY_NAME(n, mclk, id)}}}
+			.mclk_sys = (void *)(DT_INST_CLOCKS_CELL_BY_NAME(n, mclk, subsystem))}}
 /**
  * @brief Initialize entropy device instances.
  *

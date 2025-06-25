@@ -97,10 +97,10 @@ typedef struct mchp_rtc_clock {
 	const struct device *clock_dev;
 
 	/* Main clock subsystem. */
-	clock_control_mchp_subsys_t mclk_sys;
+	clock_control_subsys_t mclk_sys;
 
-	/* Generic clock subsystem. */
-	clock_control_mchp_subsys_t osc32k_sys;
+	/* osc32k rtcclk clock subsystem. */
+	clock_control_subsys_t rtcclk_sys;
 
 } mchp_rtc_clock_t;
 
@@ -1281,16 +1281,14 @@ static int rtc_mchp_init(const struct device *dev)
 
 	do {
 		/* On Oscillator clock for RTC */
-		ret = clock_control_on(cfg->rtc_clock.clock_dev,
-				       (clock_control_subsys_t)&cfg->rtc_clock.osc32k_sys);
+		ret = clock_control_on(cfg->rtc_clock.clock_dev, cfg->rtc_clock.rtcclk_sys);
 		if ((ret != 0) && (ret != -EALREADY)) {
 			LOG_ERR("Failed to enable the osc32k clock for RTC: %d", ret);
 			break;
 		}
 
 		/* On Main clock for RTC */
-		ret = clock_control_on(cfg->rtc_clock.clock_dev,
-				       (clock_control_subsys_t)&cfg->rtc_clock.mclk_sys);
+		ret = clock_control_on(cfg->rtc_clock.clock_dev, cfg->rtc_clock.mclk_sys);
 		if ((ret != 0) && (ret != -EALREADY)) {
 			LOG_ERR("Failed to enable the MCLK for RTC: %d", ret);
 			break;
@@ -1364,10 +1362,8 @@ static const struct rtc_driver_api rtc_mchp_driver_api = {
  */
 #define RTC_MCHP_CLOCK_DEFN(n)                                                                     \
 	.rtc_clock.clock_dev = DEVICE_DT_GET(DT_NODELABEL(clock)),                                 \
-	.rtc_clock.mclk_sys = {.dev = DEVICE_DT_GET(DT_INST_CLOCKS_CTLR_BY_NAME(n, mclk)),         \
-			       .id = DT_INST_CLOCKS_CELL_BY_NAME(n, mclk, id)},                    \
-	.rtc_clock.osc32k_sys = {.dev = DEVICE_DT_GET(DT_INST_CLOCKS_CTLR_BY_NAME(n, osc32kctrl)), \
-				 .id = DT_INST_CLOCKS_CELL_BY_NAME(n, osc32kctrl, id)},
+	.rtc_clock.mclk_sys = (void *)(DT_INST_CLOCKS_CELL_BY_NAME(n, mclk, subsystem)),           \
+	.rtc_clock.rtcclk_sys = (void *)(DT_INST_CLOCKS_CELL_BY_NAME(n, rtcclk, subsystem)),
 
 /* Do the peripheral interrupt related configuration */
 #if defined(CONFIG_RTC_ALARM)
