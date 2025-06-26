@@ -1,0 +1,19 @@
+# Copyright (c) 2025 Microchip Technology Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+config UART_MCHP_SERCOM_U2201
+	bool "Microchip SERCOM U2201 UART driver"
+	default y
+	depends on DT_HAS_MICROCHIP_SERCOM_U2201_UART_ENABLED
+	select SERIAL_HAS_DRIVER
+	select SERIAL_SUPPORT_INTERRUPT
+	select SERIAL_SUPPORT_ASYNC
+	select PINCTRL
+	help
+		This option enables the USART driver for Microchip sercom-u2201 IP.
+
+config UART_MCHP_ASYNC
+	bool "Async UART support for Microchip UART Peripheral"
+	depends on UART_MCHP_SERCOM_U2201
+	depends on UART_ASYNC_API
+	depends on DMA
