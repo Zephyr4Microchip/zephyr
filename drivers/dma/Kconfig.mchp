@@ -3,17 +3,17 @@
 #Copyright(c) 2025 Microchip Technology Inc.
 #SPDX - License - Identifier : Apache - 2.0
 
-config DMA_MCHP_V1
-	bool "Microchip MCHP_V1 DMA driver"
+config DMA_MCHP_DMAC_U2503
+	bool "Microchip DMA driver for DMAC U2503"
 	default y
 	select KERNEL_MEM_POOL
 	depends on DT_HAS_MICROCHIP_DMAC_U2503_ENABLED && !DMA_64BIT
 	help
 	  Enables the DMA driver support for Microchip MCUs.
 
-if DMA_MCHP_V1
+if DMA_MCHP_DMAC_U2503
 
-config DMA_MCHP_V1_MAX_DESC
+config DMA_MCHP_DMAC_U2503_MAX_DESC
 	int "Number of DMA descriptors allocated in DMA descriptor pool"
 	range 4 256
 	default 128
@@ -24,7 +24,7 @@ config DMA_MCHP_V1_MAX_DESC
 	  DMA usage but will increase memory consumption.
 
 config DMA_MCHP_LOG_LEVEL
-	int "DMA MCHP V1 driver log level"
+	int "DMA MCHP driver log level"
 	default 3
 	range 0 4
 	depends on DMA
@@ -46,4 +46,4 @@ config HEAP_MEM_POOL_ADD_SIZE_DMA
 	  in the memory pool (in bytes). Ensuring sufficient heap memory helps prevent
 	  allocation failures and ensures reliable DMA operation.
 
-endif # DMA_MCHP_V1
+endif # DMA_MCHP_DMAC_U2503

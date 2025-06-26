@@ -52,7 +52,7 @@ source "drivers/dma/Kconfig.gd32"
 
 source "drivers/dma/Kconfig.esp32"
 
-source "drivers/dma/Kconfig.mchp_v1"
+source "drivers/dma/Kconfig.mchp"
 
 source "drivers/dma/Kconfig.xec"
 

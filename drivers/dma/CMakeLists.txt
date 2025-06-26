@@ -30,7 +30,7 @@ zephyr_library_sources_ifdef(CONFIG_DMA_INTEL_ADSP_GPDMA	dma_intel_adsp_gpdma.c 
 zephyr_library_sources_ifdef(CONFIG_DMA_INTEL_LPSS      dma_intel_lpss.c dma_dw_common.c)
 zephyr_library_sources_ifdef(CONFIG_DMA_GD32		dma_gd32.c)
 zephyr_library_sources_ifdef(CONFIG_DMA_ESP32		dma_esp32_gdma.c)
-zephyr_library_sources_ifdef(CONFIG_DMA_MCHP_V1     dma_mchp_v1.c)
+zephyr_library_sources_ifdef(CONFIG_DMA_MCHP_DMAC_U2503     dma_mchp_dmac_u2503.c)
 zephyr_library_sources_ifdef(CONFIG_DMA_MCHP_XEC	dma_mchp_xec.c)
 zephyr_library_sources_ifdef(CONFIG_DMA_XMC4XXX		dma_xmc4xxx.c)
 zephyr_library_sources_ifdef(CONFIG_DMA_RPI_PICO	dma_rpi_pico.c)
