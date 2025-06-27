@@ -256,5 +256,11 @@ config HWINFO_NUMAKER_RMC
 	select HAS_NUMAKER_RMC
 	help
 	  Enable Nuvoton NuMaker hwinfo driver backed up by RMC
-
+config HWINFO_MCHP_G1
+	bool "Microchip hwinfo"
+	default y
+	depends on DT_HAS_MICROCHIP_HWINFO_G1_ENABLED
+	select HWINFO_HAS_DRIVER
+	help
+	  Enable mchp hwinfo driver
 endif
