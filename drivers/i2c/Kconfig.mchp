@@ -1,27 +1,35 @@
 # Copyright (c) 2025 Microchip Technology Inc.
 # SPDX-License-Identifier: Apache-2.0
 
-config I2C_MCHP_V1
-	bool "Microchip I2C v1 driver"
+config I2C_MCHP_SERCOM_U2201
+	bool
 	default y
 	depends on DT_HAS_MICROCHIP_SERCOM_U2201_I2C_ENABLED
 	select PINCTRL
 	help
-	  Enable Microchip I2C v1 driver.
+	  Enable support for Microchip I2C driver for SERCOM_U2201 IP.
+
+menuconfig I2C_MCHP_SERCOM
+	bool "Microchip I2C SERCOM driver support"
+	default y
+	depends on I2C_MCHP_SERCOM_U2201
+	help
+	  Enable support for Microchip I2C SERCOM drivers.
+
+if I2C_MCHP_SERCOM
 
 config I2C_MCHP_INTERRUPT_DRIVEN
-	bool "INTERRUPT support for Microchip I2C devices"
+	bool "Interrupt support for Microchip I2C devices"
 	default y
-	depends on I2C_MCHP_V1
 	depends on !I2C_MCHP_DMA_DRIVEN
 	help
 	  This enables INTERRUPT driven transactions for the I2C peripheral.
-	  INTERRUPT driven mode can be used in blocking & non blocking mode.
+	  interrupt driven mode can be used in blocking & non blocking mode.
 
 config I2C_MCHP_DMA_DRIVEN
-	bool "DMA support for Microchip I2C v1 devices"
+	bool "DMA support for Microchip I2C devices"
 	default n
-	depends on I2C_MCHP_V1 && I2C_CALLBACK
+	depends on I2C_CALLBACK
 	select DMA
 	help
 	  This enables DMA driven transactions for the I2C peripheral.
@@ -30,17 +38,18 @@ config I2C_MCHP_DMA_DRIVEN
 	  by data reloading.
 
 config I2C_MCHP_TARGET
-	bool "Target device support for Microchip I2C v1 devices"
+	bool "Target device support for Microchip I2C devices"
 	default y
-	depends on I2C_MCHP_V1 && I2C_TARGET
+	depends on I2C_TARGET
 	help
 	  This enables target device support for the I2C peripheral.
 
 config I2C_MCHP_TRANSFER_TIMEOUT
 	int "Microchip Transfer timeout [ms]"
 	default 500
-	depends on I2C_MCHP_V1
 	help
 	  Timeout in milliseconds used for each I2C transfer.
 	  0 means that the driver should use the K_FOREVER value,
 	  i.e. it should wait as long as necessary.
+
+endif # I2C_MCHP_SERCOM

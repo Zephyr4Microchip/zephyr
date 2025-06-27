@@ -151,7 +151,7 @@ source "drivers/i2c/Kconfig.sedi"
 source "drivers/i2c/Kconfig.ambiq"
 source "drivers/i2c/Kconfig.numaker"
 source "drivers/i2c/Kconfig.mcux"
-source "drivers/i2c/kconfig.mchp_v1"
+source "drivers/i2c/Kconfig.mchp"
 source "drivers/i2c/Kconfig.ene"
 source "drivers/i2c/Kconfig.max32"
 
