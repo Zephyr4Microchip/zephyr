@@ -33,6 +33,17 @@ SPARC, MIPS, and a large number of `supported boards`_.
 Getting Started
 ***************
 
+.. code-block:: bash
+
+   python3 -m venv zephyrproject/.venv
+   source zephyrproject/.venv/bin/activate
+   pip install west
+   west init -m git@github.com:Ignitarium-Technology/mchp_dspic_zephyr.git zephyrproject
+   cd zephyrproject
+   west update
+   west zephyr-export
+   west packages pip --install
+
 Welcome to Zephyr! See the `Introduction to Zephyr`_ for a high-level overview,
 and the documentation's `Getting Started Guide`_ to start developing.
 
