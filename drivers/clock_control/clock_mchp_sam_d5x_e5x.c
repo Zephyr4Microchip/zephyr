@@ -511,11 +511,11 @@ static int clock_on_off(const clock_mchp_config_t *config, const clock_mchp_subs
 
 	int ret_val;
 	__IO uint32_t *reg32 = NULL;
-	uint32_t reg32_val;
+	uint32_t reg32_val = 0;
 	__IO uint16_t *reg16 = NULL;
-	uint16_t reg16_val;
+	uint16_t reg16_val = 0;
 	__IO uint8_t *reg8 = NULL;
-	uint8_t reg8_val, inst;
+	uint8_t reg8_val = 0, inst;
 
 	ret_val = CLOCK_SUCCESS;
 	inst = subsys.bits.inst;
