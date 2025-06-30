@@ -1,9 +1,9 @@
 # Copyright (c) 2025 Microchip Technology Inc.
 # SPDX-License-Identifier: Apache-2.0
 
-config GPIO_MCHP_V1
-	bool "Microchip MCHP V1 variant GPIO driver"
+config GPIO_MCHP_PORT_U2210
+	bool "Microchip MCHP PORT_U2210 GPIO driver"
 	default y
 	depends on DT_HAS_MICROCHIP_PORT_U2210_GPIO_ENABLED
 	help
-	  GPIO driver for Microchip MCHP V1 variant MCUs.
+	  GPIO driver for Microchip MCHP PORT_U2210 (SAMD5xE5x Family).
