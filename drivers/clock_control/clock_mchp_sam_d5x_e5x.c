@@ -9,7 +9,6 @@
  * @brief Clock control driver for sam_d5x_e5x family devices.
  */
 
-#include "zephyr/syscall.h"
 #include <stdbool.h>
 #include <string.h>
 #include <zephyr/drivers/pinctrl.h>
