@@ -1,9 +1,0 @@
-# Copyright (c) 2025 Microchip Technology Inc.
-# SPDX-License-Identifier: Apache-2.0
-
-config PINCTRL_MCHP_V1
-	bool "Microchip SAM D5x/E5x pin controller driver"
-	default y
-	depends on DT_HAS_MICROCHIP_SAM_D5X_E5X_PINCTRL_ENABLED
-	help
-	  Microchip pin controller driver is used on SAM D5x/E5x family

@@ -1,0 +1,9 @@
+# Copyright (c) 2025 Microchip Technology Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+config PINCTRL_MCHP_PORT_U2210
+	bool "Microchip PORT_U2210 pin controller driver"
+	default y
+	depends on DT_HAS_MICROCHIP_PORT_U2210_PINCTRL_ENABLED
+	help
+	  Microchip pin controller driver for SAM D5x/E5x family

@@ -237,7 +237,7 @@
 			};
 		};
 		pinctrl: pinctrl@41008000 {
-			compatible = "microchip,sam-d5x-e5x-pinctrl";
+			compatible = "microchip,port-u2210-pinctrl";
 			#address-cells = <1>;
 			#size-cells = <1>;
 			ranges = <0x41008000 0x41008000 0x200>;

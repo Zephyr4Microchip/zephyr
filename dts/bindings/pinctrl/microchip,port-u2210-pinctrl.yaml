@@ -2,12 +2,15 @@
 # SPDX-License-Identifier: Apache-2.0
 
 description: |
-  Microchip SAM D5x/E5x Pinctrl container node
+  Microchip port-u2210 Pinctrl container node
 
-  The Microchip SAM D5x/E5x pin controller is a singleton node responsible for controlling
+  The Microchip port-u2210 pin controller is a singleton node responsible for controlling
   pin function selection and pin properties. For example, you can use this node
   to route SERCOM0 as UART were RX to pin PAD1 and enable the pull-up resistor
   on the pin.
+
+  The is used in the below families:
+    - SAM D5x/E5x
 
   The node has the 'pinctrl' node label set in your SoC's devicetree, so you can
   modify it like this:
@@ -72,7 +75,7 @@ description: |
           pinctrl-names = "default";
     };
 
-compatible: "microchip,sam-d5x-e5x-pinctrl"
+compatible: "microchip,port-u2210-pinctrl"
 
 include: base.yaml
 

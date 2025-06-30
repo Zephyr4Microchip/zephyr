@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#include <dt-bindings/pinctrl/sam/sam_d5x_e5x/same54/atsame54p20a-pinctrl.h>
+#include <dt-bindings/sam/sam_d5x_e5x/same54/atsame54p20a-pinctrl.h>
 
 &pinctrl {
 	sercom2_uart_default: sercom2_uart_default {

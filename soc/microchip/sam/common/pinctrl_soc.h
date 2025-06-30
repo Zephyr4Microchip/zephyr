@@ -4,12 +4,12 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef MICROCHIP_SAM_PINCTRL_SOC_H_
-#define MICROCHIP_SAM_PINCTRL_SOC_H_
+#ifndef SOC_MICROCHIP_SAM_COMMON_PINCTRL_SOC_H_
+#define SOC_MICROCHIP_SAM_COMMON_PINCTRL_SOC_H_
 
 #include <zephyr/devicetree.h>
 #include <zephyr/types.h>
-#include "dt-bindings/pinctrl/sam/common/mchp_pinctrl_pinmux.h"
+#include "dt-bindings/sam/common/mchp_pinctrl_pinmux_sam.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -17,14 +17,40 @@ extern "C" {
 
 /** @cond INTERNAL_HIDDEN */
 
-/** @brief Type for MCHP pin.
+/**
+ * @brief Structure representing the pin control settings for a SOC pin.
  *
- * Bits:
- * -  0-5:  Pin flags bit field (@ref MCHP_PINFLAGS).
- * -  6-15: Reserved.
- * - 16-31: MCHP pinmux bit field (@ref MCHP_PINMUX)
+ * This structure is used to define the pinmux and pin configuration settings
+ * for a specific pin on the SOC. It includes information about the port, pin,
+ * function, bias, drive, and other configuration options.
  */
-typedef uint32_t pinctrl_soc_pin_t;
+typedef struct pinctrl_soc_pin {
+	/** Pinmux settings (port, pin and function). */
+	uint16_t pinmux;
+	/** Pin configuration (bias, drive etc). */
+	uint16_t pinflag;
+} pinctrl_soc_pin_t;
+
+/**
+ * @brief Utility macro to initialize pinmux field.
+ *
+ * @param node_id Node identifier.
+ */
+#define Z_PINCTRL_MCHP_PINMUX_INIT(node_id, prop, idx) DT_PROP_BY_IDX(node_id, prop, idx)
+
+/**
+ * @brief Utility macro to initialize each pin.
+ *
+ * @param node_id Node identifier.
+ * @param prop Property name.
+ * @param idx Property entry index.
+ */
+#define Z_PINCTRL_MCHP_PINFLAG_INIT(node_id, prop, idx)                                            \
+	((DT_PROP(node_id, bias_pull_up) << MCHP_PINCTRL_PULLUP_POS) |                             \
+	 (DT_PROP(node_id, bias_pull_down) << MCHP_PINCTRL_PULLDOWN_POS) |                         \
+	 (DT_PROP(node_id, input_enable) << MCHP_PINCTRL_INPUTENABLE_POS) |                        \
+	 (DT_PROP(node_id, output_enable) << MCHP_PINCTRL_OUTPUTENABLE_POS) |                      \
+	 (DT_ENUM_IDX(node_id, drive_strength) << MCHP_PINCTRL_DRIVESTRENGTH_POS)),
 
 /**
  * @brief Utility macro to initialize each pin.
@@ -34,12 +60,8 @@ typedef uint32_t pinctrl_soc_pin_t;
  * @param idx Property entry index.
  */
 #define Z_PINCTRL_STATE_PIN_INIT(node_id, prop, idx)                                               \
-	((DT_PROP_BY_IDX(node_id, prop, idx) << MCHP_PINCTRL_PINMUX_POS) |                         \
-	 (DT_PROP(node_id, bias_pull_up) << MCHP_PINCTRL_PULLUP_POS) |                             \
-	 (DT_PROP(node_id, bias_pull_down) << MCHP_PINCTRL_PULLDOWN_POS) |                         \
-	 (DT_PROP(node_id, input_enable) << MCHP_PINCTRL_INPUTENABLE_POS) |                        \
-	 (DT_PROP(node_id, output_enable) << MCHP_PINCTRL_OUTPUTENABLE_POS) |                      \
-	 (DT_ENUM_IDX(node_id, drive_strength) << MCHP_PINCTRL_DRIVESTRENGTH_POS)),
+	{.pinmux = Z_PINCTRL_MCHP_PINMUX_INIT(node_id, prop, idx),                                 \
+	 .pinflag = Z_PINCTRL_MCHP_PINFLAG_INIT(node_id, prop, idx)},
 
 /**
  * @brief Utility macro to initialize state pins contained in a given property.
@@ -79,19 +101,8 @@ typedef uint32_t pinctrl_soc_pin_t;
 
 /** @} */
 
-/**
- * Obtain Flag value from pinctrl_soc_pin_t configuration.
- *
- * @param pincfg pinctrl_soc_pin_t bit field value.
- * @param pos    attribute/flags bit position (@ref MCHP_PINFLAGS).
- */
-#define MCHP_PINCTRL_FLAG_GET(pincfg, pos) (((pincfg) >> pos) & MCHP_PINCTRL_FLAG_MASK)
-
-#define MCHP_PINCTRL_FLAGS_GET(pincfg)                                                             \
-	(((pincfg) >> MCHP_PINCTRL_FLAGS_POS) & MCHP_PINCTRL_FLAGS_MASK)
-
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* MICROCHIP_SAM_PINCTRL_SOC_H_ */
+#endif /* SOC_MICROCHIP_SAM_COMMON_PINCTRL_SOC_H_ */
