@@ -72,6 +72,8 @@ LOG_MODULE_REGISTER(adc_mchp_u2500, CONFIG_ADC_LOG_LEVEL);
 #define ADC_PRESCALER_DIV_128 128
 #define ADC_PRESCALER_DIV_256 256
 
+#define ADC_DEFAULT_SAMPLEN 3
+
 /* If the SUPC API support is not available, define direct access
  * to SUPC registers and shortcuts for voltage reference register
  */
@@ -377,7 +379,7 @@ static int8_t adc_set_reference(adc_registers_t *adc_reg, enum adc_reference ref
 
 #ifndef MCHP_SUPC_API_SUPPORT_AVAILABLE
 	/* Enable internal references manually if SUPC API support is not available */
-	/* Enable Bandgap reference and select 2.5V output */
+	/* Enable Bandgap reference and select 2.4V output */
 	SUPC_VREF |= SUPC_VREF_SEL_2V4;
 #else
 	/* Use MCHP SUPC API to enable and select the internal bandgap voltage reference */
@@ -771,7 +773,7 @@ static int adc_get_sample_length(uint16_t acq_time, uint32_t adc_clk, uint8_t pr
 		break;
 	default:
 		/* Unsupported acquisition time unit or ADC_ACQ_TIME_DEFAULT */
-		sample_length = 0;
+		sample_length = ADC_DEFAULT_SAMPLEN;
 		break;
 	}
 
@@ -1247,22 +1249,23 @@ static int adc_mchp_init(const struct device *dev)
 	do {
 		/* On Global clock for ADC */
 		ret = clock_control_on(dev_cfg->adc_clock.clock_dev, dev_cfg->adc_clock.gclk_sys);
-		if (ret != 0) {
+		if ((ret != 0) && (ret != -EALREADY)) {
 			LOG_ERR("Failed to enable the GCLK for ADC: %d", ret);
 			break;
 		}
 		/* On Main clock for ADC */
 		ret = clock_control_on(dev_cfg->adc_clock.clock_dev, dev_cfg->adc_clock.mclk_sys);
-		if (ret != 0) {
+		if ((ret != 0) && (ret != -EALREADY)) {
 			LOG_ERR("Failed to enable the MCLK for ADC: %d", ret);
 			break;
 		}
 
+		ret = (ret == -EALREADY) ? 0 : ret;
+
 		/* Get ADC Clock Frequency */
-		ret = clock_control_get_rate(
-			((const adc_mchp_dev_config_t *)(dev->config))->adc_clock.clock_dev,
-			(((adc_mchp_dev_config_t *)(dev->config))->adc_clock.mclk_sys),
-			(uint32_t *)&dev_cfg->freq);
+		ret = clock_control_get_rate(dev_cfg->adc_clock.clock_dev,
+					     dev_cfg->adc_clock.gclk_sys,
+					     (uint32_t *)&dev_cfg->freq);
 
 		if (ret != 0) {
 			LOG_ERR("Failed to get the clock rate for ADC: %d", ret);
