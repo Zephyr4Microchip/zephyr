@@ -134,6 +134,6 @@ source "drivers/watchdog/Kconfig.ene"
 
 source "drivers/watchdog/Kconfig.litex"
 
-source "drivers/watchdog/Kconfig.mchp_v1"
+source "drivers/watchdog/Kconfig.mchp"
 
 endif # WATCHDOG
