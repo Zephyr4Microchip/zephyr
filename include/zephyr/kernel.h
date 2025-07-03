@@ -51,19 +51,18 @@ BUILD_ASSERT(sizeof(intptr_t) == sizeof(long));
 #error Zero available thread priorities defined!
 #endif
 
-#define K_PRIO_COOP(x) (-(CONFIG_NUM_COOP_PRIORITIES - (x)))
+#define K_PRIO_COOP(x)    (-(CONFIG_NUM_COOP_PRIORITIES - (x)))
 #define K_PRIO_PREEMPT(x) (x)
 
-#define K_HIGHEST_THREAD_PRIO (-CONFIG_NUM_COOP_PRIORITIES)
-#define K_LOWEST_THREAD_PRIO CONFIG_NUM_PREEMPT_PRIORITIES
-#define K_IDLE_PRIO K_LOWEST_THREAD_PRIO
+#define K_HIGHEST_THREAD_PRIO             (-CONFIG_NUM_COOP_PRIORITIES)
+#define K_LOWEST_THREAD_PRIO              CONFIG_NUM_PREEMPT_PRIORITIES
+#define K_IDLE_PRIO                       K_LOWEST_THREAD_PRIO
 #define K_HIGHEST_APPLICATION_THREAD_PRIO (K_HIGHEST_THREAD_PRIO)
-#define K_LOWEST_APPLICATION_THREAD_PRIO (K_LOWEST_THREAD_PRIO - 1)
+#define K_LOWEST_APPLICATION_THREAD_PRIO  (K_LOWEST_THREAD_PRIO - 1)
 
 #ifdef CONFIG_POLL
-#define Z_POLL_EVENT_OBJ_INIT(obj) \
-	.poll_events = SYS_DLIST_STATIC_INIT(&obj.poll_events),
-#define Z_DECL_POLL_EVENT sys_dlist_t poll_events;
+#define Z_POLL_EVENT_OBJ_INIT(obj) .poll_events = SYS_DLIST_STATIC_INIT(&obj.poll_events),
+#define Z_DECL_POLL_EVENT          sys_dlist_t poll_events;
 #else
 #define Z_POLL_EVENT_OBJ_INIT(obj)
 #define Z_DECL_POLL_EVENT
@@ -103,8 +102,7 @@ typedef int (*_poller_cb_t)(struct k_poll_event *event, uint32_t state);
  * @{
  */
 
-typedef void (*k_thread_user_cb_t)(const struct k_thread *thread,
-				   void *user_data);
+typedef void (*k_thread_user_cb_t)(const struct k_thread *thread, void *user_data);
 
 /**
  * @brief Iterate over all the threads in the system.
@@ -142,12 +140,10 @@ void k_thread_foreach(k_thread_user_cb_t user_cb, void *user_data);
  * threads are blocked until this API returns.
  */
 #ifdef CONFIG_SMP
-void k_thread_foreach_filter_by_cpu(unsigned int cpu,
-				    k_thread_user_cb_t user_cb, void *user_data);
+void k_thread_foreach_filter_by_cpu(unsigned int cpu, k_thread_user_cb_t user_cb, void *user_data);
 #else
-static inline
-void k_thread_foreach_filter_by_cpu(unsigned int cpu,
-				    k_thread_user_cb_t user_cb, void *user_data)
+static inline void k_thread_foreach_filter_by_cpu(unsigned int cpu, k_thread_user_cb_t user_cb,
+						  void *user_data)
 {
 	__ASSERT(cpu == 0, "cpu filter out of bounds");
 	ARG_UNUSED(cpu);
@@ -182,8 +178,7 @@ void k_thread_foreach_filter_by_cpu(unsigned int cpu,
  * Do not reuse the memory that was occupied by k_thread structure of aborted
  * task if it was aborted after this function was called in any context.
  */
-void k_thread_foreach_unlocked(
-	k_thread_user_cb_t user_cb, void *user_data);
+void k_thread_foreach_unlocked(k_thread_user_cb_t user_cb, void *user_data);
 
 /**
  * @brief Iterate over the threads in running on current cpu without locking.
@@ -217,12 +212,12 @@ void k_thread_foreach_unlocked(
  * task if it was aborted after this function was called in any context.
  */
 #ifdef CONFIG_SMP
-void k_thread_foreach_unlocked_filter_by_cpu(unsigned int cpu,
-					     k_thread_user_cb_t user_cb, void *user_data);
+void k_thread_foreach_unlocked_filter_by_cpu(unsigned int cpu, k_thread_user_cb_t user_cb,
+					     void *user_data);
 #else
-static inline
-void k_thread_foreach_unlocked_filter_by_cpu(unsigned int cpu,
-					     k_thread_user_cb_t user_cb, void *user_data)
+static inline void k_thread_foreach_unlocked_filter_by_cpu(unsigned int cpu,
+							   k_thread_user_cb_t user_cb,
+							   void *user_data)
 {
 	__ASSERT(cpu == 0, "cpu filter out of bounds");
 	ARG_UNUSED(cpu);
@@ -240,7 +235,6 @@ void k_thread_foreach_unlocked_filter_by_cpu(unsigned int cpu,
 
 #endif /* !_ASMLANGUAGE */
 
-
 /*
  * Thread user options. May be needed by assembly code. Common part uses low
  * bits, arch-specific use high bits.
@@ -251,7 +245,7 @@ void k_thread_foreach_unlocked_filter_by_cpu(unsigned int cpu,
  * */
 #define K_ESSENTIAL (BIT(0))
 
-#define K_FP_IDX 1
+#define K_FP_IDX  1
 /**
  * @brief FPU registers are managed by context switch
  *
@@ -301,7 +295,7 @@ void k_thread_foreach_unlocked_filter_by_cpu(unsigned int cpu,
  * restore the contents of these registers when scheduling the thread.
  * No effect if @kconfig{CONFIG_DSP_SHARING} is not enabled.
  */
-#define K_DSP_IDX 6
+#define K_DSP_IDX  6
 #define K_DSP_REGS (BIT(K_DSP_IDX))
 
 /**
@@ -312,7 +306,7 @@ void k_thread_foreach_unlocked_filter_by_cpu(unsigned int cpu,
  * memory and DSP feature. Often used with @kconfig{CONFIG_ARC_AGU_SHARING}.
  * No effect if @kconfig{CONFIG_ARC_AGU_SHARING} is not enabled.
  */
-#define K_AGU_IDX 7
+#define K_AGU_IDX  7
 #define K_AGU_REGS (BIT(K_AGU_IDX))
 
 /**
@@ -420,12 +414,9 @@ __syscall int k_thread_stack_free(k_thread_stack_t *stack);
  * @return ID of new thread.
  *
  */
-__syscall k_tid_t k_thread_create(struct k_thread *new_thread,
-				  k_thread_stack_t *stack,
-				  size_t stack_size,
-				  k_thread_entry_t entry,
-				  void *p1, void *p2, void *p3,
-				  int prio, uint32_t options, k_timeout_t delay);
+__syscall k_tid_t k_thread_create(struct k_thread *new_thread, k_thread_stack_t *stack,
+				  size_t stack_size, k_thread_entry_t entry, void *p1, void *p2,
+				  void *p3, int prio, uint32_t options, k_timeout_t delay);
 
 /**
  * @brief Drop a thread's privileges permanently to user mode
@@ -448,9 +439,7 @@ __syscall k_tid_t k_thread_create(struct k_thread *new_thread,
  * @param p2 2nd entry point parameter
  * @param p3 3rd entry point parameter
  */
-FUNC_NORETURN void k_thread_user_mode_enter(k_thread_entry_t entry,
-						   void *p1, void *p2,
-						   void *p3);
+FUNC_NORETURN void k_thread_user_mode_enter(k_thread_entry_t entry, void *p1, void *p2, void *p3);
 
 /**
  * @brief Grant a thread access to a set of kernel objects
@@ -465,7 +454,7 @@ FUNC_NORETURN void k_thread_user_mode_enter(k_thread_entry_t entry,
  * @param thread Thread to grant access to objects
  * @param ... list of kernel object pointers
  */
-#define k_thread_access_grant(thread, ...) \
+#define k_thread_access_grant(thread, ...)                                                         \
 	FOR_EACH_FIXED_ARG(k_object_access_grant, (;), (thread), __VA_ARGS__)
 
 /**
@@ -482,8 +471,7 @@ FUNC_NORETURN void k_thread_user_mode_enter(k_thread_entry_t entry,
  * @param heap Heap object to use for resources,
  *             or NULL if the thread should no longer have a memory pool.
  */
-static inline void k_thread_heap_assign(struct k_thread *thread,
-					struct k_heap *heap)
+static inline void k_thread_heap_assign(struct k_thread *thread, struct k_heap *heap)
 {
 	thread->resource_pool = heap;
 }
@@ -509,8 +497,7 @@ static inline void k_thread_heap_assign(struct k_thread *thread,
  * @return -EINVAL Thread is uninitialized or exited (user mode only)
  * @return -EFAULT Bad memory address for unused_ptr (user mode only)
  */
-__syscall int k_thread_stack_space_get(const struct k_thread *thread,
-				       size_t *unused_ptr);
+__syscall int k_thread_stack_space_get(const struct k_thread *thread, size_t *unused_ptr);
 #endif
 
 #if (K_HEAP_MEM_POOL_SIZE > 0)
@@ -663,8 +650,7 @@ __syscall void k_wakeup(k_tid_t thread);
  *
  * @return ID of current thread.
  */
-__attribute_const__
-__syscall k_tid_t k_sched_current_thread_query(void);
+__attribute_const__ __syscall k_tid_t k_sched_current_thread_query(void);
 
 /**
  * @brief Get thread ID of the current thread.
@@ -672,8 +658,7 @@ __syscall k_tid_t k_sched_current_thread_query(void);
  * @return ID of current thread.
  *
  */
-__attribute_const__
-static inline k_tid_t k_current_get(void)
+__attribute_const__ static inline k_tid_t k_current_get(void)
 {
 #ifdef CONFIG_CURRENT_THREAD_USE_TLS
 
@@ -721,8 +706,7 @@ k_ticks_t z_timeout_remaining(const struct _timeout *timeout);
  */
 __syscall k_ticks_t k_thread_timeout_expires_ticks(const struct k_thread *thread);
 
-static inline k_ticks_t z_impl_k_thread_timeout_expires_ticks(
-						const struct k_thread *thread)
+static inline k_ticks_t z_impl_k_thread_timeout_expires_ticks(const struct k_thread *thread)
 {
 	return z_timeout_expires(&thread->base.timeout);
 }
@@ -736,8 +720,7 @@ static inline k_ticks_t z_impl_k_thread_timeout_expires_ticks(
  */
 __syscall k_ticks_t k_thread_timeout_remaining_ticks(const struct k_thread *thread);
 
-static inline k_ticks_t z_impl_k_thread_timeout_remaining_ticks(
-						const struct k_thread *thread)
+static inline k_ticks_t z_impl_k_thread_timeout_remaining_ticks(const struct k_thread *thread)
 {
 	return z_timeout_remaining(&thread->base.timeout);
 }
@@ -768,44 +751,35 @@ struct _static_thread_data {
 
 #ifdef CONFIG_TIMER_READS_ITS_FREQUENCY_AT_RUNTIME
 #define Z_THREAD_INIT_DELAY_INITIALIZER(ms) .init_delay_ms = (ms)
-#define Z_THREAD_INIT_DELAY(thread) SYS_TIMEOUT_MS((thread)->init_delay_ms)
+#define Z_THREAD_INIT_DELAY(thread)         SYS_TIMEOUT_MS((thread)->init_delay_ms)
 #else
 #define Z_THREAD_INIT_DELAY_INITIALIZER(ms) .init_delay = SYS_TIMEOUT_MS_INIT(ms)
-#define Z_THREAD_INIT_DELAY(thread) (thread)->init_delay
+#define Z_THREAD_INIT_DELAY(thread)         (thread)->init_delay
 #endif
 
-#define Z_THREAD_INITIALIZER(thread, stack, stack_size,           \
-			    entry, p1, p2, p3,                   \
-			    prio, options, delay, tname)         \
-	{                                                        \
-	.init_thread = (thread),				 \
-	.init_stack = (stack),					 \
-	.init_stack_size = (stack_size),                         \
-	.init_entry = (k_thread_entry_t)entry,			 \
-	.init_p1 = (void *)p1,                                   \
-	.init_p2 = (void *)p2,                                   \
-	.init_p3 = (void *)p3,                                   \
-	.init_prio = (prio),                                     \
-	.init_options = (options),                               \
-	.init_name = STRINGIFY(tname),                           \
-	Z_THREAD_INIT_DELAY_INITIALIZER(delay)			 \
-	}
+#define Z_THREAD_INITIALIZER(thread, stack, stack_size, entry, p1, p2, p3, prio, options, delay,   \
+			     tname)                                                                \
+	{.init_thread = (thread),                                                                  \
+	 .init_stack = (stack),                                                                    \
+	 .init_stack_size = (stack_size),                                                          \
+	 .init_entry = (k_thread_entry_t)entry,                                                    \
+	 .init_p1 = (void *)p1,                                                                    \
+	 .init_p2 = (void *)p2,                                                                    \
+	 .init_p3 = (void *)p3,                                                                    \
+	 .init_prio = (prio),                                                                      \
+	 .init_options = (options),                                                                \
+	 .init_name = STRINGIFY(tname), Z_THREAD_INIT_DELAY_INITIALIZER(delay)}
 
 /*
  * Refer to K_THREAD_DEFINE() and K_KERNEL_THREAD_DEFINE() for
  * information on arguments.
  */
-#define Z_THREAD_COMMON_DEFINE(name, stack_size,			\
-			       entry, p1, p2, p3,			\
-			       prio, options, delay)			\
-	struct k_thread _k_thread_obj_##name;				\
-	STRUCT_SECTION_ITERABLE(_static_thread_data,			\
-				_k_thread_data_##name) =		\
-		Z_THREAD_INITIALIZER(&_k_thread_obj_##name,		\
-				     _k_thread_stack_##name, stack_size,\
-				     entry, p1, p2, p3, prio, options,	\
-				     delay, name);			\
-	const k_tid_t name = (k_tid_t)&_k_thread_obj_##name
+#define Z_THREAD_COMMON_DEFINE(name, stack_size, entry, p1, p2, p3, prio, options, delay)          \
+	struct k_thread _k_thread_obj_##name;                                                      \
+	STRUCT_SECTION_ITERABLE(_static_thread_data, _k_thread_data_##name) =                      \
+		Z_THREAD_INITIALIZER(&_k_thread_obj_##name, _k_thread_stack_##name, stack_size,    \
+				     entry, p1, p2, p3, prio, options, delay, name);               \
+	const k_tid_t name = (k_tid_t) & _k_thread_obj_##name
 
 /**
  * INTERNAL_HIDDEN @endcond
@@ -842,12 +816,9 @@ struct _static_thread_data {
  * Use a SYS_INIT() callback if you need to run code before entrance
  * to the application main().
  */
-#define K_THREAD_DEFINE(name, stack_size,                                \
-			entry, p1, p2, p3,                               \
-			prio, options, delay)                            \
-	K_THREAD_STACK_DEFINE(_k_thread_stack_##name, stack_size);	 \
-	Z_THREAD_COMMON_DEFINE(name, stack_size, entry, p1, p2, p3,	 \
-			       prio, options, delay)
+#define K_THREAD_DEFINE(name, stack_size, entry, p1, p2, p3, prio, options, delay)                 \
+	K_THREAD_STACK_DEFINE(_k_thread_stack_##name, stack_size);                                 \
+	Z_THREAD_COMMON_DEFINE(name, stack_size, entry, p1, p2, p3, prio, options, delay)
 
 /**
  * @brief Statically define and initialize a thread intended to run only in kernel mode.
@@ -879,12 +850,9 @@ struct _static_thread_data {
  * @param options Thread options.
  * @param delay Scheduling delay (in milliseconds), zero for no delay.
  */
-#define K_KERNEL_THREAD_DEFINE(name, stack_size,			\
-			       entry, p1, p2, p3,			\
-			       prio, options, delay)			\
-	K_KERNEL_STACK_DEFINE(_k_thread_stack_##name, stack_size);	\
-	Z_THREAD_COMMON_DEFINE(name, stack_size, entry, p1, p2, p3,	\
-			       prio, options, delay)
+#define K_KERNEL_THREAD_DEFINE(name, stack_size, entry, p1, p2, p3, prio, options, delay)          \
+	K_KERNEL_STACK_DEFINE(_k_thread_stack_##name, stack_size);                                 \
+	Z_THREAD_COMMON_DEFINE(name, stack_size, entry, p1, p2, p3, prio, options, delay)
 
 /**
  * @brief Get a thread's priority.
@@ -923,7 +891,6 @@ __syscall int k_thread_priority_get(k_tid_t thread);
  * priority inheritance may result in undefined behavior.
  */
 __syscall void k_thread_priority_set(k_tid_t thread, int prio);
-
 
 #ifdef CONFIG_SCHED_DEADLINE
 /**
@@ -1334,8 +1301,7 @@ const char *k_thread_name_get(k_tid_t thread);
  * @retval -ENOSYS Thread name feature not enabled
  * @retval 0 Success
  */
-__syscall int k_thread_name_copy(k_tid_t thread, char *buf,
-				 size_t size);
+__syscall int k_thread_name_copy(k_tid_t thread, char *buf, size_t size);
 
 /**
  * @brief Get thread state string
@@ -1382,7 +1348,7 @@ const char *k_thread_state_str(k_tid_t thread_id, char *buf, size_t buf_size);
  *
  * @return Timeout delay value.
  */
-#define K_NSEC(t)     Z_TIMEOUT_NS(t)
+#define K_NSEC(t) Z_TIMEOUT_NS(t)
 
 /**
  * @brief Generate timeout delay from microseconds.
@@ -1396,7 +1362,7 @@ const char *k_thread_state_str(k_tid_t thread_id, char *buf, size_t buf_size);
  *
  * @return Timeout delay value.
  */
-#define K_USEC(t)     Z_TIMEOUT_US(t)
+#define K_USEC(t) Z_TIMEOUT_US(t)
 
 /**
  * @brief Generate timeout delay from cycles.
@@ -1408,7 +1374,7 @@ const char *k_thread_state_str(k_tid_t thread_id, char *buf, size_t buf_size);
  *
  * @return Timeout delay value.
  */
-#define K_CYC(t)     Z_TIMEOUT_CYC(t)
+#define K_CYC(t) Z_TIMEOUT_CYC(t)
 
 /**
  * @brief Generate timeout delay from system ticks.
@@ -1420,7 +1386,7 @@ const char *k_thread_state_str(k_tid_t thread_id, char *buf, size_t buf_size);
  *
  * @return Timeout delay value.
  */
-#define K_TICKS(t)     Z_TIMEOUT_TICKS(t)
+#define K_TICKS(t) Z_TIMEOUT_TICKS(t)
 
 /**
  * @brief Generate timeout delay from milliseconds.
@@ -1432,7 +1398,7 @@ const char *k_thread_state_str(k_tid_t thread_id, char *buf, size_t buf_size);
  *
  * @return Timeout delay value.
  */
-#define K_MSEC(ms)     Z_TIMEOUT_MS(ms)
+#define K_MSEC(ms) Z_TIMEOUT_MS(ms)
 
 /**
  * @brief Generate timeout delay from seconds.
@@ -1444,7 +1410,7 @@ const char *k_thread_state_str(k_tid_t thread_id, char *buf, size_t buf_size);
  *
  * @return Timeout delay value.
  */
-#define K_SECONDS(s)   K_MSEC((s) * MSEC_PER_SEC)
+#define K_SECONDS(s) K_MSEC((s) * MSEC_PER_SEC)
 
 /**
  * @brief Generate timeout delay from minutes.
@@ -1456,7 +1422,7 @@ const char *k_thread_state_str(k_tid_t thread_id, char *buf, size_t buf_size);
  *
  * @return Timeout delay value.
  */
-#define K_MINUTES(m)   K_SECONDS((m) * 60)
+#define K_MINUTES(m) K_SECONDS((m) * 60)
 
 /**
  * @brief Generate timeout delay from hours.
@@ -1468,7 +1434,7 @@ const char *k_thread_state_str(k_tid_t thread_id, char *buf, size_t buf_size);
  *
  * @return Timeout delay value.
  */
-#define K_HOURS(h)     K_MINUTES((h) * 60)
+#define K_HOURS(h) K_MINUTES((h) * 60)
 
 /**
  * @brief Generate infinite timeout delay.
@@ -1493,8 +1459,7 @@ const char *k_thread_state_str(k_tid_t thread_id, char *buf, size_t buf_size);
  * @param t Tick uptime value
  * @return Timeout delay value
  */
-#define K_TIMEOUT_ABS_TICKS(t) \
-	Z_TIMEOUT_TICKS(Z_TICK_ABS((k_ticks_t)CLAMP(t, 0, (INT64_MAX - 1))))
+#define K_TIMEOUT_ABS_TICKS(t) Z_TIMEOUT_TICKS(Z_TICK_ABS((k_ticks_t)CLAMP(t, 0, (INT64_MAX - 1))))
 
 /**
  * @brief Generates an absolute/uptime timeout value from seconds
@@ -1603,23 +1568,24 @@ struct k_timer {
 	SYS_PORT_TRACING_TRACKING_FIELD(k_timer)
 
 #ifdef CONFIG_OBJ_CORE_TIMER
-	struct k_obj_core  obj_core;
+	struct k_obj_core obj_core;
 #endif
 };
 
-#define Z_TIMER_INITIALIZER(obj, expiry, stop) \
-	{ \
-	.timeout = { \
-		.node = {},\
-		.fn = z_timer_expiration_handler, \
-		.dticks = 0, \
-	}, \
-	.wait_q = Z_WAIT_Q_INIT(&obj.wait_q), \
-	.expiry_fn = expiry, \
-	.stop_fn = stop, \
-	.period = {}, \
-	.status = 0, \
-	.user_data = 0, \
+#define Z_TIMER_INITIALIZER(obj, expiry, stop)                                                     \
+	{                                                                                          \
+		.timeout =                                                                         \
+			{                                                                          \
+				.node = {},                                                        \
+				.fn = z_timer_expiration_handler,                                  \
+				.dticks = 0,                                                       \
+			},                                                                         \
+		.wait_q = Z_WAIT_Q_INIT(&obj.wait_q),                                              \
+		.expiry_fn = expiry,                                                               \
+		.stop_fn = stop,                                                                   \
+		.period = {},                                                                      \
+		.status = 0,                                                                       \
+		.user_data = 0,                                                                    \
 	}
 
 /**
@@ -1671,9 +1637,8 @@ typedef void (*k_timer_stop_t)(struct k_timer *timer);
  * @param expiry_fn Function to invoke each time the timer expires.
  * @param stop_fn   Function to invoke if the timer is stopped while running.
  */
-#define K_TIMER_DEFINE(name, expiry_fn, stop_fn) \
-	STRUCT_SECTION_ITERABLE(k_timer, name) = \
-		Z_TIMER_INITIALIZER(name, expiry_fn, stop_fn)
+#define K_TIMER_DEFINE(name, expiry_fn, stop_fn)                                                   \
+	STRUCT_SECTION_ITERABLE(k_timer, name) = Z_TIMER_INITIALIZER(name, expiry_fn, stop_fn)
 
 /**
  * @brief Initialize a timer.
@@ -1684,9 +1649,7 @@ typedef void (*k_timer_stop_t)(struct k_timer *timer);
  * @param expiry_fn Function to invoke each time the timer expires.
  * @param stop_fn   Function to invoke if the timer is stopped while running.
  */
-void k_timer_init(struct k_timer *timer,
-			 k_timer_expiry_t expiry_fn,
-			 k_timer_stop_t stop_fn);
+void k_timer_init(struct k_timer *timer, k_timer_expiry_t expiry_fn, k_timer_stop_t stop_fn);
 
 /**
  * @brief Start a timer.
@@ -1702,8 +1665,7 @@ void k_timer_init(struct k_timer *timer,
  * @param duration  Initial timer duration.
  * @param period    Timer period.
  */
-__syscall void k_timer_start(struct k_timer *timer,
-			     k_timeout_t duration, k_timeout_t period);
+__syscall void k_timer_start(struct k_timer *timer, k_timeout_t duration, k_timeout_t period);
 
 /**
  * @brief Stop a timer.
@@ -1770,8 +1732,7 @@ __syscall uint32_t k_timer_status_sync(struct k_timer *timer);
  */
 __syscall k_ticks_t k_timer_expires_ticks(const struct k_timer *timer);
 
-static inline k_ticks_t z_impl_k_timer_expires_ticks(
-				       const struct k_timer *timer)
+static inline k_ticks_t z_impl_k_timer_expires_ticks(const struct k_timer *timer)
 {
 	return z_timeout_expires(&timer->timeout);
 }
@@ -1788,8 +1749,7 @@ static inline k_ticks_t z_impl_k_timer_expires_ticks(
  */
 __syscall k_ticks_t k_timer_remaining_ticks(const struct k_timer *timer);
 
-static inline k_ticks_t z_impl_k_timer_remaining_ticks(
-				       const struct k_timer *timer)
+static inline k_ticks_t z_impl_k_timer_remaining_ticks(const struct k_timer *timer)
 {
 	return z_timeout_remaining(&timer->timeout);
 }
@@ -1828,8 +1788,7 @@ __syscall void k_timer_user_data_set(struct k_timer *timer, void *user_data);
 /**
  * @internal
  */
-static inline void z_impl_k_timer_user_data_set(struct k_timer *timer,
-					       void *user_data)
+static inline void z_impl_k_timer_user_data_set(struct k_timer *timer, void *user_data)
 {
 	timer->user_data = user_data;
 }
@@ -1996,13 +1955,11 @@ struct k_queue {
  * @cond INTERNAL_HIDDEN
  */
 
-#define Z_QUEUE_INITIALIZER(obj) \
-	{ \
-	.data_q = SYS_SFLIST_STATIC_INIT(&obj.data_q), \
-	.lock = { }, \
-	.wait_q = Z_WAIT_Q_INIT(&obj.wait_q),	\
-	Z_POLL_EVENT_OBJ_INIT(obj)		\
-	}
+#define Z_QUEUE_INITIALIZER(obj)                                                                   \
+	{.data_q = SYS_SFLIST_STATIC_INIT(&obj.data_q),                                            \
+	 .lock = {},                                                                               \
+	 .wait_q = Z_WAIT_Q_INIT(&obj.wait_q),                                                     \
+	 Z_POLL_EVENT_OBJ_INIT(obj)}
 
 /**
  * INTERNAL_HIDDEN @endcond
@@ -2258,9 +2215,7 @@ __syscall void *k_queue_peek_tail(struct k_queue *queue);
  *
  * @param name Name of the queue.
  */
-#define K_QUEUE_DEFINE(name) \
-	STRUCT_SECTION_ITERABLE(k_queue, name) = \
-		Z_QUEUE_INITIALIZER(name)
+#define K_QUEUE_DEFINE(name) STRUCT_SECTION_ITERABLE(k_queue, name) = Z_QUEUE_INITIALIZER(name)
 
 /** @} */
 
@@ -2290,10 +2245,7 @@ struct z_futex_data {
 	struct k_spinlock lock;
 };
 
-#define Z_FUTEX_DATA_INITIALIZER(obj) \
-	{ \
-	.wait_q = Z_WAIT_Q_INIT(&obj.wait_q) \
-	}
+#define Z_FUTEX_DATA_INITIALIZER(obj) {.wait_q = Z_WAIT_Q_INIT(&obj.wait_q)}
 
 /**
  * @defgroup futex_apis FUTEX APIs
@@ -2320,8 +2272,7 @@ struct z_futex_data {
  *	     should check the futex's value on wakeup to determine if it needs
  *	     to block again.
  */
-__syscall int k_futex_wait(struct k_futex *futex, int expected,
-			   k_timeout_t timeout);
+__syscall int k_futex_wait(struct k_futex *futex, int expected, k_timeout_t timeout);
 
 /**
  * @brief Wake one/all threads pending on a futex
@@ -2354,8 +2305,8 @@ __syscall int k_futex_wake(struct k_futex *futex, bool wake_all);
  */
 
 struct k_event {
-	_wait_q_t         wait_q;
-	uint32_t          events;
+	_wait_q_t wait_q;
+	uint32_t events;
 	struct k_spinlock lock;
 
 	SYS_PORT_TRACING_TRACKING_FIELD(k_event)
@@ -2363,14 +2314,13 @@ struct k_event {
 #ifdef CONFIG_OBJ_CORE_EVENT
 	struct k_obj_core obj_core;
 #endif
-
 };
 
-#define Z_EVENT_INITIALIZER(obj) \
-	{ \
-	.wait_q = Z_WAIT_Q_INIT(&obj.wait_q), \
-	.events = 0, \
-	.lock = {}, \
+#define Z_EVENT_INITIALIZER(obj)                                                                   \
+	{                                                                                          \
+		.wait_q = Z_WAIT_Q_INIT(&obj.wait_q),                                              \
+		.events = 0,                                                                       \
+		.lock = {},                                                                        \
 	}
 
 /**
@@ -2436,8 +2386,7 @@ __syscall uint32_t k_event_set(struct k_event *event, uint32_t events);
  *
  * @retval Previous value of the events in @a events_mask
  */
-__syscall uint32_t k_event_set_masked(struct k_event *event, uint32_t events,
-				  uint32_t events_mask);
+__syscall uint32_t k_event_set_masked(struct k_event *event, uint32_t events, uint32_t events_mask);
 
 /**
  * @brief Clear the events in an event object
@@ -2477,8 +2426,8 @@ __syscall uint32_t k_event_clear(struct k_event *event, uint32_t events);
  * @retval set of matching events upon success
  * @retval 0 if matching events were not received within the specified time
  */
-__syscall uint32_t k_event_wait(struct k_event *event, uint32_t events,
-				bool reset, k_timeout_t timeout);
+__syscall uint32_t k_event_wait(struct k_event *event, uint32_t events, bool reset,
+				k_timeout_t timeout);
 
 /**
  * @brief Wait for all of the specified events
@@ -2504,8 +2453,8 @@ __syscall uint32_t k_event_wait(struct k_event *event, uint32_t events,
  * @retval set of matching events upon success
  * @retval 0 if matching events were not received within the specified time
  */
-__syscall uint32_t k_event_wait_all(struct k_event *event, uint32_t events,
-				    bool reset, k_timeout_t timeout);
+__syscall uint32_t k_event_wait_all(struct k_event *event, uint32_t events, bool reset,
+				    k_timeout_t timeout);
 
 /**
  * @brief Test the events currently tracked in the event object
@@ -2531,26 +2480,21 @@ static inline uint32_t k_event_test(struct k_event *event, uint32_t events_mask)
  *
  * @param name Name of the event object.
  */
-#define K_EVENT_DEFINE(name)                                   \
-	STRUCT_SECTION_ITERABLE(k_event, name) =               \
-		Z_EVENT_INITIALIZER(name);
+#define K_EVENT_DEFINE(name) STRUCT_SECTION_ITERABLE(k_event, name) = Z_EVENT_INITIALIZER(name);
 
 /** @} */
 
 struct k_fifo {
 	struct k_queue _queue;
 #ifdef CONFIG_OBJ_CORE_FIFO
-	struct k_obj_core  obj_core;
+	struct k_obj_core obj_core;
 #endif
 };
 
 /**
  * @cond INTERNAL_HIDDEN
  */
-#define Z_FIFO_INITIALIZER(obj) \
-	{ \
-	._queue = Z_QUEUE_INITIALIZER(obj._queue) \
-	}
+#define Z_FIFO_INITIALIZER(obj) {._queue = Z_QUEUE_INITIALIZER(obj._queue)}
 
 /**
  * INTERNAL_HIDDEN @endcond
@@ -2569,13 +2513,13 @@ struct k_fifo {
  *
  * @param fifo Address of the FIFO queue.
  */
-#define k_fifo_init(fifo)                                    \
-	({                                                   \
-	SYS_PORT_TRACING_OBJ_FUNC_ENTER(k_fifo, init, fifo); \
-	k_queue_init(&(fifo)->_queue);                       \
-	K_OBJ_CORE_INIT(K_OBJ_CORE(fifo), _obj_type_fifo);   \
-	K_OBJ_CORE_LINK(K_OBJ_CORE(fifo));                   \
-	SYS_PORT_TRACING_OBJ_FUNC_EXIT(k_fifo, init, fifo);  \
+#define k_fifo_init(fifo)                                                                          \
+	({                                                                                         \
+		SYS_PORT_TRACING_OBJ_FUNC_ENTER(k_fifo, init, fifo);                               \
+		k_queue_init(&(fifo)->_queue);                                                     \
+		K_OBJ_CORE_INIT(K_OBJ_CORE(fifo), _obj_type_fifo);                                 \
+		K_OBJ_CORE_LINK(K_OBJ_CORE(fifo));                                                 \
+		SYS_PORT_TRACING_OBJ_FUNC_EXIT(k_fifo, init, fifo);                                \
 	})
 
 /**
@@ -2589,11 +2533,11 @@ struct k_fifo {
  *
  * @param fifo Address of the FIFO queue.
  */
-#define k_fifo_cancel_wait(fifo) \
-	({ \
-	SYS_PORT_TRACING_OBJ_FUNC_ENTER(k_fifo, cancel_wait, fifo); \
-	k_queue_cancel_wait(&(fifo)->_queue); \
-	SYS_PORT_TRACING_OBJ_FUNC_EXIT(k_fifo, cancel_wait, fifo); \
+#define k_fifo_cancel_wait(fifo)                                                                   \
+	({                                                                                         \
+		SYS_PORT_TRACING_OBJ_FUNC_ENTER(k_fifo, cancel_wait, fifo);                        \
+		k_queue_cancel_wait(&(fifo)->_queue);                                              \
+		SYS_PORT_TRACING_OBJ_FUNC_EXIT(k_fifo, cancel_wait, fifo);                         \
 	})
 
 /**
@@ -2608,12 +2552,12 @@ struct k_fifo {
  * @param fifo Address of the FIFO.
  * @param data Address of the data item.
  */
-#define k_fifo_put(fifo, data) \
-	({ \
-	void *_data = data; \
-	SYS_PORT_TRACING_OBJ_FUNC_ENTER(k_fifo, put, fifo, _data); \
-	k_queue_append(&(fifo)->_queue, _data); \
-	SYS_PORT_TRACING_OBJ_FUNC_EXIT(k_fifo, put, fifo, _data); \
+#define k_fifo_put(fifo, data)                                                                     \
+	({                                                                                         \
+		void *_data = data;                                                                \
+		SYS_PORT_TRACING_OBJ_FUNC_ENTER(k_fifo, put, fifo, _data);                         \
+		k_queue_append(&(fifo)->_queue, _data);                                            \
+		SYS_PORT_TRACING_OBJ_FUNC_EXIT(k_fifo, put, fifo, _data);                          \
 	})
 
 /**
@@ -2632,13 +2576,13 @@ struct k_fifo {
  * @retval 0 on success
  * @retval -ENOMEM if there isn't sufficient RAM in the caller's resource pool
  */
-#define k_fifo_alloc_put(fifo, data) \
-	({ \
-	void *_data = data; \
-	SYS_PORT_TRACING_OBJ_FUNC_ENTER(k_fifo, alloc_put, fifo, _data); \
-	int fap_ret = k_queue_alloc_append(&(fifo)->_queue, _data); \
-	SYS_PORT_TRACING_OBJ_FUNC_EXIT(k_fifo, alloc_put, fifo, _data, fap_ret); \
-	fap_ret; \
+#define k_fifo_alloc_put(fifo, data)                                                               \
+	({                                                                                         \
+		void *_data = data;                                                                \
+		SYS_PORT_TRACING_OBJ_FUNC_ENTER(k_fifo, alloc_put, fifo, _data);                   \
+		int fap_ret = k_queue_alloc_append(&(fifo)->_queue, _data);                        \
+		SYS_PORT_TRACING_OBJ_FUNC_EXIT(k_fifo, alloc_put, fifo, _data, fap_ret);           \
+		fap_ret;                                                                           \
 	})
 
 /**
@@ -2655,11 +2599,11 @@ struct k_fifo {
  * @param head Pointer to first node in singly-linked list.
  * @param tail Pointer to last node in singly-linked list.
  */
-#define k_fifo_put_list(fifo, head, tail) \
-	({ \
-	SYS_PORT_TRACING_OBJ_FUNC_ENTER(k_fifo, put_list, fifo, head, tail); \
-	k_queue_append_list(&(fifo)->_queue, head, tail); \
-	SYS_PORT_TRACING_OBJ_FUNC_EXIT(k_fifo, put_list, fifo, head, tail); \
+#define k_fifo_put_list(fifo, head, tail)                                                          \
+	({                                                                                         \
+		SYS_PORT_TRACING_OBJ_FUNC_ENTER(k_fifo, put_list, fifo, head, tail);               \
+		k_queue_append_list(&(fifo)->_queue, head, tail);                                  \
+		SYS_PORT_TRACING_OBJ_FUNC_EXIT(k_fifo, put_list, fifo, head, tail);                \
 	})
 
 /**
@@ -2675,11 +2619,11 @@ struct k_fifo {
  * @param fifo Address of the FIFO queue.
  * @param list Pointer to sys_slist_t object.
  */
-#define k_fifo_put_slist(fifo, list) \
-	({ \
-	SYS_PORT_TRACING_OBJ_FUNC_ENTER(k_fifo, put_slist, fifo, list); \
-	k_queue_merge_slist(&(fifo)->_queue, list); \
-	SYS_PORT_TRACING_OBJ_FUNC_EXIT(k_fifo, put_slist, fifo, list); \
+#define k_fifo_put_slist(fifo, list)                                                               \
+	({                                                                                         \
+		SYS_PORT_TRACING_OBJ_FUNC_ENTER(k_fifo, put_slist, fifo, list);                    \
+		k_queue_merge_slist(&(fifo)->_queue, list);                                        \
+		SYS_PORT_TRACING_OBJ_FUNC_EXIT(k_fifo, put_slist, fifo, list);                     \
 	})
 
 /**
@@ -2699,12 +2643,12 @@ struct k_fifo {
  * @return Address of the data item if successful; NULL if returned
  * without waiting, or waiting period timed out.
  */
-#define k_fifo_get(fifo, timeout) \
-	({ \
-	SYS_PORT_TRACING_OBJ_FUNC_ENTER(k_fifo, get, fifo, timeout); \
-	void *fg_ret = k_queue_get(&(fifo)->_queue, timeout); \
-	SYS_PORT_TRACING_OBJ_FUNC_EXIT(k_fifo, get, fifo, timeout, fg_ret); \
-	fg_ret; \
+#define k_fifo_get(fifo, timeout)                                                                  \
+	({                                                                                         \
+		SYS_PORT_TRACING_OBJ_FUNC_ENTER(k_fifo, get, fifo, timeout);                       \
+		void *fg_ret = k_queue_get(&(fifo)->_queue, timeout);                              \
+		SYS_PORT_TRACING_OBJ_FUNC_EXIT(k_fifo, get, fifo, timeout, fg_ret);                \
+		fg_ret;                                                                            \
 	})
 
 /**
@@ -2720,8 +2664,7 @@ struct k_fifo {
  * @return Non-zero if the FIFO queue is empty.
  * @return 0 if data is available.
  */
-#define k_fifo_is_empty(fifo) \
-	k_queue_is_empty(&(fifo)->_queue)
+#define k_fifo_is_empty(fifo) k_queue_is_empty(&(fifo)->_queue)
 
 /**
  * @brief Peek element at the head of a FIFO queue.
@@ -2736,12 +2679,12 @@ struct k_fifo {
  *
  * @return Head element, or NULL if the FIFO queue is empty.
  */
-#define k_fifo_peek_head(fifo) \
-	({ \
-	SYS_PORT_TRACING_OBJ_FUNC_ENTER(k_fifo, peek_head, fifo); \
-	void *fph_ret = k_queue_peek_head(&(fifo)->_queue); \
-	SYS_PORT_TRACING_OBJ_FUNC_EXIT(k_fifo, peek_head, fifo, fph_ret); \
-	fph_ret; \
+#define k_fifo_peek_head(fifo)                                                                     \
+	({                                                                                         \
+		SYS_PORT_TRACING_OBJ_FUNC_ENTER(k_fifo, peek_head, fifo);                          \
+		void *fph_ret = k_queue_peek_head(&(fifo)->_queue);                                \
+		SYS_PORT_TRACING_OBJ_FUNC_EXIT(k_fifo, peek_head, fifo, fph_ret);                  \
+		fph_ret;                                                                           \
 	})
 
 /**
@@ -2755,12 +2698,12 @@ struct k_fifo {
  *
  * @return Tail element, or NULL if a FIFO queue is empty.
  */
-#define k_fifo_peek_tail(fifo) \
-	({ \
-	SYS_PORT_TRACING_OBJ_FUNC_ENTER(k_fifo, peek_tail, fifo); \
-	void *fpt_ret = k_queue_peek_tail(&(fifo)->_queue); \
-	SYS_PORT_TRACING_OBJ_FUNC_EXIT(k_fifo, peek_tail, fifo, fpt_ret); \
-	fpt_ret; \
+#define k_fifo_peek_tail(fifo)                                                                     \
+	({                                                                                         \
+		SYS_PORT_TRACING_OBJ_FUNC_ENTER(k_fifo, peek_tail, fifo);                          \
+		void *fpt_ret = k_queue_peek_tail(&(fifo)->_queue);                                \
+		SYS_PORT_TRACING_OBJ_FUNC_EXIT(k_fifo, peek_tail, fifo, fpt_ret);                  \
+		fpt_ret;                                                                           \
 	})
 
 /**
@@ -2772,16 +2715,14 @@ struct k_fifo {
  *
  * @param name Name of the FIFO queue.
  */
-#define K_FIFO_DEFINE(name) \
-	STRUCT_SECTION_ITERABLE(k_fifo, name) = \
-		Z_FIFO_INITIALIZER(name)
+#define K_FIFO_DEFINE(name) STRUCT_SECTION_ITERABLE(k_fifo, name) = Z_FIFO_INITIALIZER(name)
 
 /** @} */
 
 struct k_lifo {
 	struct k_queue _queue;
 #ifdef CONFIG_OBJ_CORE_LIFO
-	struct k_obj_core  obj_core;
+	struct k_obj_core obj_core;
 #endif
 };
 
@@ -2789,10 +2730,7 @@ struct k_lifo {
  * @cond INTERNAL_HIDDEN
  */
 
-#define Z_LIFO_INITIALIZER(obj) \
-	{ \
-	._queue = Z_QUEUE_INITIALIZER(obj._queue) \
-	}
+#define Z_LIFO_INITIALIZER(obj) {._queue = Z_QUEUE_INITIALIZER(obj._queue)}
 
 /**
  * INTERNAL_HIDDEN @endcond
@@ -2811,13 +2749,13 @@ struct k_lifo {
  *
  * @param lifo Address of the LIFO queue.
  */
-#define k_lifo_init(lifo)                                    \
-	({                                                   \
-	SYS_PORT_TRACING_OBJ_FUNC_ENTER(k_lifo, init, lifo); \
-	k_queue_init(&(lifo)->_queue);                       \
-	K_OBJ_CORE_INIT(K_OBJ_CORE(lifo), _obj_type_lifo);   \
-	K_OBJ_CORE_LINK(K_OBJ_CORE(lifo));                   \
-	SYS_PORT_TRACING_OBJ_FUNC_EXIT(k_lifo, init, lifo);  \
+#define k_lifo_init(lifo)                                                                          \
+	({                                                                                         \
+		SYS_PORT_TRACING_OBJ_FUNC_ENTER(k_lifo, init, lifo);                               \
+		k_queue_init(&(lifo)->_queue);                                                     \
+		K_OBJ_CORE_INIT(K_OBJ_CORE(lifo), _obj_type_lifo);                                 \
+		K_OBJ_CORE_LINK(K_OBJ_CORE(lifo));                                                 \
+		SYS_PORT_TRACING_OBJ_FUNC_EXIT(k_lifo, init, lifo);                                \
 	})
 
 /**
@@ -2832,12 +2770,12 @@ struct k_lifo {
  * @param lifo Address of the LIFO queue.
  * @param data Address of the data item.
  */
-#define k_lifo_put(lifo, data) \
-	({ \
-	void *_data = data; \
-	SYS_PORT_TRACING_OBJ_FUNC_ENTER(k_lifo, put, lifo, _data); \
-	k_queue_prepend(&(lifo)->_queue, _data); \
-	SYS_PORT_TRACING_OBJ_FUNC_EXIT(k_lifo, put, lifo, _data); \
+#define k_lifo_put(lifo, data)                                                                     \
+	({                                                                                         \
+		void *_data = data;                                                                \
+		SYS_PORT_TRACING_OBJ_FUNC_ENTER(k_lifo, put, lifo, _data);                         \
+		k_queue_prepend(&(lifo)->_queue, _data);                                           \
+		SYS_PORT_TRACING_OBJ_FUNC_EXIT(k_lifo, put, lifo, _data);                          \
 	})
 
 /**
@@ -2856,13 +2794,13 @@ struct k_lifo {
  * @retval 0 on success
  * @retval -ENOMEM if there isn't sufficient RAM in the caller's resource pool
  */
-#define k_lifo_alloc_put(lifo, data) \
-	({ \
-	void *_data = data; \
-	SYS_PORT_TRACING_OBJ_FUNC_ENTER(k_lifo, alloc_put, lifo, _data); \
-	int lap_ret = k_queue_alloc_prepend(&(lifo)->_queue, _data); \
-	SYS_PORT_TRACING_OBJ_FUNC_EXIT(k_lifo, alloc_put, lifo, _data, lap_ret); \
-	lap_ret; \
+#define k_lifo_alloc_put(lifo, data)                                                               \
+	({                                                                                         \
+		void *_data = data;                                                                \
+		SYS_PORT_TRACING_OBJ_FUNC_ENTER(k_lifo, alloc_put, lifo, _data);                   \
+		int lap_ret = k_queue_alloc_prepend(&(lifo)->_queue, _data);                       \
+		SYS_PORT_TRACING_OBJ_FUNC_EXIT(k_lifo, alloc_put, lifo, _data, lap_ret);           \
+		lap_ret;                                                                           \
 	})
 
 /**
@@ -2882,12 +2820,12 @@ struct k_lifo {
  * @return Address of the data item if successful; NULL if returned
  * without waiting, or waiting period timed out.
  */
-#define k_lifo_get(lifo, timeout) \
-	({ \
-	SYS_PORT_TRACING_OBJ_FUNC_ENTER(k_lifo, get, lifo, timeout); \
-	void *lg_ret = k_queue_get(&(lifo)->_queue, timeout); \
-	SYS_PORT_TRACING_OBJ_FUNC_EXIT(k_lifo, get, lifo, timeout, lg_ret); \
-	lg_ret; \
+#define k_lifo_get(lifo, timeout)                                                                  \
+	({                                                                                         \
+		SYS_PORT_TRACING_OBJ_FUNC_ENTER(k_lifo, get, lifo, timeout);                       \
+		void *lg_ret = k_queue_get(&(lifo)->_queue, timeout);                              \
+		SYS_PORT_TRACING_OBJ_FUNC_EXIT(k_lifo, get, lifo, timeout, lg_ret);                \
+		lg_ret;                                                                            \
 	})
 
 /**
@@ -2899,16 +2837,14 @@ struct k_lifo {
  *
  * @param name Name of the fifo.
  */
-#define K_LIFO_DEFINE(name) \
-	STRUCT_SECTION_ITERABLE(k_lifo, name) = \
-		Z_LIFO_INITIALIZER(name)
+#define K_LIFO_DEFINE(name) STRUCT_SECTION_ITERABLE(k_lifo, name) = Z_LIFO_INITIALIZER(name)
 
 /** @} */
 
 /**
  * @cond INTERNAL_HIDDEN
  */
-#define K_STACK_FLAG_ALLOC	((uint8_t)1)	/* Buffer was allocated */
+#define K_STACK_FLAG_ALLOC ((uint8_t)1) /* Buffer was allocated */
 
 typedef uintptr_t stack_data_t;
 
@@ -2922,16 +2858,16 @@ struct k_stack {
 	SYS_PORT_TRACING_TRACKING_FIELD(k_stack)
 
 #ifdef CONFIG_OBJ_CORE_STACK
-	struct k_obj_core  obj_core;
+	struct k_obj_core obj_core;
 #endif
 };
 
-#define Z_STACK_INITIALIZER(obj, stack_buffer, stack_num_entries) \
-	{ \
-	.wait_q = Z_WAIT_Q_INIT(&(obj).wait_q),	\
-	.base = (stack_buffer), \
-	.next = (stack_buffer), \
-	.top = (stack_buffer) + (stack_num_entries), \
+#define Z_STACK_INITIALIZER(obj, stack_buffer, stack_num_entries)                                  \
+	{                                                                                          \
+		.wait_q = Z_WAIT_Q_INIT(&(obj).wait_q),                                            \
+		.base = (stack_buffer),                                                            \
+		.next = (stack_buffer),                                                            \
+		.top = (stack_buffer) + (stack_num_entries),                                       \
 	}
 
 /**
@@ -2953,9 +2889,7 @@ struct k_stack {
  * @param buffer Address of array used to hold stacked values.
  * @param num_entries Maximum number of values that can be stacked.
  */
-void k_stack_init(struct k_stack *stack,
-		  stack_data_t *buffer, uint32_t num_entries);
-
+void k_stack_init(struct k_stack *stack, stack_data_t *buffer, uint32_t num_entries);
 
 /**
  * @brief Initialize a stack.
@@ -2971,8 +2905,7 @@ void k_stack_init(struct k_stack *stack,
  * @return -ENOMEM if memory couldn't be allocated
  */
 
-__syscall int32_t k_stack_alloc_init(struct k_stack *stack,
-				   uint32_t num_entries);
+__syscall int32_t k_stack_alloc_init(struct k_stack *stack, uint32_t num_entries);
 
 /**
  * @brief Release a stack's allocated buffer
@@ -3022,8 +2955,7 @@ __syscall int k_stack_push(struct k_stack *stack, stack_data_t data);
  * @retval -EBUSY Returned without waiting.
  * @retval -EAGAIN Waiting period timed out.
  */
-__syscall int k_stack_pop(struct k_stack *stack, stack_data_t *data,
-			  k_timeout_t timeout);
+__syscall int k_stack_pop(struct k_stack *stack, stack_data_t *data, k_timeout_t timeout);
 
 /**
  * @brief Statically define and initialize a stack
@@ -3035,12 +2967,10 @@ __syscall int k_stack_pop(struct k_stack *stack, stack_data_t *data,
  * @param name Name of the stack.
  * @param stack_num_entries Maximum number of values that can be stacked.
  */
-#define K_STACK_DEFINE(name, stack_num_entries)                \
-	stack_data_t __noinit                                  \
-		_k_stack_buf_##name[stack_num_entries];        \
-	STRUCT_SECTION_ITERABLE(k_stack, name) =               \
-		Z_STACK_INITIALIZER(name, _k_stack_buf_##name, \
-				    stack_num_entries)
+#define K_STACK_DEFINE(name, stack_num_entries)                                                    \
+	stack_data_t __noinit _k_stack_buf_##name[stack_num_entries];                              \
+	STRUCT_SECTION_ITERABLE(k_stack, name) =                                                   \
+		Z_STACK_INITIALIZER(name, _k_stack_buf_##name, stack_num_entries)
 
 /** @} */
 
@@ -3089,12 +3019,12 @@ struct k_mutex {
 /**
  * @cond INTERNAL_HIDDEN
  */
-#define Z_MUTEX_INITIALIZER(obj) \
-	{ \
-	.wait_q = Z_WAIT_Q_INIT(&(obj).wait_q), \
-	.owner = NULL, \
-	.lock_count = 0, \
-	.owner_orig_prio = K_LOWEST_APPLICATION_THREAD_PRIO, \
+#define Z_MUTEX_INITIALIZER(obj)                                                                   \
+	{                                                                                          \
+		.wait_q = Z_WAIT_Q_INIT(&(obj).wait_q),                                            \
+		.owner = NULL,                                                                     \
+		.lock_count = 0,                                                                   \
+		.owner_orig_prio = K_LOWEST_APPLICATION_THREAD_PRIO,                               \
 	}
 
 /**
@@ -3110,9 +3040,7 @@ struct k_mutex {
  *
  * @param name Name of the mutex.
  */
-#define K_MUTEX_DEFINE(name) \
-	STRUCT_SECTION_ITERABLE(k_mutex, name) = \
-		Z_MUTEX_INITIALIZER(name)
+#define K_MUTEX_DEFINE(name) STRUCT_SECTION_ITERABLE(k_mutex, name) = Z_MUTEX_INITIALIZER(name)
 
 /**
  * @brief Initialize a mutex.
@@ -3127,7 +3055,6 @@ struct k_mutex {
  *
  */
 __syscall int k_mutex_init(struct k_mutex *mutex);
-
 
 /**
  * @brief Lock a mutex.
@@ -3178,18 +3105,17 @@ __syscall int k_mutex_unlock(struct k_mutex *mutex);
  * @}
  */
 
-
 struct k_condvar {
 	_wait_q_t wait_q;
 
 #ifdef CONFIG_OBJ_CORE_CONDVAR
-	struct k_obj_core  obj_core;
+	struct k_obj_core obj_core;
 #endif
 };
 
-#define Z_CONDVAR_INITIALIZER(obj)                                             \
-	{                                                                      \
-		.wait_q = Z_WAIT_Q_INIT(&obj.wait_q),                          \
+#define Z_CONDVAR_INITIALIZER(obj)                                                                 \
+	{                                                                                          \
+		.wait_q = Z_WAIT_Q_INIT(&obj.wait_q),                                              \
 	}
 
 /**
@@ -3240,8 +3166,7 @@ __syscall int k_condvar_broadcast(struct k_condvar *condvar);
  * @retval 0 On success
  * @retval -EAGAIN Waiting period timed out.
  */
-__syscall int k_condvar_wait(struct k_condvar *condvar, struct k_mutex *mutex,
-			     k_timeout_t timeout);
+__syscall int k_condvar_wait(struct k_condvar *condvar, struct k_mutex *mutex, k_timeout_t timeout);
 
 /**
  * @brief Statically define and initialize a condition variable.
@@ -3253,9 +3178,8 @@ __syscall int k_condvar_wait(struct k_condvar *condvar, struct k_mutex *mutex,
  *
  * @param name Name of the condition variable.
  */
-#define K_CONDVAR_DEFINE(name)                                                 \
-	STRUCT_SECTION_ITERABLE(k_condvar, name) =                             \
-		Z_CONDVAR_INITIALIZER(name)
+#define K_CONDVAR_DEFINE(name)                                                                     \
+	STRUCT_SECTION_ITERABLE(k_condvar, name) = Z_CONDVAR_INITIALIZER(name)
 /**
  * @}
  */
@@ -3285,7 +3209,7 @@ struct k_sem {
 	SYS_PORT_TRACING_TRACKING_FIELD(k_sem)
 
 #ifdef CONFIG_OBJ_CORE_SEM
-	struct k_obj_core  obj_core;
+	struct k_obj_core obj_core;
 #endif
 	/** @endcond */
 };
@@ -3294,13 +3218,11 @@ struct k_sem {
  * @cond INTERNAL_HIDDEN
  */
 
-#define Z_SEM_INITIALIZER(obj, initial_count, count_limit) \
-	{ \
-	.wait_q = Z_WAIT_Q_INIT(&(obj).wait_q), \
-	.count = (initial_count), \
-	.limit = (count_limit), \
-	Z_POLL_EVENT_OBJ_INIT(obj) \
-	}
+#define Z_SEM_INITIALIZER(obj, initial_count, count_limit)                                         \
+	{.wait_q = Z_WAIT_Q_INIT(&(obj).wait_q),                                                   \
+	 .count = (initial_count),                                                                 \
+	 .limit = (count_limit),                                                                   \
+	 Z_POLL_EVENT_OBJ_INIT(obj)}
 
 /**
  * @endcond
@@ -3331,8 +3253,7 @@ struct k_sem {
  * @retval -EINVAL Invalid values
  *
  */
-__syscall int k_sem_init(struct k_sem *sem, unsigned int initial_count,
-			  unsigned int limit);
+__syscall int k_sem_init(struct k_sem *sem, unsigned int initial_count, unsigned int limit);
 
 /**
  * @brief Take a semaphore.
@@ -3454,8 +3375,7 @@ typedef void (*k_work_handler_t)(struct k_work *work);
  *
  * @param handler the handler to be invoked by the work item.
  */
-void k_work_init(struct k_work *work,
-		  k_work_handler_t handler);
+void k_work_init(struct k_work *work, k_work_handler_t handler);
 
 /** @brief Busy state flags from the work item.
  *
@@ -3508,8 +3428,7 @@ static inline bool k_work_is_pending(const struct k_work *work);
  * @retval -EINVAL if @p queue is null and the work item has never been run.
  * @retval -ENODEV if @p queue has not been started.
  */
-int k_work_submit_to_queue(struct k_work_q *queue,
-			   struct k_work *work);
+int k_work_submit_to_queue(struct k_work_q *queue, struct k_work *work);
 
 /** @brief Submit a work item to the system queue.
  *
@@ -3545,8 +3464,7 @@ int k_work_submit(struct k_work *work);
  * @retval true if call had to wait for completion
  * @retval false if work was already idle
  */
-bool k_work_flush(struct k_work *work,
-		  struct k_work_sync *sync);
+bool k_work_flush(struct k_work *work, struct k_work_sync *sync);
 
 /** @brief Cancel a work item.
  *
@@ -3631,8 +3549,7 @@ void k_work_queue_init(struct k_work_q *queue);
  * NULL if not required, to use the defaults documented in
  * k_work_queue_config.
  */
-void k_work_queue_start(struct k_work_q *queue,
-			k_thread_stack_t *stack, size_t stack_size,
+void k_work_queue_start(struct k_work_q *queue, k_thread_stack_t *stack, size_t stack_size,
 			int prio, const struct k_work_queue_config *cfg);
 
 /** @brief Run work queue using calling thread
@@ -3727,8 +3644,7 @@ int k_work_queue_stop(struct k_work_q *queue, k_timeout_t timeout);
  *
  * @param handler the handler to be invoked by the work item.
  */
-void k_work_init_delayable(struct k_work_delayable *dwork,
-			   k_work_handler_t handler);
+void k_work_init_delayable(struct k_work_delayable *dwork, k_work_handler_t handler);
 
 /**
  * @brief Get the parent delayable work structure from a work pointer.
@@ -3741,8 +3657,7 @@ void k_work_init_delayable(struct k_work_delayable *dwork,
  *
  * @return Address of the containing @c k_work_delayable structure.
  */
-static inline struct k_work_delayable *
-k_work_delayable_from_work(struct k_work *work);
+static inline struct k_work_delayable *k_work_delayable_from_work(struct k_work *work);
 
 /** @brief Busy state flags from the delayable work item.
  *
@@ -3773,8 +3688,7 @@ int k_work_delayable_busy_get(const struct k_work_delayable *dwork);
  * @return true if and only if k_work_delayable_busy_get() returns a non-zero
  * value.
  */
-static inline bool k_work_delayable_is_pending(
-	const struct k_work_delayable *dwork);
+static inline bool k_work_delayable_is_pending(const struct k_work_delayable *dwork);
 
 /** @brief Get the absolute tick count at which a scheduled delayable work
  * will be submitted.
@@ -3789,8 +3703,7 @@ static inline bool k_work_delayable_is_pending(
  * @return the tick count when the timer that will schedule the work item will
  * expire, or the current tick count if the work is not scheduled.
  */
-static inline k_ticks_t k_work_delayable_expires_get(
-	const struct k_work_delayable *dwork);
+static inline k_ticks_t k_work_delayable_expires_get(const struct k_work_delayable *dwork);
 
 /** @brief Get the number of ticks until a scheduled delayable work will be
  * submitted.
@@ -3805,8 +3718,7 @@ static inline k_ticks_t k_work_delayable_expires_get(
  * @return the number of ticks until the timer that will schedule the work
  * item will expire, or zero if the item is not scheduled.
  */
-static inline k_ticks_t k_work_delayable_remaining_get(
-	const struct k_work_delayable *dwork);
+static inline k_ticks_t k_work_delayable_remaining_get(const struct k_work_delayable *dwork);
 
 /** @brief Submit an idle work item to a queue after a delay.
  *
@@ -3835,9 +3747,8 @@ static inline k_ticks_t k_work_delayable_remaining_get(
  * @retval -ENODEV if @p delay is @c K_NO_WAIT and
  *         k_work_submit_to_queue() fails with this code.
  */
-int k_work_schedule_for_queue(struct k_work_q *queue,
-			       struct k_work_delayable *dwork,
-			       k_timeout_t delay);
+int k_work_schedule_for_queue(struct k_work_q *queue, struct k_work_delayable *dwork,
+			      k_timeout_t delay);
 
 /** @brief Submit an idle work item to the system work queue after a
  * delay.
@@ -3852,8 +3763,7 @@ int k_work_schedule_for_queue(struct k_work_q *queue,
  *
  * @return as with k_work_schedule_for_queue().
  */
-int k_work_schedule(struct k_work_delayable *dwork,
-				   k_timeout_t delay);
+int k_work_schedule(struct k_work_delayable *dwork, k_timeout_t delay);
 
 /** @brief Reschedule a work item to a queue after a delay.
  *
@@ -3890,9 +3800,8 @@ int k_work_schedule(struct k_work_delayable *dwork,
  * @retval -ENODEV if @p delay is @c K_NO_WAIT and
  *         k_work_submit_to_queue() fails with this code.
  */
-int k_work_reschedule_for_queue(struct k_work_q *queue,
-				 struct k_work_delayable *dwork,
-				 k_timeout_t delay);
+int k_work_reschedule_for_queue(struct k_work_q *queue, struct k_work_delayable *dwork,
+				k_timeout_t delay);
 
 /** @brief Reschedule a work item to the system work queue after a
  * delay.
@@ -3906,8 +3815,7 @@ int k_work_reschedule_for_queue(struct k_work_q *queue,
  *
  * @return as with k_work_reschedule_for_queue().
  */
-int k_work_reschedule(struct k_work_delayable *dwork,
-				     k_timeout_t delay);
+int k_work_reschedule(struct k_work_delayable *dwork, k_timeout_t delay);
 
 /** @brief Flush delayable work.
  *
@@ -3933,8 +3841,7 @@ int k_work_reschedule(struct k_work_delayable *dwork,
  * @retval true if call had to wait for completion
  * @retval false if work was already idle
  */
-bool k_work_flush_delayable(struct k_work_delayable *dwork,
-			    struct k_work_sync *sync);
+bool k_work_flush_delayable(struct k_work_delayable *dwork, struct k_work_sync *sync);
 
 /** @brief Cancel delayable work.
  *
@@ -3986,13 +3893,12 @@ int k_work_cancel_delayable(struct k_work_delayable *dwork);
  * cancelled);
  * @retval false otherwise
  */
-bool k_work_cancel_delayable_sync(struct k_work_delayable *dwork,
-				  struct k_work_sync *sync);
+bool k_work_cancel_delayable_sync(struct k_work_delayable *dwork, struct k_work_sync *sync);
 
 enum {
-/**
- * @cond INTERNAL_HIDDEN
- */
+	/**
+	 * @cond INTERNAL_HIDDEN
+	 */
 
 	/* The atomic API is used for all work and queue flags fields to
 	 * enforce sequential consistency in SMP environments.
@@ -4007,8 +3913,8 @@ enum {
 	K_WORK_DELAYED_BIT = 3,
 	K_WORK_FLUSHING_BIT = 4,
 
-	K_WORK_MASK = BIT(K_WORK_DELAYED_BIT) | BIT(K_WORK_QUEUED_BIT)
-		| BIT(K_WORK_RUNNING_BIT) | BIT(K_WORK_CANCELING_BIT) | BIT(K_WORK_FLUSHING_BIT),
+	K_WORK_MASK = BIT(K_WORK_DELAYED_BIT) | BIT(K_WORK_QUEUED_BIT) | BIT(K_WORK_RUNNING_BIT) |
+		      BIT(K_WORK_CANCELING_BIT) | BIT(K_WORK_FLUSHING_BIT),
 
 	/* Static work flags */
 	K_WORK_DELAYABLE_BIT = 8,
@@ -4030,9 +3936,9 @@ enum {
 	K_WORK_QUEUE_NO_YIELD_BIT = 8,
 	K_WORK_QUEUE_NO_YIELD = BIT(K_WORK_QUEUE_NO_YIELD_BIT),
 
-/**
- * INTERNAL_HIDDEN @endcond
- */
+	/**
+	 * INTERNAL_HIDDEN @endcond
+	 */
 	/* Transient work flags */
 
 	/** @brief Flag indicating a work item that is running under a work
@@ -4093,9 +3999,10 @@ struct k_work {
 	uint32_t flags;
 };
 
-#define Z_WORK_INITIALIZER(work_handler) { \
-	.handler = (work_handler), \
-}
+#define Z_WORK_INITIALIZER(work_handler)                                                           \
+	{                                                                                          \
+		.handler = (work_handler),                                                         \
+	}
 
 /** @brief A structure used to submit work after a delay. */
 struct k_work_delayable {
@@ -4109,12 +4016,14 @@ struct k_work_delayable {
 	struct k_work_q *queue;
 };
 
-#define Z_WORK_DELAYABLE_INITIALIZER(work_handler) { \
-	.work = { \
-		.handler = (work_handler), \
-		.flags = K_WORK_DELAYABLE, \
-	}, \
-}
+#define Z_WORK_DELAYABLE_INITIALIZER(work_handler)                                                 \
+	{                                                                                          \
+		.work =                                                                            \
+			{                                                                          \
+				.handler = (work_handler),                                         \
+				.flags = K_WORK_DELAYABLE,                                         \
+			},                                                                         \
+	}
 
 /**
  * @brief Initialize a statically-defined delayable work item.
@@ -4132,9 +4041,8 @@ struct k_work_delayable {
  * @param work Symbol name for delayable work item object
  * @param work_handler Function to invoke each time work item is processed.
  */
-#define K_WORK_DELAYABLE_DEFINE(work, work_handler) \
-	struct k_work_delayable work \
-	  = Z_WORK_DELAYABLE_INITIALIZER(work_handler)
+#define K_WORK_DELAYABLE_DEFINE(work, work_handler)                                                \
+	struct k_work_delayable work = Z_WORK_DELAYABLE_INITIALIZER(work_handler)
 
 /**
  * @cond INTERNAL_HIDDEN
@@ -4271,26 +4179,22 @@ static inline bool k_work_is_pending(const struct k_work *work)
 	return k_work_busy_get(work) != 0;
 }
 
-static inline struct k_work_delayable *
-k_work_delayable_from_work(struct k_work *work)
+static inline struct k_work_delayable *k_work_delayable_from_work(struct k_work *work)
 {
 	return CONTAINER_OF(work, struct k_work_delayable, work);
 }
 
-static inline bool k_work_delayable_is_pending(
-	const struct k_work_delayable *dwork)
+static inline bool k_work_delayable_is_pending(const struct k_work_delayable *dwork)
 {
 	return k_work_delayable_busy_get(dwork) != 0;
 }
 
-static inline k_ticks_t k_work_delayable_expires_get(
-	const struct k_work_delayable *dwork)
+static inline k_ticks_t k_work_delayable_expires_get(const struct k_work_delayable *dwork)
 {
 	return z_timeout_expires(&dwork->timeout);
 }
 
-static inline k_ticks_t k_work_delayable_remaining_get(
-	const struct k_work_delayable *dwork)
+static inline k_ticks_t k_work_delayable_remaining_get(const struct k_work_delayable *dwork)
 {
 	return z_timeout_remaining(&dwork->timeout);
 }
@@ -4330,11 +4234,11 @@ struct k_work_user_q {
 };
 
 enum {
-	K_WORK_USER_STATE_PENDING,	/* Work item pending state */
+	K_WORK_USER_STATE_PENDING, /* Work item pending state */
 };
 
 struct k_work_user {
-	void *_reserved;		/* Used by k_queue implementation. */
+	void *_reserved; /* Used by k_queue implementation. */
 	k_work_user_handler_t handler;
 	atomic_t flags;
 };
@@ -4344,14 +4248,10 @@ struct k_work_user {
  */
 
 #if defined(__cplusplus) && ((__cplusplus - 0) < 202002L)
-#define Z_WORK_USER_INITIALIZER(work_handler) { NULL, work_handler, 0 }
+#define Z_WORK_USER_INITIALIZER(work_handler) {NULL, work_handler, 0}
 #else
-#define Z_WORK_USER_INITIALIZER(work_handler) \
-	{ \
-	._reserved = NULL, \
-	.handler = (work_handler), \
-	.flags = 0 \
-	}
+#define Z_WORK_USER_INITIALIZER(work_handler)                                                      \
+	{._reserved = NULL, .handler = (work_handler), .flags = 0}
 #endif
 
 /**
@@ -4365,7 +4265,7 @@ struct k_work_user {
  * @param work Symbol name for work item object
  * @param work_handler Function to invoke each time work item is processed.
  */
-#define K_WORK_USER_DEFINE(work, work_handler) \
+#define K_WORK_USER_DEFINE(work, work_handler)                                                     \
 	struct k_work_user work = Z_WORK_USER_INITIALIZER(work_handler)
 
 /**
@@ -4377,8 +4277,7 @@ struct k_work_user {
  * @param work Address of work item.
  * @param handler Function to invoke each time work item is processed.
  */
-static inline void k_work_user_init(struct k_work_user *work,
-				    k_work_user_handler_t handler)
+static inline void k_work_user_init(struct k_work_user *work, k_work_user_handler_t handler)
 {
 	*work = (struct k_work_user)Z_WORK_USER_INITIALIZER(handler);
 }
@@ -4427,16 +4326,14 @@ static inline int k_work_user_submit_to_queue(struct k_work_user_q *work_q,
 {
 	int ret = -EBUSY;
 
-	if (!atomic_test_and_set_bit(&work->flags,
-				     K_WORK_USER_STATE_PENDING)) {
+	if (!atomic_test_and_set_bit(&work->flags, K_WORK_USER_STATE_PENDING)) {
 		ret = k_queue_alloc_append(&work_q->queue, work);
 
 		/* Couldn't insert into the queue. Clear the pending bit
 		 * so the work item can be submitted again
 		 */
 		if (ret != 0) {
-			atomic_clear_bit(&work->flags,
-					 K_WORK_USER_STATE_PENDING);
+			atomic_clear_bit(&work->flags, K_WORK_USER_STATE_PENDING);
 		}
 	}
 
@@ -4462,10 +4359,8 @@ static inline int k_work_user_submit_to_queue(struct k_work_user_q *work_q,
  * @param name optional thread name.  If not null a copy is made into the
  *		thread's name buffer.
  */
-void k_work_user_queue_start(struct k_work_user_q *work_q,
-				    k_thread_stack_t *stack,
-				    size_t stack_size, int prio,
-				    const char *name);
+void k_work_user_queue_start(struct k_work_user_q *work_q, k_thread_stack_t *stack,
+			     size_t stack_size, int prio, const char *name);
 
 /**
  * @brief Access the user mode thread that animates a work queue.
@@ -4519,8 +4414,7 @@ struct k_work_poll {
  * @param work Symbol name for work item object
  * @param work_handler Function to invoke each time work item is processed.
  */
-#define K_WORK_DEFINE(work, work_handler) \
-	struct k_work work = Z_WORK_INITIALIZER(work_handler)
+#define K_WORK_DEFINE(work, work_handler) struct k_work work = Z_WORK_INITIALIZER(work_handler)
 
 /**
  * @brief Initialize a triggered work item.
@@ -4531,8 +4425,7 @@ struct k_work_poll {
  * @param work Address of triggered work item.
  * @param handler Function to invoke each time work item is processed.
  */
-void k_work_poll_init(struct k_work_poll *work,
-			     k_work_handler_t handler);
+void k_work_poll_init(struct k_work_poll *work, k_work_handler_t handler);
 
 /**
  * @brief Submit a triggered work item.
@@ -4568,11 +4461,8 @@ void k_work_poll_init(struct k_work_poll *work,
  * @retval -EINVAL Work item is being processed or has completed its work.
  * @retval -EADDRINUSE Work item is pending on a different workqueue.
  */
-int k_work_poll_submit_to_queue(struct k_work_q *work_q,
-				       struct k_work_poll *work,
-				       struct k_poll_event *events,
-				       int num_events,
-				       k_timeout_t timeout);
+int k_work_poll_submit_to_queue(struct k_work_q *work_q, struct k_work_poll *work,
+				struct k_poll_event *events, int num_events, k_timeout_t timeout);
 
 /**
  * @brief Submit a triggered work item to the system workqueue.
@@ -4605,10 +4495,8 @@ int k_work_poll_submit_to_queue(struct k_work_q *work_q,
  * @retval -EINVAL Work item is being processed or has completed its work.
  * @retval -EADDRINUSE Work item is pending on a different workqueue.
  */
-int k_work_poll_submit(struct k_work_poll *work,
-				     struct k_poll_event *events,
-				     int num_events,
-				     k_timeout_t timeout);
+int k_work_poll_submit(struct k_work_poll *work, struct k_poll_event *events, int num_events,
+		       k_timeout_t timeout);
 
 /**
  * @brief Cancel a triggered work item.
@@ -4665,35 +4553,32 @@ struct k_msgq {
 	SYS_PORT_TRACING_TRACKING_FIELD(k_msgq)
 
 #ifdef CONFIG_OBJ_CORE_MSGQ
-	struct k_obj_core  obj_core;
+	struct k_obj_core obj_core;
 #endif
 };
 /**
  * @cond INTERNAL_HIDDEN
  */
 
-
-#define Z_MSGQ_INITIALIZER(obj, q_buffer, q_msg_size, q_max_msgs) \
-	{ \
-	.wait_q = Z_WAIT_Q_INIT(&obj.wait_q), \
-	.lock = {}, \
-	.msg_size = q_msg_size, \
-	.max_msgs = q_max_msgs, \
-	.buffer_start = q_buffer, \
-	.buffer_end = q_buffer + (q_max_msgs * q_msg_size), \
-	.read_ptr = q_buffer, \
-	.write_ptr = q_buffer, \
-	.used_msgs = 0, \
-	Z_POLL_EVENT_OBJ_INIT(obj) \
-	.flags = 0, \
+#define Z_MSGQ_INITIALIZER(obj, q_buffer, q_msg_size, q_max_msgs)                                  \
+	{                                                                                          \
+		.wait_q = Z_WAIT_Q_INIT(&obj.wait_q),                                              \
+		.lock = {},                                                                        \
+		.msg_size = q_msg_size,                                                            \
+		.max_msgs = q_max_msgs,                                                            \
+		.buffer_start = q_buffer,                                                          \
+		.buffer_end = q_buffer + (q_max_msgs * q_msg_size),                                \
+		.read_ptr = q_buffer,                                                              \
+		.write_ptr = q_buffer,                                                             \
+		.used_msgs = 0,                                                                    \
+		Z_POLL_EVENT_OBJ_INIT(obj).flags = 0,                                              \
 	}
 
 /**
  * INTERNAL_HIDDEN @endcond
  */
 
-
-#define K_MSGQ_FLAG_ALLOC	BIT(0)
+#define K_MSGQ_FLAG_ALLOC BIT(0)
 
 /**
  * @brief Message Queue Attributes
@@ -4706,7 +4591,6 @@ struct k_msgq_attrs {
 	/** Used messages */
 	uint32_t used_msgs;
 };
-
 
 /**
  * @brief Statically define and initialize a message queue.
@@ -4726,12 +4610,10 @@ struct k_msgq_attrs {
  * @param q_align Alignment of the message queue's ring buffer (power of 2).
  *
  */
-#define K_MSGQ_DEFINE(q_name, q_msg_size, q_max_msgs, q_align)		\
-	static char __noinit __aligned(q_align)				\
-		_k_fifo_buf_##q_name[(q_max_msgs) * (q_msg_size)];	\
-	STRUCT_SECTION_ITERABLE(k_msgq, q_name) =			\
-	       Z_MSGQ_INITIALIZER(q_name, _k_fifo_buf_##q_name,	\
-				  (q_msg_size), (q_max_msgs))
+#define K_MSGQ_DEFINE(q_name, q_msg_size, q_max_msgs, q_align)                                     \
+	static char __noinit __aligned(q_align) _k_fifo_buf_##q_name[(q_max_msgs) * (q_msg_size)]; \
+	STRUCT_SECTION_ITERABLE(k_msgq, q_name) =                                                  \
+		Z_MSGQ_INITIALIZER(q_name, _k_fifo_buf_##q_name, (q_msg_size), (q_max_msgs))
 
 /**
  * @brief Initialize a message queue.
@@ -4747,8 +4629,7 @@ struct k_msgq_attrs {
  * @param msg_size Message size (in bytes).
  * @param max_msgs Maximum number of messages that can be queued.
  */
-void k_msgq_init(struct k_msgq *msgq, char *buffer, size_t msg_size,
-		 uint32_t max_msgs);
+void k_msgq_init(struct k_msgq *msgq, char *buffer, size_t msg_size, uint32_t max_msgs);
 
 /**
  * @brief Initialize a message queue.
@@ -4769,8 +4650,7 @@ void k_msgq_init(struct k_msgq *msgq, char *buffer, size_t msg_size,
  *	thread's resource pool, or -EINVAL if the size parameters cause
  *	an integer overflow.
  */
-__syscall int k_msgq_alloc_init(struct k_msgq *msgq, size_t msg_size,
-				uint32_t max_msgs);
+__syscall int k_msgq_alloc_init(struct k_msgq *msgq, size_t msg_size, uint32_t max_msgs);
 
 /**
  * @brief Release allocated buffer for a queue
@@ -4893,9 +4773,7 @@ __syscall uint32_t k_msgq_num_free_get(struct k_msgq *msgq);
  * @param msgq Address of the message queue.
  * @param attrs pointer to message queue attribute structure.
  */
-__syscall void  k_msgq_get_attrs(struct k_msgq *msgq,
-				 struct k_msgq_attrs *attrs);
-
+__syscall void k_msgq_get_attrs(struct k_msgq *msgq, struct k_msgq_attrs *attrs);
 
 static inline uint32_t z_impl_k_msgq_num_free_get(struct k_msgq *msgq)
 {
@@ -4962,17 +4840,17 @@ struct k_mbox {
 	SYS_PORT_TRACING_TRACKING_FIELD(k_mbox)
 
 #ifdef CONFIG_OBJ_CORE_MAILBOX
-	struct k_obj_core  obj_core;
+	struct k_obj_core obj_core;
 #endif
 };
 /**
  * @cond INTERNAL_HIDDEN
  */
 
-#define Z_MBOX_INITIALIZER(obj) \
-	{ \
-	.tx_msg_queue = Z_WAIT_Q_INIT(&obj.tx_msg_queue), \
-	.rx_msg_queue = Z_WAIT_Q_INIT(&obj.rx_msg_queue), \
+#define Z_MBOX_INITIALIZER(obj)                                                                    \
+	{                                                                                          \
+		.tx_msg_queue = Z_WAIT_Q_INIT(&obj.tx_msg_queue),                                  \
+		.rx_msg_queue = Z_WAIT_Q_INIT(&obj.rx_msg_queue),                                  \
 	}
 
 /**
@@ -4988,9 +4866,7 @@ struct k_mbox {
  *
  * @param name Name of the mailbox.
  */
-#define K_MBOX_DEFINE(name) \
-	STRUCT_SECTION_ITERABLE(k_mbox, name) = \
-		Z_MBOX_INITIALIZER(name) \
+#define K_MBOX_DEFINE(name) STRUCT_SECTION_ITERABLE(k_mbox, name) = Z_MBOX_INITIALIZER(name)
 
 /**
  * @brief Initialize a mailbox.
@@ -5020,8 +4896,7 @@ void k_mbox_init(struct k_mbox *mbox);
  * @retval -ENOMSG Returned without waiting.
  * @retval -EAGAIN Waiting period timed out.
  */
-int k_mbox_put(struct k_mbox *mbox, struct k_mbox_msg *tx_msg,
-		      k_timeout_t timeout);
+int k_mbox_put(struct k_mbox *mbox, struct k_mbox_msg *tx_msg, k_timeout_t timeout);
 
 /**
  * @brief Send a mailbox message in an asynchronous manner.
@@ -5036,8 +4911,7 @@ int k_mbox_put(struct k_mbox *mbox, struct k_mbox_msg *tx_msg,
  * @param tx_msg Address of the transmit message descriptor.
  * @param sem Address of a semaphore, or NULL if none is needed.
  */
-void k_mbox_async_put(struct k_mbox *mbox, struct k_mbox_msg *tx_msg,
-			     struct k_sem *sem);
+void k_mbox_async_put(struct k_mbox *mbox, struct k_mbox_msg *tx_msg, struct k_sem *sem);
 
 /**
  * @brief Receive a mailbox message.
@@ -5056,8 +4930,7 @@ void k_mbox_async_put(struct k_mbox *mbox, struct k_mbox_msg *tx_msg,
  * @retval -ENOMSG Returned without waiting.
  * @retval -EAGAIN Waiting period timed out.
  */
-int k_mbox_get(struct k_mbox *mbox, struct k_mbox_msg *rx_msg,
-		      void *buffer, k_timeout_t timeout);
+int k_mbox_get(struct k_mbox *mbox, struct k_mbox_msg *rx_msg, void *buffer, k_timeout_t timeout);
 
 /**
  * @brief Retrieve mailbox message data into a buffer.
@@ -5096,48 +4969,45 @@ __syscall void k_pipe_init(struct k_pipe *pipe, uint8_t *buffer, size_t buffer_s
 #ifdef CONFIG_PIPES
 /** Pipe Structure */
 struct k_pipe {
-	unsigned char *buffer;          /**< Pipe buffer: may be NULL */
-	size_t         size;            /**< Buffer size */
-	size_t         bytes_used;      /**< Number of bytes used in buffer */
-	size_t         read_index;      /**< Where in buffer to read from */
-	size_t         write_index;     /**< Where in buffer to write */
-	struct k_spinlock lock;		/**< Synchronization lock */
+	unsigned char *buffer;  /**< Pipe buffer: may be NULL */
+	size_t size;            /**< Buffer size */
+	size_t bytes_used;      /**< Number of bytes used in buffer */
+	size_t read_index;      /**< Where in buffer to read from */
+	size_t write_index;     /**< Where in buffer to write */
+	struct k_spinlock lock; /**< Synchronization lock */
 
 	struct {
-		_wait_q_t      readers; /**< Reader wait queue */
-		_wait_q_t      writers; /**< Writer wait queue */
-	} wait_q;			/** Wait queue */
+		_wait_q_t readers; /**< Reader wait queue */
+		_wait_q_t writers; /**< Writer wait queue */
+	} wait_q;                  /** Wait queue */
 
 	Z_DECL_POLL_EVENT
 
-	uint8_t	       flags;		/**< Flags */
+	uint8_t flags; /**< Flags */
 
 	SYS_PORT_TRACING_TRACKING_FIELD(k_pipe)
 
 #ifdef CONFIG_OBJ_CORE_PIPE
-	struct k_obj_core  obj_core;
+	struct k_obj_core obj_core;
 #endif
 };
 
 /**
  * @cond INTERNAL_HIDDEN
  */
-#define K_PIPE_FLAG_ALLOC	BIT(0)	/** Buffer was allocated */
+#define K_PIPE_FLAG_ALLOC BIT(0) /** Buffer was allocated */
 
-#define Z_PIPE_INITIALIZER(obj, pipe_buffer, pipe_buffer_size)     \
-	{                                                           \
-	.buffer = pipe_buffer,                                      \
-	.size = pipe_buffer_size,                                   \
-	.bytes_used = 0,                                            \
-	.read_index = 0,                                            \
-	.write_index = 0,                                           \
-	.lock = {},                                                 \
-	.wait_q = {                                                 \
-		.readers = Z_WAIT_Q_INIT(&obj.wait_q.readers),       \
-		.writers = Z_WAIT_Q_INIT(&obj.wait_q.writers)        \
-	},                                                          \
-	Z_POLL_EVENT_OBJ_INIT(obj)                                   \
-	.flags = 0,                                                 \
+#define Z_PIPE_INITIALIZER(obj, pipe_buffer, pipe_buffer_size)                                     \
+	{                                                                                          \
+		.buffer = pipe_buffer,                                                             \
+		.size = pipe_buffer_size,                                                          \
+		.bytes_used = 0,                                                                   \
+		.read_index = 0,                                                                   \
+		.write_index = 0,                                                                  \
+		.lock = {},                                                                        \
+		.wait_q = {.readers = Z_WAIT_Q_INIT(&obj.wait_q.readers),                          \
+			   .writers = Z_WAIT_Q_INIT(&obj.wait_q.writers)},                         \
+		Z_POLL_EVENT_OBJ_INIT(obj).flags = 0,                                              \
 	}
 
 /**
@@ -5157,10 +5027,9 @@ struct k_pipe {
  * @param pipe_align Alignment of the pipe's ring buffer (power of 2).
  *
  */
-#define K_PIPE_DEFINE(name, pipe_buffer_size, pipe_align)		\
-	static unsigned char __noinit __aligned(pipe_align)		\
-		_k_pipe_buf_##name[pipe_buffer_size];			\
-	STRUCT_SECTION_ITERABLE(k_pipe, name) =				\
+#define K_PIPE_DEFINE(name, pipe_buffer_size, pipe_align)                                          \
+	static unsigned char __noinit __aligned(pipe_align) _k_pipe_buf_##name[pipe_buffer_size];  \
+	STRUCT_SECTION_ITERABLE(k_pipe, name) =                                                    \
 		Z_PIPE_INITIALIZER(name, _k_pipe_buf_##name, pipe_buffer_size)
 
 /**
@@ -5214,9 +5083,8 @@ __deprecated __syscall int k_pipe_alloc_init(struct k_pipe *pipe, size_t size);
  * @retval -EAGAIN Waiting period timed out; between zero and @a min_xfer
  *                 minus one data bytes were written.
  */
-__deprecated __syscall int k_pipe_put(struct k_pipe *pipe, const void *data,
-			 size_t bytes_to_write, size_t *bytes_written,
-			 size_t min_xfer, k_timeout_t timeout);
+__deprecated __syscall int k_pipe_put(struct k_pipe *pipe, const void *data, size_t bytes_to_write,
+				      size_t *bytes_written, size_t min_xfer, k_timeout_t timeout);
 
 /**
  * @deprecated k_pipe_get() is replaced by k_pipe_read(...) in the new k_pipe API.
@@ -5238,9 +5106,8 @@ __deprecated __syscall int k_pipe_put(struct k_pipe *pipe, const void *data,
  * @retval -EAGAIN Waiting period timed out; between zero and @a min_xfer
  *                 minus one data bytes were read.
  */
-__deprecated  __syscall int k_pipe_get(struct k_pipe *pipe, void *data,
-			 size_t bytes_to_read, size_t *bytes_read,
-			 size_t min_xfer, k_timeout_t timeout);
+__deprecated __syscall int k_pipe_get(struct k_pipe *pipe, void *data, size_t bytes_to_read,
+				      size_t *bytes_read, size_t min_xfer, k_timeout_t timeout);
 
 /**
  * @deprecated k_pipe_read_avail() will be removed in the new k_pipe API.
@@ -5251,7 +5118,7 @@ __deprecated  __syscall int k_pipe_get(struct k_pipe *pipe, void *data,
  * @retval a number n such that 0 <= n <= @ref k_pipe.size; the
  *         result is zero for unbuffered pipes.
  */
-__deprecated  __syscall size_t k_pipe_read_avail(struct k_pipe *pipe);
+__deprecated __syscall size_t k_pipe_read_avail(struct k_pipe *pipe);
 
 /**
  * @deprecated k_pipe_write_avail() will be removed in the new k_pipe API.
@@ -5308,7 +5175,7 @@ struct k_pipe {
 
 	Z_DECL_POLL_EVENT
 #ifdef CONFIG_OBJ_CORE_PIPE
-	struct k_obj_core  obj_core;
+	struct k_obj_core obj_core;
 #endif
 	SYS_PORT_TRACING_TRACKING_FIELD(k_pipe)
 };
@@ -5316,15 +5183,13 @@ struct k_pipe {
 /**
  * @cond INTERNAL_HIDDEN
  */
-#define Z_PIPE_INITIALIZER(obj, pipe_buffer, pipe_buffer_size)	\
-{								\
-	.buf = RING_BUF_INIT(pipe_buffer, pipe_buffer_size),	\
-	.data = Z_WAIT_Q_INIT(&obj.data),			\
-	.space = Z_WAIT_Q_INIT(&obj.space),			\
-	.flags = PIPE_FLAG_OPEN,				\
-	.waiting = 0,						\
-	Z_POLL_EVENT_OBJ_INIT(obj)				\
-}
+#define Z_PIPE_INITIALIZER(obj, pipe_buffer, pipe_buffer_size)                                     \
+	{.buf = RING_BUF_INIT(pipe_buffer, pipe_buffer_size),                                      \
+	 .data = Z_WAIT_Q_INIT(&obj.data),                                                         \
+	 .space = Z_WAIT_Q_INIT(&obj.space),                                                       \
+	 .flags = PIPE_FLAG_OPEN,                                                                  \
+	 .waiting = 0,                                                                             \
+	 Z_POLL_EVENT_OBJ_INIT(obj)}
 /**
  * INTERNAL_HIDDEN @endcond
  */
@@ -5342,12 +5207,10 @@ struct k_pipe {
  * @param pipe_align Alignment of the pipe's ring buffer (power of 2).
  *
  */
-#define K_PIPE_DEFINE(name, pipe_buffer_size, pipe_align)		\
-	static unsigned char __noinit __aligned(pipe_align)		\
-		_k_pipe_buf_##name[pipe_buffer_size];			\
-	STRUCT_SECTION_ITERABLE(k_pipe, name) =				\
+#define K_PIPE_DEFINE(name, pipe_buffer_size, pipe_align)                                          \
+	static unsigned char __noinit __aligned(pipe_align) _k_pipe_buf_##name[pipe_buffer_size];  \
+	STRUCT_SECTION_ITERABLE(k_pipe, name) =                                                    \
 		Z_PIPE_INITIALIZER(name, _k_pipe_buf_##name, pipe_buffer_size)
-
 
 /**
  * @brief Write data to a pipe
@@ -5383,8 +5246,7 @@ __syscall int k_pipe_write(struct k_pipe *pipe, const uint8_t *data, size_t len,
  * @retval -ECANCELED if the read was interrupted by k_pipe_reset(..)
  * @retval -EPIPE if the pipe was closed
  */
-__syscall int k_pipe_read(struct k_pipe *pipe, uint8_t *data, size_t len,
-			  k_timeout_t timeout);
+__syscall int k_pipe_read(struct k_pipe *pipe, uint8_t *data, size_t len, k_timeout_t timeout);
 
 /**
  * @brief Reset a pipe
@@ -5414,7 +5276,7 @@ __syscall void k_pipe_close(struct k_pipe *pipe);
  */
 struct k_mem_slab_info {
 	uint32_t num_blocks;
-	size_t   block_size;
+	size_t block_size;
 	uint32_t num_used;
 #ifdef CONFIG_MEM_SLAB_TRACE_MAX_UTILIZATION
 	uint32_t max_used;
@@ -5431,20 +5293,16 @@ struct k_mem_slab {
 	SYS_PORT_TRACING_TRACKING_FIELD(k_mem_slab)
 
 #ifdef CONFIG_OBJ_CORE_MEM_SLAB
-	struct k_obj_core  obj_core;
+	struct k_obj_core obj_core;
 #endif
 };
 
-#define Z_MEM_SLAB_INITIALIZER(_slab, _slab_buffer, _slab_block_size, \
-			       _slab_num_blocks)                      \
-	{                                                             \
-	.wait_q = Z_WAIT_Q_INIT(&(_slab).wait_q),                     \
-	.lock = {},                                                   \
-	.buffer = _slab_buffer,                                       \
-	.free_list = NULL,                                            \
-	.info = {_slab_num_blocks, _slab_block_size, 0}               \
-	}
-
+#define Z_MEM_SLAB_INITIALIZER(_slab, _slab_buffer, _slab_block_size, _slab_num_blocks)            \
+	{.wait_q = Z_WAIT_Q_INIT(&(_slab).wait_q),                                                 \
+	 .lock = {},                                                                               \
+	 .buffer = _slab_buffer,                                                                   \
+	 .free_list = NULL,                                                                        \
+	 .info = {_slab_num_blocks, _slab_block_size, 0}}
 
 /**
  * INTERNAL_HIDDEN @endcond
@@ -5584,8 +5442,7 @@ struct k_mem_slab {
  * @retval -EINVAL invalid data supplied
  *
  */
-int k_mem_slab_init(struct k_mem_slab *slab, void *buffer,
-			   size_t block_size, uint32_t num_blocks);
+int k_mem_slab_init(struct k_mem_slab *slab, void *buffer, size_t block_size, uint32_t num_blocks);
 
 /**
  * @brief Allocate memory from a memory slab.
@@ -5609,8 +5466,7 @@ int k_mem_slab_init(struct k_mem_slab *slab, void *buffer,
  * @retval -EAGAIN Waiting period timed out.
  * @retval -EINVAL Invalid data supplied
  */
-int k_mem_slab_alloc(struct k_mem_slab *slab, void **mem,
-			    k_timeout_t timeout);
+int k_mem_slab_alloc(struct k_mem_slab *slab, void **mem, k_timeout_t timeout);
 
 /**
  * @brief Free memory allocated from a memory slab.
@@ -5728,8 +5584,7 @@ struct k_heap {
  * @param mem Pointer to memory.
  * @param bytes Size of memory region, in bytes
  */
-void k_heap_init(struct k_heap *h, void *mem,
-		size_t bytes) __attribute_nonnull(1);
+void k_heap_init(struct k_heap *h, void *mem, size_t bytes) __attribute_nonnull(1);
 
 /**
  * @brief Allocate aligned memory from a k_heap
@@ -5751,8 +5606,8 @@ void k_heap_init(struct k_heap *h, void *mem,
  * @param timeout How long to wait, or K_NO_WAIT
  * @return Pointer to memory the caller can now use
  */
-void *k_heap_aligned_alloc(struct k_heap *h, size_t align, size_t bytes,
-			k_timeout_t timeout) __attribute_nonnull(1);
+void *k_heap_aligned_alloc(struct k_heap *h, size_t align, size_t bytes, k_timeout_t timeout)
+	__attribute_nonnull(1);
 
 /**
  * @brief Allocate memory from a k_heap
@@ -5775,8 +5630,7 @@ void *k_heap_aligned_alloc(struct k_heap *h, size_t align, size_t bytes,
  * @param timeout How long to wait, or K_NO_WAIT
  * @return A pointer to valid heap memory, or NULL
  */
-void *k_heap_alloc(struct k_heap *h, size_t bytes,
-		k_timeout_t timeout) __attribute_nonnull(1);
+void *k_heap_alloc(struct k_heap *h, size_t bytes, k_timeout_t timeout) __attribute_nonnull(1);
 
 /**
  * @brief Allocate and initialize memory for an array of objects from a k_heap
@@ -5862,15 +5716,15 @@ void k_heap_free(struct k_heap *h, void *mem) __attribute_nonnull(1);
  * @param bytes Size of memory region, in bytes
  * @param in_section Section attribute specifier such as Z_GENERIC_SECTION.
  */
-#define Z_HEAP_DEFINE_IN_SECT(name, bytes, in_section)		\
-	char in_section						\
-	     __aligned(8) /* CHUNK_UNIT */			\
-	     kheap_##name[MAX(bytes, Z_HEAP_MIN_SIZE)];		\
-	STRUCT_SECTION_ITERABLE(k_heap, name) = {		\
-		.heap = {					\
-			.init_mem = kheap_##name,		\
-			.init_bytes = MAX(bytes, Z_HEAP_MIN_SIZE), \
-		 },						\
+#define Z_HEAP_DEFINE_IN_SECT(name, bytes, in_section)                                             \
+	char in_section __aligned(8) /* CHUNK_UNIT */                                              \
+	kheap_##name[MAX(bytes, Z_HEAP_MIN_SIZE)];                                                 \
+	STRUCT_SECTION_ITERABLE(k_heap, name) = {                                                  \
+		.heap =                                                                            \
+			{                                                                          \
+				.init_mem = kheap_##name,                                          \
+				.init_bytes = MAX(bytes, Z_HEAP_MIN_SIZE),                         \
+			},                                                                         \
 	}
 
 /**
@@ -5887,9 +5741,8 @@ void k_heap_free(struct k_heap *h, void *mem) __attribute_nonnull(1);
  * @param name Symbol name for the struct k_heap object
  * @param bytes Size of memory region, in bytes
  */
-#define K_HEAP_DEFINE(name, bytes)				\
-	Z_HEAP_DEFINE_IN_SECT(name, bytes,			\
-			      __noinit_named(kheap_buf_##name))
+#define K_HEAP_DEFINE(name, bytes)                                                                 \
+	Z_HEAP_DEFINE_IN_SECT(name, bytes, __noinit_named(kheap_buf_##name))
 
 /**
  * @brief Define a static k_heap in uncached memory
@@ -5905,8 +5758,7 @@ void k_heap_free(struct k_heap *h, void *mem) __attribute_nonnull(1);
  * @param name Symbol name for the struct k_heap object
  * @param bytes Size of memory region, in bytes
  */
-#define K_HEAP_DEFINE_NOCACHE(name, bytes)			\
-	Z_HEAP_DEFINE_IN_SECT(name, bytes, __nocache)
+#define K_HEAP_DEFINE_NOCACHE(name, bytes) Z_HEAP_DEFINE_IN_SECT(name, bytes, __nocache)
 
 /** @brief Get the array of statically defined heaps
  *
@@ -6012,9 +5864,14 @@ void *k_realloc(void *ptr, size_t size);
 /* polling API - PRIVATE */
 
 #ifdef CONFIG_POLL
-#define _INIT_OBJ_POLL_EVENT(obj) do { (obj)->poll_event = NULL; } while (false)
+#define _INIT_OBJ_POLL_EVENT(obj)                                                                  \
+	do {                                                                                       \
+		(obj)->poll_event = NULL;                                                          \
+	} while (false)
 #else
-#define _INIT_OBJ_POLL_EVENT(obj) do { } while (false)
+#define _INIT_OBJ_POLL_EVENT(obj)                                                                  \
+	do {                                                                                       \
+	} while (false)
 #endif
 
 /* private - types bit positions */
@@ -6070,16 +5927,12 @@ enum _poll_states_bits {
 
 #define Z_POLL_STATE_BIT(state) (1U << ((state) - 1U))
 
-#define _POLL_EVENT_NUM_UNUSED_BITS \
-	(32 - (0 \
-	       + 8 /* tag */ \
-	       + _POLL_NUM_TYPES \
-	       + _POLL_NUM_STATES \
-	       + 1 /* modes */ \
-	      ))
+#define _POLL_EVENT_NUM_UNUSED_BITS                                                                \
+	(32 - (0 + 8                                    /* tag */                                  \
+	       + _POLL_NUM_TYPES + _POLL_NUM_STATES + 1 /* modes */                                \
+	       ))
 
 /* end of polling API - PRIVATE */
-
 
 /**
  * @defgroup poll_apis Async polling APIs
@@ -6092,10 +5945,10 @@ enum _poll_states_bits {
 /* Public polling API */
 
 /* public - values for k_poll_event.type bitfield */
-#define K_POLL_TYPE_IGNORE 0
-#define K_POLL_TYPE_SIGNAL Z_POLL_TYPE_BIT(_POLL_TYPE_SIGNAL)
-#define K_POLL_TYPE_SEM_AVAILABLE Z_POLL_TYPE_BIT(_POLL_TYPE_SEM_AVAILABLE)
-#define K_POLL_TYPE_DATA_AVAILABLE Z_POLL_TYPE_BIT(_POLL_TYPE_DATA_AVAILABLE)
+#define K_POLL_TYPE_IGNORE              0
+#define K_POLL_TYPE_SIGNAL              Z_POLL_TYPE_BIT(_POLL_TYPE_SIGNAL)
+#define K_POLL_TYPE_SEM_AVAILABLE       Z_POLL_TYPE_BIT(_POLL_TYPE_SEM_AVAILABLE)
+#define K_POLL_TYPE_DATA_AVAILABLE      Z_POLL_TYPE_BIT(_POLL_TYPE_DATA_AVAILABLE)
 #define K_POLL_TYPE_FIFO_DATA_AVAILABLE K_POLL_TYPE_DATA_AVAILABLE
 #define K_POLL_TYPE_MSGQ_DATA_AVAILABLE Z_POLL_TYPE_BIT(_POLL_TYPE_MSGQ_DATA_AVAILABLE)
 #define K_POLL_TYPE_PIPE_DATA_AVAILABLE Z_POLL_TYPE_BIT(_POLL_TYPE_PIPE_DATA_AVAILABLE)
@@ -6109,14 +5962,14 @@ enum k_poll_modes {
 };
 
 /* public - values for k_poll_event.state bitfield */
-#define K_POLL_STATE_NOT_READY 0
-#define K_POLL_STATE_SIGNALED Z_POLL_STATE_BIT(_POLL_STATE_SIGNALED)
-#define K_POLL_STATE_SEM_AVAILABLE Z_POLL_STATE_BIT(_POLL_STATE_SEM_AVAILABLE)
-#define K_POLL_STATE_DATA_AVAILABLE Z_POLL_STATE_BIT(_POLL_STATE_DATA_AVAILABLE)
+#define K_POLL_STATE_NOT_READY           0
+#define K_POLL_STATE_SIGNALED            Z_POLL_STATE_BIT(_POLL_STATE_SIGNALED)
+#define K_POLL_STATE_SEM_AVAILABLE       Z_POLL_STATE_BIT(_POLL_STATE_SEM_AVAILABLE)
+#define K_POLL_STATE_DATA_AVAILABLE      Z_POLL_STATE_BIT(_POLL_STATE_DATA_AVAILABLE)
 #define K_POLL_STATE_FIFO_DATA_AVAILABLE K_POLL_STATE_DATA_AVAILABLE
 #define K_POLL_STATE_MSGQ_DATA_AVAILABLE Z_POLL_STATE_BIT(_POLL_STATE_MSGQ_DATA_AVAILABLE)
 #define K_POLL_STATE_PIPE_DATA_AVAILABLE Z_POLL_STATE_BIT(_POLL_STATE_PIPE_DATA_AVAILABLE)
-#define K_POLL_STATE_CANCELLED Z_POLL_STATE_BIT(_POLL_STATE_CANCELLED)
+#define K_POLL_STATE_CANCELLED           Z_POLL_STATE_BIT(_POLL_STATE_CANCELLED)
 
 /* public - poll signal object */
 struct k_poll_signal {
@@ -6133,11 +5986,11 @@ struct k_poll_signal {
 	int result;
 };
 
-#define K_POLL_SIGNAL_INITIALIZER(obj) \
-	{ \
-	.poll_events = SYS_DLIST_STATIC_INIT(&obj.poll_events), \
-	.signaled = 0, \
-	.result = 0, \
+#define K_POLL_SIGNAL_INITIALIZER(obj)                                                             \
+	{                                                                                          \
+		.poll_events = SYS_DLIST_STATIC_INIT(&obj.poll_events),                            \
+		.signaled = 0,                                                                     \
+		.result = 0,                                                                       \
 	}
 /**
  * @brief Poll Event
@@ -6151,19 +6004,19 @@ struct k_poll_event {
 	struct z_poller *poller;
 
 	/** optional user-specified tag, opaque, untouched by the API */
-	uint32_t tag:8;
+	uint32_t tag: 8;
 
 	/** bitfield of event types (bitwise-ORed K_POLL_TYPE_xxx values) */
-	uint32_t type:_POLL_NUM_TYPES;
+	uint32_t type: _POLL_NUM_TYPES;
 
 	/** bitfield of event states (bitwise-ORed K_POLL_STATE_xxx values) */
-	uint32_t state:_POLL_NUM_STATES;
+	uint32_t state: _POLL_NUM_STATES;
 
 	/** mode of operation, from enum k_poll_modes */
-	uint32_t mode:1;
+	uint32_t mode: 1;
 
 	/** unused bits in 32-bit word */
-	uint32_t unused:_POLL_EVENT_NUM_UNUSED_BITS;
+	uint32_t unused: _POLL_EVENT_NUM_UNUSED_BITS;
 
 	/** per-type data */
 	union {
@@ -6180,29 +6033,28 @@ struct k_poll_event {
 	};
 };
 
-#define K_POLL_EVENT_INITIALIZER(_event_type, _event_mode, _event_obj) \
-	{ \
-	.poller = NULL, \
-	.type = _event_type, \
-	.state = K_POLL_STATE_NOT_READY, \
-	.mode = _event_mode, \
-	.unused = 0, \
-	{ \
-		.typed_##_event_type = _event_obj, \
-	}, \
+#define K_POLL_EVENT_INITIALIZER(_event_type, _event_mode, _event_obj)                             \
+	{                                                                                          \
+		.poller = NULL,                                                                    \
+		.type = _event_type,                                                               \
+		.state = K_POLL_STATE_NOT_READY,                                                   \
+		.mode = _event_mode,                                                               \
+		.unused = 0,                                                                       \
+		{                                                                                  \
+			.typed_##_event_type = _event_obj,                                         \
+		},                                                                                 \
 	}
 
-#define K_POLL_EVENT_STATIC_INITIALIZER(_event_type, _event_mode, _event_obj, \
-					event_tag) \
-	{ \
-	.tag = event_tag, \
-	.type = _event_type, \
-	.state = K_POLL_STATE_NOT_READY, \
-	.mode = _event_mode, \
-	.unused = 0, \
-	{ \
-		.typed_##_event_type = _event_obj, \
-	}, \
+#define K_POLL_EVENT_STATIC_INITIALIZER(_event_type, _event_mode, _event_obj, event_tag)           \
+	{                                                                                          \
+		.tag = event_tag,                                                                  \
+		.type = _event_type,                                                               \
+		.state = K_POLL_STATE_NOT_READY,                                                   \
+		.mode = _event_mode,                                                               \
+		.unused = 0,                                                                       \
+		{                                                                                  \
+			.typed_##_event_type = _event_obj,                                         \
+		},                                                                                 \
 	}
 
 /**
@@ -6220,8 +6072,7 @@ struct k_poll_event {
  * @param obj Kernel object or poll signal.
  */
 
-void k_poll_event_init(struct k_poll_event *event, uint32_t type,
-			      int mode, void *obj);
+void k_poll_event_init(struct k_poll_event *event, uint32_t type, int mode, void *obj);
 
 /**
  * @brief Wait for one or many of multiple poll events to occur
@@ -6266,8 +6117,7 @@ void k_poll_event_init(struct k_poll_event *event, uint32_t type,
  * @retval -EINVAL Bad parameters (user mode only)
  */
 
-__syscall int k_poll(struct k_poll_event *events, int num_events,
-		     k_timeout_t timeout);
+__syscall int k_poll(struct k_poll_event *events, int num_events, k_timeout_t timeout);
 
 /**
  * @brief Initialize a poll signal object.
@@ -6296,8 +6146,7 @@ __syscall void k_poll_signal_reset(struct k_poll_signal *sig);
  *		   result value if the object was signaled, or an undefined
  *		   value if it was not.
  */
-__syscall void k_poll_signal_check(struct k_poll_signal *sig,
-				   unsigned int *signaled, int *result);
+__syscall void k_poll_signal_check(struct k_poll_signal *sig, unsigned int *signaled, int *result);
 
 /**
  * @brief Signal a poll signal object.
@@ -6345,9 +6194,12 @@ __syscall int k_poll_signal_raise(struct k_poll_signal *sig, int result);
  * @note In some architectures, before returning, the function unmasks interrupts
  * unconditionally.
  */
+
 static inline void k_cpu_idle(void)
 {
+#ifdef TO_BE_IMPLEMENTED_LATER
 	arch_cpu_idle();
+#endif
 }
 
 /**
@@ -6379,7 +6231,7 @@ static inline void k_cpu_atomic_idle(unsigned int key)
  */
 #ifdef ARCH_EXCEPT
 /* This architecture has direct support for triggering a CPU exception */
-#define z_except_reason(reason)	ARCH_EXCEPT(reason)
+#define z_except_reason(reason) ARCH_EXCEPT(reason)
 #else
 
 #if !defined(CONFIG_ASSERT_NO_FILE_INFO)
@@ -6395,9 +6247,10 @@ static inline void k_cpu_atomic_idle(unsigned int key)
  * the oops occurred, so print file and line number before we jump into
  * the fatal error handler.
  */
-#define z_except_reason(reason) do { \
-		__EXCEPT_LOC();              \
-		z_fatal_error(reason, NULL); \
+#define z_except_reason(reason)                                                                    \
+	do {                                                                                       \
+		__EXCEPT_LOC();                                                                    \
+		z_fatal_error(reason, NULL);                                                       \
 	} while (false)
 
 #endif /* _ARCH__EXCEPT */
@@ -6416,7 +6269,7 @@ static inline void k_cpu_atomic_idle(unsigned int key)
  * If this is called from ISR context, the default system fatal error handler
  * will treat it as an unrecoverable system error, just like k_panic().
  */
-#define k_oops()	z_except_reason(K_ERR_KERNEL_OOPS)
+#define k_oops() z_except_reason(K_ERR_KERNEL_OOPS)
 
 /**
  * @brief Fatally terminate the system
@@ -6426,7 +6279,7 @@ static inline void k_cpu_atomic_idle(unsigned int key)
  * means is determined by the _fatal_error_handler() implementation, which
  * will be called with reason code K_ERR_KERNEL_PANIC.
  */
-#define k_panic()	z_except_reason(K_ERR_KERNEL_PANIC)
+#define k_panic() z_except_reason(K_ERR_KERNEL_PANIC)
 
 /**
  * @cond INTERNAL_HIDDEN
@@ -6534,8 +6387,7 @@ __syscall int k_float_enable(struct k_thread *thread, unsigned int options);
  * @param stats Pointer to struct to copy statistics into.
  * @return -EINVAL if null pointers, otherwise 0
  */
-int k_thread_runtime_stats_get(k_tid_t thread,
-			       k_thread_runtime_stats_t *stats);
+int k_thread_runtime_stats_get(k_tid_t thread, k_thread_runtime_stats_t *stats);
 
 /**
  * @brief Get the runtime statistics of all threads

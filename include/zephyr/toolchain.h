@@ -48,6 +48,8 @@
 #include <zephyr/toolchain/iar.h>
 #elif defined(__llvm__) || (defined(_LINKER) && defined(__LLD_LINKER_CMD__))
 #include <zephyr/toolchain/llvm.h>
+#elif defined(__XC_DSC__) || defined(__XCDSC_LINKER_CMD__)
+#include <zephyr/toolchain/xcdsc.h>
 #elif defined(__GNUC__) || (defined(_LINKER) && defined(__GCC_LINKER_CMD__))
 #include <zephyr/toolchain/gcc.h>
 #else
@@ -99,14 +101,14 @@
  */
 #if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
 /* _Generic is introduced in C11, so it is supported. */
-# ifdef TOOLCHAIN_HAS_C_GENERIC
-#  undef TOOLCHAIN_HAS_C_GENERIC
-# endif
-# define TOOLCHAIN_HAS_C_GENERIC 1
+#ifdef TOOLCHAIN_HAS_C_GENERIC
+#undef TOOLCHAIN_HAS_C_GENERIC
+#endif
+#define TOOLCHAIN_HAS_C_GENERIC 1
 #else
-# ifndef TOOLCHAIN_HAS_C_GENERIC
-#  define TOOLCHAIN_HAS_C_GENERIC 0
-# endif
+#ifndef TOOLCHAIN_HAS_C_GENERIC
+#define TOOLCHAIN_HAS_C_GENERIC 0
+#endif
 #endif
 
 /**
@@ -324,8 +326,7 @@
  * check for endianness.
  */
 #ifndef _LINKER
-#if !defined(__BYTE_ORDER__) || !defined(__ORDER_BIG_ENDIAN__) || \
-    !defined(__ORDER_LITTLE_ENDIAN__)
+#if !defined(__BYTE_ORDER__) || !defined(__ORDER_BIG_ENDIAN__) || !defined(__ORDER_LITTLE_ENDIAN__)
 
 /*
  * Displaying values unfortunately requires #pragma message which can't
@@ -336,23 +337,23 @@
 
 #else
 
-#if (defined(CONFIG_BIG_ENDIAN) && (__BYTE_ORDER__ != __ORDER_BIG_ENDIAN__)) || \
-    (defined(CONFIG_LITTLE_ENDIAN) && (__BYTE_ORDER__ != __ORDER_LITTLE_ENDIAN__))
+#if (defined(CONFIG_BIG_ENDIAN) && (__BYTE_ORDER__ != __ORDER_BIG_ENDIAN__)) ||                    \
+	(defined(CONFIG_LITTLE_ENDIAN) && (__BYTE_ORDER__ != __ORDER_LITTLE_ENDIAN__))
 
-#  error "Kconfig/toolchain endianness mismatch:"
+#error "Kconfig/toolchain endianness mismatch:"
 
-#  if (__BYTE_ORDER__ != __ORDER_BIG_ENDIAN__) && (__BYTE_ORDER__ != __ORDER_LITTLE_ENDIAN__)
-#    error "Unknown __BYTE_ORDER__ value"
-#  else
-#    ifdef CONFIG_BIG_ENDIAN
-#      error "CONFIG_BIG_ENDIAN but __ORDER_LITTLE_ENDIAN__"
-#    endif
-#    ifdef CONFIG_LITTLE_ENDIAN
-#      error "CONFIG_LITTLE_ENDIAN but __ORDER_BIG_ENDIAN__"
-#   endif
-# endif
+#if (__BYTE_ORDER__ != __ORDER_BIG_ENDIAN__) && (__BYTE_ORDER__ != __ORDER_LITTLE_ENDIAN__)
+#error "Unknown __BYTE_ORDER__ value"
+#else
+#ifdef CONFIG_BIG_ENDIAN
+#error "CONFIG_BIG_ENDIAN but __ORDER_LITTLE_ENDIAN__"
+#endif
+#ifdef CONFIG_LITTLE_ENDIAN
+#error "CONFIG_LITTLE_ENDIAN but __ORDER_BIG_ENDIAN__"
+#endif
+#endif
 
-#endif  /* Endianness mismatch */
+#endif /* Endianness mismatch */
 
 #endif /* all _ORDER_ macros defined */
 

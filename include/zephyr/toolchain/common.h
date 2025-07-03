@@ -29,7 +29,7 @@
 /* Use TASK_ENTRY_CPP to tag task entry points defined in C++ files. */
 
 #ifdef __cplusplus
-#define TASK_ENTRY_CPP  extern "C"
+#define TASK_ENTRY_CPP extern "C"
 #endif
 
 #ifndef ZRESTRICT
@@ -52,13 +52,13 @@
  */
 
 #ifdef _ASMLANGUAGE
-  #define REQUIRES(sym) .set sym ## _Requires, sym
+#define REQUIRES(sym) .set sym##_Requires, sym
 #else
-  #define REQUIRES(sym) __asm__ (".set " # sym "_Requires, " # sym "\n\t");
+#define REQUIRES(sym) __asm__(".set " #sym "_Requires, " #sym "\n\t");
 #endif
 
 #ifdef _ASMLANGUAGE
-  #define SECTION .section
+#define SECTION .section
 #endif
 
 /*
@@ -74,20 +74,20 @@
 
 #if defined(_ASMLANGUAGE) && !defined(_LINKER)
 
-  #if defined(CONFIG_X86) || defined(CONFIG_ARM) || defined(CONFIG_ARM64) || \
-	defined(CONFIG_RISCV) || defined(CONFIG_XTENSA) || defined(CONFIG_MIPS) || \
-	defined(CONFIG_ARCH_POSIX) || defined(CONFIG_RX)
-    #define   ALIGN(x)    .balign   x
-  #elif defined(CONFIG_ARC)
-    /* .align assembler directive is supported by all ARC toolchains and it is
-     * implemented in the same way across ARC toolchains.
-     */
-    #define   ALIGN(x)    .align    x
-  #elif defined(CONFIG_SPARC)
-    #define   ALIGN(x)    .align    x
-  #else
-    #error Architecture unsupported
-  #endif
+#if defined(CONFIG_X86) || defined(CONFIG_ARM) || defined(CONFIG_ARM64) ||                         \
+	defined(CONFIG_RISCV) || defined(CONFIG_XTENSA) || defined(CONFIG_MIPS) ||                 \
+	defined(CONFIG_ARCH_POSIX) || defined(CONFIG_RX) || defined(CONFIG_DSPIC)
+#define ALIGN(x) .balign x
+#elif defined(CONFIG_ARC)
+/* .align assembler directive is supported by all ARC toolchains and it is
+ * implemented in the same way across ARC toolchains.
+ */
+#define ALIGN(x) .align x
+#elif defined(CONFIG_SPARC)
+#define ALIGN(x) .align x
+#else
+#error Architecture unsupported
+#endif
 
 #endif /* defined(_ASMLANGUAGE) && !defined(_LINKER) */
 
@@ -98,75 +98,78 @@
 
 #ifdef _ASMLANGUAGE
 
-  #if defined(CONFIG_X86)
+#if defined(CONFIG_X86)
 
-    #ifdef PERF_OPT
-      #define PERFOPT_ALIGN .balign 16
-    #else
-      #define PERFOPT_ALIGN .balign  1
-    #endif
+#ifdef PERF_OPT
+#define PERFOPT_ALIGN .balign 16
+#else
+#define PERFOPT_ALIGN .balign 1
+#endif
 
-  #elif defined(CONFIG_ARM) || defined(CONFIG_ARM64)
+#elif defined(CONFIG_ARM) || defined(CONFIG_ARM64)
 
-    #define PERFOPT_ALIGN .balign  4
+#define PERFOPT_ALIGN .balign 4
 
-  #elif defined(CONFIG_ARC)
+#elif defined(CONFIG_ARC)
 
-    /* .align assembler directive is supposed by all ARC toolchains and it is
-     * implemented in a same way across ARC toolchains.
-     */
-    #define PERFOPT_ALIGN .align  4
+/* .align assembler directive is supposed by all ARC toolchains and it is
+ * implemented in a same way across ARC toolchains.
+ */
+#define PERFOPT_ALIGN .align 4
 
-  #elif defined(CONFIG_RISCV) ||  defined(CONFIG_XTENSA) || \
-	  defined(CONFIG_MIPS) || defined(CONFIG_RX)
-    #define PERFOPT_ALIGN .balign 4
+#elif defined(CONFIG_RISCV) || defined(CONFIG_XTENSA) || defined(CONFIG_MIPS) || defined(CONFIG_RX)
+#define PERFOPT_ALIGN .balign 4
 
-  #elif defined(CONFIG_ARCH_POSIX)
+#elif defined(CONFIG_ARCH_POSIX)
 
-  #elif defined(CONFIG_SPARC)
+#elif defined(CONFIG_SPARC)
 
-    #define PERFOPT_ALIGN .align  4
+#define PERFOPT_ALIGN .align 4
 
-  #else
+#elif defined(CONFIG_DSPIC)
 
-    #error Architecture unsupported
+#define PERFOPT_ALIGN .align 4
 
-  #endif
+#else
 
-  #define GC_SECTION(sym) SECTION .text.##sym, "ax"
+#error Architecture unsupported
+
+#endif
+
+#define GC_SECTION(sym) SECTION.text.##sym, "ax"
 
 #endif /* _ASMLANGUAGE */
 
 /* force inlining a function */
 
 #if !defined(_ASMLANGUAGE)
-  #ifdef CONFIG_COVERAGE
-    /*
-     * The always_inline attribute forces a function to be inlined,
-     * even ignoring -fno-inline. So for code coverage, do not
-     * force inlining of these functions to keep their bodies around
-     * so their number of executions can be counted.
-     *
-     * Note that "inline" is kept here for kobject_hash.c and
-     * priv_stacks_hash.c. These are built without compiler flags
-     * used for coverage. ALWAYS_INLINE cannot be empty as compiler
-     * would complain about unused functions. Attaching unused
-     * attribute would result in their text sections balloon more than
-     * 10 times in size, as those functions are kept in text section.
-     * So just keep "inline" here.
-     */
-    #define ALWAYS_INLINE inline
-  #else
-    #define ALWAYS_INLINE inline __attribute__((always_inline))
-  #endif
+#ifdef CONFIG_COVERAGE
+/*
+ * The always_inline attribute forces a function to be inlined,
+ * even ignoring -fno-inline. So for code coverage, do not
+ * force inlining of these functions to keep their bodies around
+ * so their number of executions can be counted.
+ *
+ * Note that "inline" is kept here for kobject_hash.c and
+ * priv_stacks_hash.c. These are built without compiler flags
+ * used for coverage. ALWAYS_INLINE cannot be empty as compiler
+ * would complain about unused functions. Attaching unused
+ * attribute would result in their text sections balloon more than
+ * 10 times in size, as those functions are kept in text section.
+ * So just keep "inline" here.
+ */
+#define ALWAYS_INLINE inline
+#else
+#define ALWAYS_INLINE inline __attribute__((always_inline))
+#endif
 #endif
 
 #define Z_STRINGIFY(x) #x
-#define STRINGIFY(s) Z_STRINGIFY(s)
+#define STRINGIFY(s)   Z_STRINGIFY(s)
 
 /* concatenate the values of the arguments into one */
-#define _DO_CONCAT(x, y) x ## y
-#define _CONCAT(x, y) _DO_CONCAT(x, y)
+#define _DO_CONCAT(x, y) x##y
+#define _CONCAT(x, y)    _DO_CONCAT(x, y)
 
 /* Additionally used as a sentinel by gen_syscalls.py to identify what
  * functions are system calls
@@ -178,7 +181,7 @@
  * not used).
  */
 #ifndef ZTEST_UNITTEST
-#define __syscall static inline
+#define __syscall               static inline
 #define __syscall_always_inline static inline __attribute__((always_inline))
 #else
 #define __syscall
@@ -200,9 +203,9 @@
 /* Compile-time assertion that makes the build to fail.
  * Common implementation swallows the message.
  */
-#define BUILD_ASSERT(EXPR, MSG...) \
-	enum _CONCAT(__build_assert_enum, __COUNTER__) { \
-		_CONCAT(__build_assert, __COUNTER__) = 1 / !!(EXPR) \
+#define BUILD_ASSERT(EXPR, MSG...)                                                                 \
+	enum _CONCAT(__build_assert_enum, __COUNTER__) {                                           \
+		_CONCAT(__build_assert, __COUNTER__) = 1 / !!(EXPR)                                \
 	}
 #endif
 
@@ -238,8 +241,8 @@
  *
  * @param symbol Symbol to keep.
  */
-#define LINKER_KEEP(symbol) \
-	static const void * const symbol##_ptr  __used \
-	__attribute__((__section__(".symbol_to_keep"))) = (void *)&symbol
+#define LINKER_KEEP(symbol)                                                                        \
+	static const void *const symbol##_ptr __used                                               \
+		__attribute__((__section__(".symbol_to_keep"))) = (void *)&symbol
 
 #endif /* ZEPHYR_INCLUDE_TOOLCHAIN_COMMON_H_ */

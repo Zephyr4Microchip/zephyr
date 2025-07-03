@@ -18,49 +18,52 @@
 #include <zephyr/kernel/mm.h>
 
 #if defined(CONFIG_ARM)
-	#if defined(CONFIG_BIG_ENDIAN)
-		#define OUTPUT_FORMAT_ "elf32-bigarm"
-	#else
-		#define OUTPUT_FORMAT_ "elf32-littlearm"
-	#endif
-	OUTPUT_FORMAT(OUTPUT_FORMAT_)
-#elif defined(CONFIG_ARM64)
-	OUTPUT_FORMAT("elf64-littleaarch64")
-#elif defined(CONFIG_ARC)
-	#if defined(CONFIG_ISA_ARCV3) && defined(CONFIG_64BIT)
-		OUTPUT_FORMAT("elf64-littlearc64")
-	#elif defined(CONFIG_ISA_ARCV3) && !defined(CONFIG_64BIT)
-		OUTPUT_FORMAT("elf32-littlearc64")
-	#else
-		OUTPUT_FORMAT("elf32-littlearc", "elf32-bigarc", "elf32-littlearc")
-	#endif
-#elif defined(CONFIG_X86)
-	#if defined(CONFIG_X86_64)
-		OUTPUT_FORMAT("elf64-x86-64")
-		OUTPUT_ARCH("i386:x86-64")
-	#else
-		OUTPUT_FORMAT("elf32-i386", "elf32-i386", "elf32-i386")
-		OUTPUT_ARCH("i386")
-	#endif
-#elif defined(CONFIG_RISCV)
-	OUTPUT_ARCH("riscv")
-#ifdef CONFIG_64BIT
-	OUTPUT_FORMAT("elf64-littleriscv")
+#if defined(CONFIG_BIG_ENDIAN)
+#define OUTPUT_FORMAT_ "elf32-bigarm"
 #else
-	OUTPUT_FORMAT("elf32-littleriscv")
+#define OUTPUT_FORMAT_ "elf32-littlearm"
+#endif
+OUTPUT_FORMAT(OUTPUT_FORMAT_)
+#elif defined(CONFIG_ARM64)
+OUTPUT_FORMAT("elf64-littleaarch64")
+#elif defined(CONFIG_ARC)
+#if defined(CONFIG_ISA_ARCV3) && defined(CONFIG_64BIT)
+OUTPUT_FORMAT("elf64-littlearc64")
+#elif defined(CONFIG_ISA_ARCV3) && !defined(CONFIG_64BIT)
+OUTPUT_FORMAT("elf32-littlearc64")
+#else
+OUTPUT_FORMAT("elf32-littlearc", "elf32-bigarc", "elf32-littlearc")
+#endif
+#elif defined(CONFIG_X86)
+#if defined(CONFIG_X86_64)
+OUTPUT_FORMAT("elf64-x86-64")
+OUTPUT_ARCH("i386:x86-64")
+#else
+OUTPUT_FORMAT("elf32-i386", "elf32-i386", "elf32-i386")
+OUTPUT_ARCH("i386")
+#endif
+#elif defined(CONFIG_RISCV)
+OUTPUT_ARCH("riscv")
+#ifdef CONFIG_64BIT
+OUTPUT_FORMAT("elf64-littleriscv")
+#else
+OUTPUT_FORMAT("elf32-littleriscv")
 #endif
 #elif defined(CONFIG_XTENSA)
-	/* Not needed */
+/* Not needed */
 #elif defined(CONFIG_MIPS)
-	OUTPUT_ARCH("mips")
+OUTPUT_ARCH("mips")
 #elif defined(CONFIG_ARCH_POSIX)
-	/* Not needed */
+/* Not needed */
 #elif defined(CONFIG_SPARC)
-	OUTPUT_FORMAT("elf32-sparc")
+OUTPUT_FORMAT("elf32-sparc")
 #elif defined(CONFIG_RX)
-	OUTPUT_FORMAT("elf32-rx-le")
+OUTPUT_FORMAT("elf32-rx-le")
+#elif defined(CONFIG_DSPIC)
+OUTPUT_FORMAT("elf32-pic30")
+OUTPUT_ARCH("33AK128MC106")
 #else
-	#error Arch not supported.
+#error Arch not supported.
 #endif
 
 /*
@@ -174,11 +177,9 @@
  */
 #ifdef K_MEM_IS_VM_KERNEL
 /* If we have a virtual memory map we need ALIGN_WITH_INPUT in all sections */
-#define SECTION_PROLOGUE(name, options, align) \
-	name options : ALIGN_WITH_INPUT align
+#define SECTION_PROLOGUE(name, options, align) name options: ALIGN_WITH_INPUT align
 #else
-#define SECTION_PROLOGUE(name, options, align) \
-	name options : align
+#define SECTION_PROLOGUE(name, options, align) name options: align
 #endif
 
 /**
@@ -199,11 +200,9 @@
  *              not allowed. May be blank.
  */
 #if defined(CONFIG_XIP)
-#define SECTION_DATA_PROLOGUE(name, options, align) \
-	name options : ALIGN_WITH_INPUT
+#define SECTION_DATA_PROLOGUE(name, options, align) name options: ALIGN_WITH_INPUT
 #else
-#define SECTION_DATA_PROLOGUE(name, options, align) \
-	SECTION_PROLOGUE(name, options, align)
+#define SECTION_DATA_PROLOGUE(name, options, align) SECTION_PROLOGUE(name, options, align)
 #endif
 
 #define COMMON_SYMBOLS *(COMMON)

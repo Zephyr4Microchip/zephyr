@@ -35,17 +35,17 @@
 LOG_MODULE_DECLARE(os, CONFIG_KERNEL_LOG_LEVEL);
 
 #ifdef CONFIG_OBJ_CORE_THREAD
-static struct k_obj_type  obj_type_thread;
+static struct k_obj_type obj_type_thread;
 
 #ifdef CONFIG_OBJ_CORE_STATS_THREAD
-static struct k_obj_core_stats_desc  thread_stats_desc = {
+static struct k_obj_core_stats_desc thread_stats_desc = {
 	.raw_size = sizeof(struct k_cycle_stats),
 	.query_size = sizeof(struct k_thread_runtime_stats),
-	.raw   = z_thread_stats_raw,
+	.raw = z_thread_stats_raw,
 	.query = z_thread_stats_query,
 	.reset = z_thread_stats_reset,
 	.disable = z_thread_stats_disable,
-	.enable  = z_thread_stats_enable,
+	.enable = z_thread_stats_enable,
 };
 #endif /* CONFIG_OBJ_CORE_STATS_THREAD */
 
@@ -65,13 +65,10 @@ static int init_thread_obj_core_list(void)
 	return 0;
 }
 
-SYS_INIT(init_thread_obj_core_list, PRE_KERNEL_1,
-	 CONFIG_KERNEL_INIT_PRIORITY_OBJECTS);
+SYS_INIT(init_thread_obj_core_list, PRE_KERNEL_1, CONFIG_KERNEL_INIT_PRIORITY_OBJECTS);
 #endif /* CONFIG_OBJ_CORE_THREAD */
 
-
-#define _FOREACH_STATIC_THREAD(thread_data)              \
-	STRUCT_SECTION_FOREACH(_static_thread_data, thread_data)
+#define _FOREACH_STATIC_THREAD(thread_data) STRUCT_SECTION_FOREACH(_static_thread_data, thread_data)
 
 bool k_is_in_isr(void)
 {
@@ -215,7 +212,7 @@ int z_impl_k_thread_name_copy(k_tid_t thread, char *buf, size_t size)
 
 static size_t copy_bytes(char *dest, size_t dest_size, const char *src, size_t src_size)
 {
-	size_t  bytes_to_copy;
+	size_t bytes_to_copy;
 
 	bytes_to_copy = MIN(dest_size, src_size);
 	memcpy(dest, src, bytes_to_copy);
@@ -225,23 +222,17 @@ static size_t copy_bytes(char *dest, size_t dest_size, const char *src, size_t s
 
 const char *k_thread_state_str(k_tid_t thread_id, char *buf, size_t buf_size)
 {
-	size_t      off = 0;
-	uint8_t     bit;
-	uint8_t     thread_state = thread_id->base.thread_state;
-#define SS_ENT(s) { Z_STATE_STR_##s, _THREAD_##s, sizeof(Z_STATE_STR_##s) - 1 }
+	size_t off = 0;
+	uint8_t bit;
+	uint8_t thread_state = thread_id->base.thread_state;
+#define SS_ENT(s) {Z_STATE_STR_##s, _THREAD_##s, sizeof(Z_STATE_STR_##s) - 1}
 	static const struct {
 		const char *str;
-		uint16_t    bit;
-		uint16_t    len;
+		uint16_t bit;
+		uint16_t len;
 	} state_string[] = {
-		SS_ENT(DUMMY),
-		SS_ENT(PENDING),
-		SS_ENT(SLEEPING),
-		SS_ENT(DEAD),
-		SS_ENT(SUSPENDED),
-		SS_ENT(ABORTING),
-		SS_ENT(SUSPENDING),
-		SS_ENT(QUEUED),
+		SS_ENT(DUMMY),     SS_ENT(PENDING),  SS_ENT(SLEEPING),   SS_ENT(DEAD),
+		SS_ENT(SUSPENDED), SS_ENT(ABORTING), SS_ENT(SUSPENDING), SS_ENT(QUEUED),
 	};
 #undef SS_ENT
 
@@ -249,7 +240,7 @@ const char *k_thread_state_str(k_tid_t thread_id, char *buf, size_t buf_size)
 		return "";
 	}
 
-	buf_size--;   /* Reserve 1 byte for end-of-string character */
+	buf_size--; /* Reserve 1 byte for end-of-string character */
 
 	/*
 	 * Loop through each bit in the thread_state. Stop once all have
@@ -257,15 +248,13 @@ const char *k_thread_state_str(k_tid_t thread_id, char *buf, size_t buf_size)
 	 * separate the descriptive strings with a '+'.
 	 */
 
-
 	for (unsigned int index = 0; thread_state != 0; index++) {
 		bit = state_string[index].bit;
 		if ((thread_state & bit) == 0) {
 			continue;
 		}
 
-		off += copy_bytes(buf + off, buf_size - off,
-				  state_string[index].str,
+		off += copy_bytes(buf + off, buf_size - off, state_string[index].str,
 				  state_string[index].len);
 
 		thread_state &= ~bit;
@@ -281,8 +270,7 @@ const char *k_thread_state_str(k_tid_t thread_id, char *buf, size_t buf_size)
 }
 
 #ifdef CONFIG_USERSPACE
-static inline int z_vrfy_k_thread_name_copy(k_tid_t thread,
-					    char *buf, size_t size)
+static inline int z_vrfy_k_thread_name_copy(k_tid_t thread, char *buf, size_t size)
 {
 #ifdef CONFIG_THREAD_NAME
 	size_t len;
@@ -292,7 +280,7 @@ static inline int z_vrfy_k_thread_name_copy(k_tid_t thread,
 	 * even if we don't have permission on them
 	 */
 	if ((thread == NULL) || (ko->type != K_OBJ_THREAD) ||
-		((ko->flags & K_OBJ_FLAG_INITIALIZED) == 0)) {
+	    ((ko->flags & K_OBJ_FLAG_INITIALIZED) == 0)) {
 		return -EINVAL;
 	}
 	if (K_SYSCALL_MEMORY_WRITE(buf, size) != 0) {
@@ -375,13 +363,13 @@ static size_t random_offset(size_t stack_size)
 	return fuzz;
 }
 #if defined(CONFIG_STACK_GROWS_UP)
-	/* This is so rare not bothering for now */
+/* This is so rare not bothering for now */
 #error "Stack pointer randomization not implemented for upward growing stacks"
 #endif /* CONFIG_STACK_GROWS_UP */
 #endif /* CONFIG_STACK_POINTER_RANDOM */
 
-static char *setup_thread_stack(struct k_thread *new_thread,
-				k_thread_stack_t *stack, size_t stack_size)
+static char *setup_thread_stack(struct k_thread *new_thread, k_thread_stack_t *stack,
+				size_t stack_size)
 {
 	size_t stack_obj_size, stack_buf_size;
 	char *stack_ptr, *stack_buf_start;
@@ -410,7 +398,6 @@ static char *setup_thread_stack(struct k_thread *new_thread,
 		}
 #endif
 	}
-
 #ifdef CONFIG_THREAD_STACK_MEM_MAPPED
 	/* Map the stack into virtual memory and use that as the base to
 	 * calculate the initial stack pointer at the high end of the stack
@@ -421,9 +408,9 @@ static char *setup_thread_stack(struct k_thread *new_thread,
 	 * stack. If CONFIG_INIT_STACKS is enabled, the stack will be
 	 * cleared below.
 	 */
-	void *stack_mapped = k_mem_map_phys_guard((uintptr_t)stack, stack_obj_size,
-				K_MEM_PERM_RW | K_MEM_CACHE_WB | K_MEM_MAP_UNINIT,
-				false);
+	void *stack_mapped =
+		k_mem_map_phys_guard((uintptr_t)stack, stack_obj_size,
+				     K_MEM_PERM_RW | K_MEM_CACHE_WB | K_MEM_MAP_UNINIT, false);
 
 	__ASSERT_NO_MSG((uintptr_t)stack_mapped != 0);
 
@@ -446,17 +433,24 @@ static char *setup_thread_stack(struct k_thread *new_thread,
 
 #else /* CONFIG_THREAD_STACK_MEM_MAPPED */
 
-	/* Initial stack pointer at the high end of the stack object, may
-	 * be reduced later in this function by TLS or random offset
+#ifdef CONFIG_STACK_GROWS_UP
+	/* Initial stack pointer at the low end of the stack object,
+	 * may be moved forward later in this function by TLS offset
+	 */
+	stack_ptr = (char *)stack;
+#else
+	/* Initial stack pointer at the high end of the stack object,
+	 * may be reduced later in this function by TLS or random offset
 	 */
 	stack_ptr = (char *)stack + stack_obj_size;
+#endif /* CONFIG_STACK_GROWS_UP */
 
 #endif /* CONFIG_THREAD_STACK_MEM_MAPPED */
 
 	LOG_DBG("stack %p for thread %p: obj_size=%zu buf_start=%p "
 		" buf_size %zu stack_ptr=%p",
-		stack, new_thread, stack_obj_size, (void *)stack_buf_start,
-		stack_buf_size, (void *)stack_ptr);
+		stack, new_thread, stack_obj_size, (void *)stack_buf_start, stack_buf_size,
+		(void *)stack_ptr);
 
 #ifdef CONFIG_INIT_STACKS
 	memset(stack_buf_start, 0xaa, stack_buf_size);
@@ -496,7 +490,13 @@ static char *setup_thread_stack(struct k_thread *new_thread,
 	new_thread->stack_info.size = stack_buf_size;
 	new_thread->stack_info.delta = delta;
 #endif /* CONFIG_THREAD_STACK_INFO */
+#ifdef CONFIG_STACK_GROWS_UP
+	/* for upward growing stack, increment the stack pointer to reserve space */
+	stack_ptr += delta;
+#else  /* CONFIG_STACK_GROWS_UP */
+	/* for downward growing stack, decreament the stack pointer to reserve space */
 	stack_ptr -= delta;
+#endif /* CONFIG_STACK_GROWS_UP */
 
 	return stack_ptr;
 }
@@ -506,11 +506,9 @@ static char *setup_thread_stack(struct k_thread *new_thread,
  * K_THREAD_STACK_SIZEOF(stack), or the size value passed to the instance
  * of K_THREAD_STACK_DEFINE() which defined 'stack'.
  */
-char *z_setup_new_thread(struct k_thread *new_thread,
-			 k_thread_stack_t *stack, size_t stack_size,
-			 k_thread_entry_t entry,
-			 void *p1, void *p2, void *p3,
-			 int prio, uint32_t options, const char *name)
+char *z_setup_new_thread(struct k_thread *new_thread, k_thread_stack_t *stack, size_t stack_size,
+			 k_thread_entry_t entry, void *p1, void *p2, void *p3, int prio,
+			 uint32_t options, const char *name)
 {
 	char *stack_ptr;
 
@@ -523,16 +521,14 @@ char *z_setup_new_thread(struct k_thread *new_thread,
 #ifdef CONFIG_OBJ_CORE_THREAD
 	k_obj_core_init_and_link(K_OBJ_CORE(new_thread), &obj_type_thread);
 #ifdef CONFIG_OBJ_CORE_STATS_THREAD
-	k_obj_core_stats_register(K_OBJ_CORE(new_thread),
-				  &new_thread->base.usage,
+	k_obj_core_stats_register(K_OBJ_CORE(new_thread), &new_thread->base.usage,
 				  sizeof(new_thread->base.usage));
 #endif /* CONFIG_OBJ_CORE_STATS_THREAD */
 #endif /* CONFIG_OBJ_CORE_THREAD */
 
 #ifdef CONFIG_USERSPACE
 	__ASSERT((options & K_USER) == 0U || z_stack_is_user_capable(stack),
-		 "user thread %p with kernel-only stack %p",
-		 new_thread, stack);
+		 "user thread %p with kernel-only stack %p", new_thread, stack);
 	k_object_init(new_thread);
 	k_object_init(stack);
 	new_thread->stack_obj = stack;
@@ -558,7 +554,7 @@ char *z_setup_new_thread(struct k_thread *new_thread,
 	 */
 #ifndef CONFIG_DYNAMIC_THREAD
 	__ASSERT_NO_MSG(!arch_mem_coherent(stack));
-#endif  /* CONFIG_DYNAMIC_THREAD */
+#endif /* CONFIG_DYNAMIC_THREAD */
 
 #endif /* CONFIG_KERNEL_COHERENCE */
 
@@ -596,8 +592,7 @@ char *z_setup_new_thread(struct k_thread *new_thread,
 #endif /* CONFIG_THREAD_MONITOR */
 #ifdef CONFIG_THREAD_NAME
 	if (name != NULL) {
-		strncpy(new_thread->name, name,
-			CONFIG_THREAD_MAX_NAME_LEN - 1);
+		strncpy(new_thread->name, name, CONFIG_THREAD_MAX_NAME_LEN - 1);
 		/* Ensure NULL termination, truncate if longer */
 		new_thread->name[CONFIG_THREAD_MAX_NAME_LEN - 1] = '\0';
 #ifdef CONFIG_ARCH_HAS_THREAD_NAME_HOOK
@@ -638,9 +633,8 @@ char *z_setup_new_thread(struct k_thread *new_thread,
 #endif /* CONFIG_SMP */
 
 #ifdef CONFIG_SCHED_THREAD_USAGE
-	new_thread->base.usage = (struct k_cycle_stats) {};
-	new_thread->base.usage.track_usage =
-		CONFIG_SCHED_THREAD_USAGE_AUTO_ENABLE;
+	new_thread->base.usage = (struct k_cycle_stats){};
+	new_thread->base.usage.track_usage = CONFIG_SCHED_THREAD_USAGE_AUTO_ENABLE;
 #endif /* CONFIG_SCHED_THREAD_USAGE */
 
 	SYS_PORT_TRACING_OBJ_FUNC(k_thread, create, new_thread);
@@ -648,17 +642,13 @@ char *z_setup_new_thread(struct k_thread *new_thread,
 	return stack_ptr;
 }
 
-
-k_tid_t z_impl_k_thread_create(struct k_thread *new_thread,
-			      k_thread_stack_t *stack,
-			      size_t stack_size, k_thread_entry_t entry,
-			      void *p1, void *p2, void *p3,
-			      int prio, uint32_t options, k_timeout_t delay)
+k_tid_t z_impl_k_thread_create(struct k_thread *new_thread, k_thread_stack_t *stack,
+			       size_t stack_size, k_thread_entry_t entry, void *p1, void *p2,
+			       void *p3, int prio, uint32_t options, k_timeout_t delay)
 {
 	__ASSERT(!arch_is_in_isr(), "Threads may not be created in ISRs");
 
-	z_setup_new_thread(new_thread, stack, stack_size, entry, p1, p2, p3,
-			  prio, options, NULL);
+	z_setup_new_thread(new_thread, stack, stack_size, entry, p1, p2, p3, prio, options, NULL);
 
 	if (!K_TIMEOUT_EQ(delay, K_FOREVER)) {
 		thread_schedule_new(new_thread, delay);
@@ -673,11 +663,9 @@ bool z_stack_is_user_capable(k_thread_stack_t *stack)
 	return k_object_find(stack) != NULL;
 }
 
-k_tid_t z_vrfy_k_thread_create(struct k_thread *new_thread,
-			       k_thread_stack_t *stack,
-			       size_t stack_size, k_thread_entry_t entry,
-			       void *p1, void *p2, void *p3,
-			       int prio, uint32_t options, k_timeout_t delay)
+k_tid_t z_vrfy_k_thread_create(struct k_thread *new_thread, k_thread_stack_t *stack,
+			       size_t stack_size, k_thread_entry_t entry, void *p1, void *p2,
+			       void *p3, int prio, uint32_t options, k_timeout_t delay)
 {
 	size_t total_size, stack_obj_size;
 	struct k_object *stack_object;
@@ -690,18 +678,16 @@ k_tid_t z_vrfy_k_thread_create(struct k_thread *new_thread,
 	 */
 	stack_object = k_object_find(stack);
 	K_OOPS(K_SYSCALL_VERIFY_MSG(k_object_validation_check(stack_object, stack,
-						K_OBJ_THREAD_STACK_ELEMENT,
-						_OBJ_INIT_FALSE) == 0,
+							      K_OBJ_THREAD_STACK_ELEMENT,
+							      _OBJ_INIT_FALSE) == 0,
 				    "bad stack object"));
 
 	/* Verify that the stack size passed in is OK by computing the total
 	 * size and comparing it with the size value in the object metadata
 	 */
-	K_OOPS(K_SYSCALL_VERIFY_MSG(!size_add_overflow(K_THREAD_STACK_RESERVED,
-						       stack_size, &total_size),
-				    "stack size overflow (%zu+%zu)",
-				    stack_size,
-				    K_THREAD_STACK_RESERVED));
+	K_OOPS(K_SYSCALL_VERIFY_MSG(
+		!size_add_overflow(K_THREAD_STACK_RESERVED, stack_size, &total_size),
+		"stack size overflow (%zu+%zu)", stack_size, K_THREAD_STACK_RESERVED));
 
 	/* Testing less-than-or-equal since additional room may have been
 	 * allocated for alignment constraints
@@ -712,8 +698,8 @@ k_tid_t z_vrfy_k_thread_create(struct k_thread *new_thread,
 	stack_obj_size = stack_object->data.stack_size;
 #endif /* CONFIG_GEN_PRIV_STACKS */
 	K_OOPS(K_SYSCALL_VERIFY_MSG(total_size <= stack_obj_size,
-				    "stack size %zu is too big, max is %zu",
-				    total_size, stack_obj_size));
+				    "stack size %zu is too big, max is %zu", total_size,
+				    stack_obj_size));
 
 	/* User threads may only create other user threads and they can't
 	 * be marked as essential
@@ -725,11 +711,9 @@ k_tid_t z_vrfy_k_thread_create(struct k_thread *new_thread,
 	 * than the caller
 	 */
 	K_OOPS(K_SYSCALL_VERIFY(_is_valid_prio(prio, NULL)));
-	K_OOPS(K_SYSCALL_VERIFY(z_is_prio_lower_or_equal(prio,
-							_current->base.prio)));
+	K_OOPS(K_SYSCALL_VERIFY(z_is_prio_lower_or_equal(prio, _current->base.prio)));
 
-	z_setup_new_thread(new_thread, stack, stack_size,
-			   entry, p1, p2, p3, prio, options, NULL);
+	z_setup_new_thread(new_thread, stack, stack_size, entry, p1, p2, p3, prio, options, NULL);
 
 	if (!K_TIMEOUT_EQ(delay, K_FOREVER)) {
 		thread_schedule_new(new_thread, delay);
@@ -740,8 +724,8 @@ k_tid_t z_vrfy_k_thread_create(struct k_thread *new_thread,
 #include <zephyr/syscalls/k_thread_create_mrsh.c>
 #endif /* CONFIG_USERSPACE */
 
-void z_init_thread_base(struct _thread_base *thread_base, int priority,
-		       uint32_t initial_state, unsigned int options)
+void z_init_thread_base(struct _thread_base *thread_base, int priority, uint32_t initial_state,
+			unsigned int options)
 {
 	/* k_q_node is initialized upon first insertion in a list */
 	thread_base->pended_on = NULL;
@@ -766,8 +750,7 @@ void z_init_thread_base(struct _thread_base *thread_base, int priority,
 	z_init_thread_timeout(thread_base);
 }
 
-FUNC_NORETURN void k_thread_user_mode_enter(k_thread_entry_t entry,
-					    void *p1, void *p2, void *p3)
+FUNC_NORETURN void k_thread_user_mode_enter(k_thread_entry_t entry, void *p1, void *p2, void *p3)
 {
 	SYS_PORT_TRACING_FUNC(k_thread, user_mode_enter);
 
@@ -783,13 +766,11 @@ FUNC_NORETURN void k_thread_user_mode_enter(k_thread_entry_t entry,
 	__ASSERT(z_stack_is_user_capable(_current->stack_obj),
 		 "dropping to user mode with kernel-only stack object");
 #ifdef CONFIG_THREAD_USERSPACE_LOCAL_DATA
-	memset(_current->userspace_local_data, 0,
-	       sizeof(struct _thread_userspace_local_data));
+	memset(_current->userspace_local_data, 0, sizeof(struct _thread_userspace_local_data));
 #endif /* CONFIG_THREAD_USERSPACE_LOCAL_DATA */
 #ifdef CONFIG_THREAD_LOCAL_STORAGE
 	arch_tls_stack_setup(_current,
-			     (char *)(_current->stack_info.start +
-				      _current->stack_info.size));
+			     (char *)(_current->stack_info.start + _current->stack_info.size));
 #endif /* CONFIG_THREAD_LOCAL_STORAGE */
 	arch_user_mode_enter(entry, p1, p2, p3);
 #else
@@ -854,8 +835,7 @@ int z_stack_space_get(const uint8_t *stack_start, size_t size, size_t *unused_pt
 	return 0;
 }
 
-int z_impl_k_thread_stack_space_get(const struct k_thread *thread,
-				    size_t *unused_ptr)
+int z_impl_k_thread_stack_space_get(const struct k_thread *thread, size_t *unused_ptr)
 {
 #ifdef CONFIG_THREAD_STACK_MEM_MAPPED
 	if (thread->stack_info.mapped.addr == NULL) {
@@ -863,13 +843,12 @@ int z_impl_k_thread_stack_space_get(const struct k_thread *thread,
 	}
 #endif /* CONFIG_THREAD_STACK_MEM_MAPPED */
 
-	return z_stack_space_get((const uint8_t *)thread->stack_info.start,
-				 thread->stack_info.size, unused_ptr);
+	return z_stack_space_get((const uint8_t *)thread->stack_info.start, thread->stack_info.size,
+				 unused_ptr);
 }
 
 #ifdef CONFIG_USERSPACE
-int z_vrfy_k_thread_stack_space_get(const struct k_thread *thread,
-				    size_t *unused_ptr)
+int z_vrfy_k_thread_stack_space_get(const struct k_thread *thread, size_t *unused_ptr)
 {
 	size_t unused;
 	int ret;
@@ -896,16 +875,14 @@ int z_vrfy_k_thread_stack_space_get(const struct k_thread *thread,
 #endif /* CONFIG_INIT_STACKS && CONFIG_THREAD_STACK_INFO */
 
 #ifdef CONFIG_USERSPACE
-static inline k_ticks_t z_vrfy_k_thread_timeout_remaining_ticks(
-						    const struct k_thread *thread)
+static inline k_ticks_t z_vrfy_k_thread_timeout_remaining_ticks(const struct k_thread *thread)
 {
 	K_OOPS(K_SYSCALL_OBJ(thread, K_OBJ_THREAD));
 	return z_impl_k_thread_timeout_remaining_ticks(thread);
 }
 #include <zephyr/syscalls/k_thread_timeout_remaining_ticks_mrsh.c>
 
-static inline k_ticks_t z_vrfy_k_thread_timeout_expires_ticks(
-						  const struct k_thread *thread)
+static inline k_ticks_t z_vrfy_k_thread_timeout_expires_ticks(const struct k_thread *thread)
 {
 	K_OOPS(K_SYSCALL_OBJ(thread, K_OBJ_THREAD));
 	return z_impl_k_thread_timeout_expires_ticks(thread);
@@ -934,8 +911,7 @@ void z_thread_mark_switched_out(void)
 #ifdef CONFIG_TRACING
 #ifdef CONFIG_THREAD_LOCAL_STORAGE
 	/* Dummy thread won't have TLS set up to run arbitrary code */
-	if (!_current ||
-	    (_current->base.thread_state & _THREAD_DUMMY) != 0) {
+	if (!_current || (_current->base.thread_state & _THREAD_DUMMY) != 0) {
 		return;
 	}
 #endif /* CONFIG_THREAD_LOCAL_STORAGE */
@@ -944,8 +920,7 @@ void z_thread_mark_switched_out(void)
 }
 #endif /* CONFIG_INSTRUMENT_THREAD_SWITCHING */
 
-int k_thread_runtime_stats_get(k_tid_t thread,
-			       k_thread_runtime_stats_t *stats)
+int k_thread_runtime_stats_get(k_tid_t thread, k_thread_runtime_stats_t *stats)
 {
 	if ((thread == NULL) || (stats == NULL)) {
 		return -EINVAL;
@@ -954,7 +929,7 @@ int k_thread_runtime_stats_get(k_tid_t thread,
 #ifdef CONFIG_SCHED_THREAD_USAGE
 	z_sched_thread_usage(thread, stats);
 #else
-	*stats = (k_thread_runtime_stats_t) {};
+	*stats = (k_thread_runtime_stats_t){};
 #endif /* CONFIG_SCHED_THREAD_USAGE */
 
 	return 0;
@@ -963,14 +938,14 @@ int k_thread_runtime_stats_get(k_tid_t thread,
 int k_thread_runtime_stats_all_get(k_thread_runtime_stats_t *stats)
 {
 #ifdef CONFIG_SCHED_THREAD_USAGE_ALL
-	k_thread_runtime_stats_t  tmp_stats;
+	k_thread_runtime_stats_t tmp_stats;
 #endif /* CONFIG_SCHED_THREAD_USAGE_ALL */
 
 	if (stats == NULL) {
 		return -EINVAL;
 	}
 
-	*stats = (k_thread_runtime_stats_t) {};
+	*stats = (k_thread_runtime_stats_t){};
 
 #ifdef CONFIG_SCHED_THREAD_USAGE_ALL
 	/* Retrieve the usage stats for each core and amalgamate them. */
@@ -981,13 +956,13 @@ int k_thread_runtime_stats_all_get(k_thread_runtime_stats_t *stats)
 		z_sched_cpu_usage(i, &tmp_stats);
 
 		stats->execution_cycles += tmp_stats.execution_cycles;
-		stats->total_cycles     += tmp_stats.total_cycles;
+		stats->total_cycles += tmp_stats.total_cycles;
 #ifdef CONFIG_SCHED_THREAD_USAGE_ANALYSIS
-		stats->current_cycles   += tmp_stats.current_cycles;
-		stats->peak_cycles      += tmp_stats.peak_cycles;
-		stats->average_cycles   += tmp_stats.average_cycles;
+		stats->current_cycles += tmp_stats.current_cycles;
+		stats->peak_cycles += tmp_stats.peak_cycles;
+		stats->average_cycles += tmp_stats.average_cycles;
 #endif /* CONFIG_SCHED_THREAD_USAGE_ANALYSIS */
-		stats->idle_cycles      += tmp_stats.idle_cycles;
+		stats->idle_cycles += tmp_stats.idle_cycles;
 	}
 #endif /* CONFIG_SCHED_THREAD_USAGE_ALL */
 
@@ -1000,7 +975,7 @@ int k_thread_runtime_stats_cpu_get(int cpu, k_thread_runtime_stats_t *stats)
 		return -EINVAL;
 	}
 
-	*stats = (k_thread_runtime_stats_t) {};
+	*stats = (k_thread_runtime_stats_t){};
 
 #ifdef CONFIG_SCHED_THREAD_USAGE_ALL
 #ifdef CONFIG_SMP
@@ -1069,8 +1044,7 @@ void do_thread_cleanup(struct k_thread *thread)
 
 #ifdef CONFIG_THREAD_STACK_MEM_MAPPED
 	if (thread_cleanup_stack_addr != NULL) {
-		k_mem_unmap_phys_guard(thread_cleanup_stack_addr,
-				       thread_cleanup_stack_sz, false);
+		k_mem_unmap_phys_guard(thread_cleanup_stack_addr, thread_cleanup_stack_sz, false);
 
 		thread_cleanup_stack_addr = NULL;
 	}
