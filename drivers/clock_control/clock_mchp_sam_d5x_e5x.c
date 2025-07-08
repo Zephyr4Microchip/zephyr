@@ -175,10 +175,6 @@ typedef struct {
 	uint8_t switch_back_en;         /* CFDCTRL */
 	uint8_t cfd_en;                 /* CFDCTRL */
 
-	uint8_t osculp32k_write_lock_en; /* OSCULP32K */
-	uint8_t osculp32k_1khz_en;       /* OSCULP32K */
-	uint8_t osculp32k_32khz_en;      /* OSCULP32K */
-
 	uint8_t gain_mode;         /* XOSC32K */
 	uint8_t write_lock_en;     /* XOSC32K */
 	uint8_t on_demand_en;      /* XOSC32K */
@@ -538,12 +534,8 @@ static int clock_on_off(const clock_mchp_config_t *config, const clock_mchp_subs
 		}
 		switch (inst) {
 		case INST_OSC32K_OSCULP1K:
-			reg32 = &osc32kctrl_regs->OSC32KCTRL_OSCULP32K;
-			reg32_val = OSC32KCTRL_OSCULP32K_EN1K_Msk;
-			break;
 		case INST_OSC32K_OSCULP32K:
-			reg32 = &osc32kctrl_regs->OSC32KCTRL_OSCULP32K;
-			reg32_val = OSC32KCTRL_OSCULP32K_EN32K_Msk;
+			ret_val = -ENOTSUP;
 			break;
 		case INST_OSC32K_XOSC1K:
 			reg16 = &osc32kctrl_regs->OSC32KCTRL_XOSC32K;
@@ -2027,7 +2019,6 @@ void clock_osc32k_init(const struct device *dev, clock_osc32k_init_t *osc32k_ini
 
 	uint8_t val8;
 	uint16_t val16;
-	uint32_t val32;
 
 	do {
 		if ((data->src_on_status &
@@ -2045,18 +2036,7 @@ void clock_osc32k_init(const struct device *dev, clock_osc32k_init_t *osc32k_ini
 		osc32kctrl_regs->OSC32KCTRL_CFDCTRL = val8;
 
 		/* OSCULP32K */
-		val32 = 0;
-		val32 |= ((osc32k_init->osculp32k_write_lock_en != 0)
-				  ? OSC32KCTRL_OSCULP32K_WRTLOCK(1)
-				  : 0);
-		val32 |= ((osc32k_init->osculp32k_1khz_en != 0) ? OSC32KCTRL_OSCULP32K_EN1K(1) : 0);
-		val32 |= ((osc32k_init->osculp32k_32khz_en != 0) ? OSC32KCTRL_OSCULP32K_EN32K(1)
-								 : 0);
-
-		osc32kctrl_regs->OSC32KCTRL_OSCULP32K = val32;
-		if (osc32k_init->osculp32k_32khz_en != 0) {
-			data->src_on_status |= (1 << ON_BITPOS_OSCULP32K);
-		}
+		data->src_on_status |= (1 << ON_BITPOS_OSCULP32K);
 
 		/* XOSC32K */
 		val16 = 0;
@@ -2269,9 +2249,6 @@ void clock_mclkperiph_init(const struct device *dev, uint32_t subsys_val, uint8_
 	osc32k_init.cf_backup_divideby2_en = DT_PROP(node, osc32k_cf_backup_divideby2_en);         \
 	osc32k_init.switch_back_en = DT_PROP(node, osc32k_switch_back_en);                         \
 	osc32k_init.cfd_en = DT_PROP(node, osc32k_cfd_en);                                         \
-	osc32k_init.osculp32k_write_lock_en = DT_PROP(node, osculp32k_write_lock_en);              \
-	osc32k_init.osculp32k_1khz_en = DT_PROP(node, osculp32k_1khz_en);                          \
-	osc32k_init.osculp32k_32khz_en = DT_PROP(node, osculp32k_32khz_en);                        \
 	osc32k_init.enable = DT_PROP(node, osc32k_en);                                             \
 	clock_osc32k_init(dev, &osc32k_init);
 

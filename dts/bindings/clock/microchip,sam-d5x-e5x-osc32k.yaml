@@ -121,27 +121,3 @@ properties:
       - 1
     default: 0
     description: Clock Failure Detector Enable
-
-  osculp32k_write_lock_en:
-    type: int
-    enum:
-      - 0
-      - 1
-    default: 0
-    description: Locks the OSCULP32K register for future writes
-
-  osculp32k_1khz_en:
-    type: int
-    enum:
-      - 0
-      - 1
-    default: 1
-    description: 1kHz Output Enable
-
-  osculp32k_32khz_en:
-    type: int
-    enum:
-      - 0
-      - 1
-    default: 1
-    description: 32kHz output is enable
