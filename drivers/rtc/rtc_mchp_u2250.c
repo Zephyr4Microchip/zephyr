@@ -48,6 +48,9 @@
 /* The maximum value is set to 127 ppb */
 #define RTC_CALIBRATE_PPB_MAX (127)
 
+/* RTC source clock rate value in hz */
+#define RTC_CLOCK_RATE_1KHZ (1024)
+
 /* This macro defines the type of the lock used to protect access to the RTC APIs. */
 #define RTC_LOCK_TYPE struct k_mutex
 
@@ -173,6 +176,9 @@ typedef struct rtc_mchp_dev_data {
 
 #ifdef CONFIG_RTC_ALARM
 	rtc_mchp_data_cb_t alarms[RTC_ALARM_COUNT];
+
+	/* Storing the alarm mask value sent to set alarm. */
+	uint16_t alarm_mask_set[RTC_ALARM_COUNT];
 #endif /* CONFIG_RTC_ALARM */
 
 } rtc_mchp_dev_data_t;
@@ -856,6 +862,7 @@ static uint16_t rtc_mchp_mask_from_alarm_msk(uint16_t mask)
 static int rtc_mchp_set_alarm_time(const struct device *dev, uint16_t alarm_id, uint16_t alarm_mask,
 				   const struct rtc_time *timeptr)
 {
+	rtc_mchp_dev_data_t *data = dev->data;
 	const rtc_mchp_dev_config_t *const cfg = dev->config;
 	rtc_mchp_time_t rtc_time;
 	uint16_t supported_mask;
@@ -922,6 +929,9 @@ static int rtc_mchp_set_alarm_time(const struct device *dev, uint16_t alarm_id, 
 			rtc_enable_interrupt(cfg->regs, alarm_id);
 		}
 
+		/* Storing the alarm mask value to data*/
+		data->alarm_mask_set[alarm_id] = alarm_mask;
+
 		/* Unlock the IRQ after completion of setting callback */
 		irq_unlock(key);
 
@@ -950,7 +960,7 @@ static int rtc_mchp_get_alarm_time(const struct device *dev, uint16_t alarm_id,
 	const rtc_mchp_dev_config_t *const cfg = dev->config;
 	rtc_mchp_time_t rtc_alarm_time = {0};
 	int retval = 0;
-	uint16_t mask;
+	uint16_t mask, app_alarm_mask;
 
 	/* Check if the alarm ID is within the valid range */
 	if (alarm_id >= cfg->alarms_count) {
@@ -972,7 +982,14 @@ static int rtc_mchp_get_alarm_time(const struct device *dev, uint16_t alarm_id,
 			/* Get the mask of fields which are enabled in the alarm time */
 			mask = rtc_get_alarm_mask(cfg->regs, alarm_id);
 
-			*alarm_mask = rtc_mchp_mask_from_alarm_msk(mask);
+			app_alarm_mask = rtc_mchp_mask_from_alarm_msk(mask);
+
+			if ((app_alarm_mask & data->alarm_mask_set[alarm_id]) ==
+			    data->alarm_mask_set[alarm_id]) {
+				*alarm_mask = data->alarm_mask_set[alarm_id];
+			} else {
+				*alarm_mask = app_alarm_mask;
+			}
 
 			/* Populate the rtc_time structure with the retrieved values. */
 			timeptr->tm_sec = (int)rtc_alarm_time.second;
@@ -1278,6 +1295,7 @@ static int rtc_mchp_init(const struct device *dev)
 	rtc_mchp_dev_data_t *data = dev->data;
 	const rtc_mchp_dev_config_t *const cfg = dev->config;
 	int16_t ret = 0;
+	uint32_t clock_rate = 0;
 
 	do {
 		/* On Oscillator clock for RTC */
@@ -1293,6 +1311,20 @@ static int rtc_mchp_init(const struct device *dev)
 			LOG_ERR("Failed to enable the MCLK for RTC: %d", ret);
 			break;
 		}
+
+		ret = clock_control_get_rate(cfg->rtc_clock.clock_dev, cfg->rtc_clock.rtcclk_sys,
+					     &clock_rate);
+		if (ret != 0) {
+			LOG_ERR("Failed to get the source clock rate for RTC: %d", ret);
+			break;
+		}
+
+		/* RTC calender mode not supported for 32khz clock source */
+		if ((clock_rate != 0) && (clock_rate != RTC_CLOCK_RATE_1KHZ)) {
+			ret = -ENOTSUP;
+			break;
+		}
+
 		/* Initialize mutex for RTC data structure */
 		RTC_DATA_LOCK_INIT(&data->lock);
 
