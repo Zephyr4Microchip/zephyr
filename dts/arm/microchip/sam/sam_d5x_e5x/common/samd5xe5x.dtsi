@@ -1,0 +1,54 @@
+/*
+ * Copyright (c) 2025 Microchip Technology Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+#include <arm/armv7-m.dtsi>
+/ {
+	chosen {
+		zephyr,flash-controller = &nvmctrl;
+	};
+
+	cpus {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		cpu0: cpu@0 {
+			device_type = "cpu";
+			compatible = "arm,cortex-m4f";
+			reg = <0>;
+			#address-cells = <1>;
+			#size-cells = <1>;
+
+			mpu: mpu@e000ed90 {
+				compatible = "arm,armv7m-mpu";
+				reg = <0xE000ED90 0x2c>;
+			};
+		};
+	};
+
+	soc {
+		sram0: memory@20000000 {
+			compatible = "mmio-sram";
+			reg = <0x20000000 0x40000>;
+		};
+
+		nvmctrl: nvmctrl@41004000 {
+			compatible = "microchip,nvmctrl-g1";
+			status = "disabled";
+			reg = <0x41004000 0x30>;
+			#address-cells = <1>;
+			#size-cells = <1>;
+
+			flash0: flash@0 {
+				compatible = "soc-nv-flash";
+				write-block-size = <8>;
+			};
+		};
+	};
+};
+
+&nvic {
+	arm,num-irq-priority-bits = <3>;
+};
