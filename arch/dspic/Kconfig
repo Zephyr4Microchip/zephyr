@@ -1,0 +1,17 @@
+# Copyright (c) 2025, Microchip Technology Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+menu "DSPIC Options"
+	depends on DSPIC
+
+config ARCH
+	string
+	default "dspic"
+
+config NUM_IRQS
+	default 287
+
+config GEN_IRQ_START_VECTOR
+	default 8
+
+endmenu
