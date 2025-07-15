@@ -395,16 +395,29 @@ typedef enum {
 } i2c_mchp_target_status_flag_t;
 
 /**
- * @enum i2c_mchp_slave_ack_status
- * @brief Enumeration for I2C slave acknowledge status.
+ * @enum i2c_mchp_target_ack_status_t
+ * @brief Enumeration for I2C target acknowledge status.
  *
- * This enum represents the possible acknowledge statuses received by the I2C slave
+ * This enum represents the possible acknowledge status received by the I2C slave
  * after a byte transfer.
  */
 typedef enum {
-	I2C_MCHP_SLAVE_ACK_STATUS_RECEIVED_ACK = 0,
-	I2C_MCHP_SLAVE_ACK_STATUS_RECEIVED_NACK
-} i2c_mchp_slave_ack_status;
+	I2C_MCHP_TARGET_ACK_STATUS_RECEIVED_ACK = 0,
+	I2C_MCHP_TARGET_ACK_STATUS_RECEIVED_NACK
+} i2c_mchp_target_ack_status_t;
+
+/**
+ * @enum i2c_mchp_target_cmd_t
+ * @brief I2C target command options for SERCOM I2C peripheral.
+ *
+ * Defines commands for ACK/NACK and transaction control in I2C target mode.
+ */
+typedef enum {
+	I2C_MCHP_TARGET_COMMAND_SEND_ACK = 0,
+	I2C_MCHP_TARGET_COMMAND_SEND_NACK,
+	I2C_MCHP_TARGET_COMMAND_RECEIVE_ACK_NAK,
+	I2C_MCHP_TARGET_COMMAND_STOP
+} i2c_mchp_target_cmd_t;
 
 /**
  * @struct i2c_mchp_clock
@@ -1022,38 +1035,6 @@ static void i2c_controller_addr_write(const struct device *dev, uint32_t addr)
 }
 
 /**
- * @brief Clear specific I2C target interrupt flags.
- *
- * This API clears the specified interrupt flags in the I2C target by writing
- * the corresponding bits to the interrupt flag register.
- *
- * @param dev Pointer to the device structure for the I2C peripheral.
- * @param target_intflag Bitmask of interrupt flags to clear (see @ref i2c_mchp_target_intflag_t).
- */
-static void i2c_target_int_flag_clear(const struct device *dev,
-				      i2c_mchp_target_intflag_t target_intflag)
-{
-	uint8_t flag_clear = 0;
-
-	if ((target_intflag & I2C_MCHP_TARGET_INTFLAG_STOP) == I2C_MCHP_TARGET_INTFLAG_STOP) {
-		flag_clear |= SERCOM_I2CS_INTFLAG_PREC(1);
-	}
-	if ((target_intflag & I2C_MCHP_TARGET_INTFLAG_ADDR_MATCH) ==
-	    I2C_MCHP_TARGET_INTFLAG_ADDR_MATCH) {
-		flag_clear |= SERCOM_I2CS_INTFLAG_AMATCH(1);
-	}
-	if ((target_intflag & I2C_MCHP_TARGET_INTFLAG_DATA_READY) ==
-	    I2C_MCHP_TARGET_INTFLAG_DATA_READY) {
-		flag_clear |= SERCOM_I2CS_INTFLAG_DRDY(1);
-	}
-	if ((target_intflag & I2C_MCHP_TARGET_INTFLAG_ERROR) == I2C_MCHP_TARGET_INTFLAG_ERROR) {
-		flag_clear |= SERCOM_I2CS_INTFLAG_ERROR(1);
-	}
-
-	I2C_REGS->I2CS.SERCOM_INTFLAG = flag_clear;
-}
-
-/**
  * @brief Calculate the I2C baud rate register value.
  *
  * This API calculates the appropriate baud rate register value for the I2C peripheral
@@ -1418,49 +1399,91 @@ static void i2c_target_status_clear(const struct device *dev,
 }
 
 /**
- * @brief Stop I2C communication by sending a NACK in target (slave) mode.
+ * @brief Clear specific I2C target interrupt flags.
  *
- * This API stops the current I2C communication in target mode by setting the ACKACT bit,
- * which causes the peripheral to send a NACK (Not Acknowledge) on the next data transfer.
+ * This API clears the specified interrupt flags in the I2C target by writing
+ * the corresponding bits to the interrupt flag register.
  *
  * @param dev Pointer to the device structure for the I2C peripheral.
+ * @param target_intflag Bitmask of interrupt flags to clear (see @ref i2c_mchp_target_intflag_t).
  */
-static void i2c_target_transfer_stop(const struct device *dev)
+static void i2c_target_int_flag_clear(const struct device *dev,
+				      i2c_mchp_target_intflag_t target_intflag)
 {
-	I2C_REGS->I2CS.SERCOM_CTRLB |= SERCOM_I2CS_CTRLB_ACKACT(1);
+	uint8_t flag_clear = 0;
+
+	if ((target_intflag & I2C_MCHP_TARGET_INTFLAG_STOP) == I2C_MCHP_TARGET_INTFLAG_STOP) {
+		flag_clear |= SERCOM_I2CS_INTFLAG_PREC(1);
+	}
+	if ((target_intflag & I2C_MCHP_TARGET_INTFLAG_ADDR_MATCH) ==
+	    I2C_MCHP_TARGET_INTFLAG_ADDR_MATCH) {
+		flag_clear |= SERCOM_I2CS_INTFLAG_AMATCH(1);
+	}
+	if ((target_intflag & I2C_MCHP_TARGET_INTFLAG_DATA_READY) ==
+	    I2C_MCHP_TARGET_INTFLAG_DATA_READY) {
+		flag_clear |= SERCOM_I2CS_INTFLAG_DRDY(1);
+	}
+	if ((target_intflag & I2C_MCHP_TARGET_INTFLAG_ERROR) == I2C_MCHP_TARGET_INTFLAG_ERROR) {
+		flag_clear |= SERCOM_I2CS_INTFLAG_ERROR(1);
+	}
+
+	I2C_REGS->I2CS.SERCOM_INTFLAG = flag_clear;
 }
 
 /**
- * @brief Execute a byte read operation followed by ACK/NACK reception in I2C slave mode.
+ * @brief Get the ACK/NACK status of the last byte transferred in I2C target mode.
  *
- * This function issues a command to the I2C peripheral to perform a byte read operation
- * in response to a data ready (DRDY) interrupt when acting as an I2C slave. After sending
- * the data byte to the I2C master, the hardware will automatically handle the reception
- * of an ACK or NACK from the master, indicating whether the master wishes to continue
- * the transfer or terminate it.
- *
- * @param[in] dev Pointer to the device structure for the I2C peripheral.
- */
-static inline void i2c_target_execute_read_with_ack_nack(const struct device *dev)
-{
-	I2C_REGS->I2CS.SERCOM_CTRLB |= SERCOM_I2CS_CTRLB_CMD(0x03UL);
-}
-
-/**
- * @brief Get the ACK/NACK status of the last byte transferred in I2C slave mode.
- *
- * This function checks the SERCOM I2C slave STATUS register to determine whether
+ * This function checks the SERCOM I2C target STATUS register to determine whether
  * the last byte transferred was acknowledged (ACK) or not acknowledged (NACK) by the I2C master.
  *
- * @param[in] dev Pointer to the device structure for the I2C peripheral.
- *
- * @return i2c_mchp_slave_ack_status
+ * @return i2c_mchp_target_ack_status
  */
-static inline i2c_mchp_slave_ack_status i2c_get_lastbyte_ack_status(const struct device *dev)
+static inline i2c_mchp_target_ack_status_t
+i2c_target_get_lastbyte_ack_status(const struct device *dev)
 {
 	return ((I2C_REGS->I2CS.SERCOM_STATUS & SERCOM_I2CS_STATUS_RXNACK_Msk) != 0U)
-		       ? I2C_MCHP_SLAVE_ACK_STATUS_RECEIVED_NACK
-		       : I2C_MCHP_SLAVE_ACK_STATUS_RECEIVED_ACK;
+		       ? I2C_MCHP_TARGET_ACK_STATUS_RECEIVED_NACK
+		       : I2C_MCHP_TARGET_ACK_STATUS_RECEIVED_ACK;
+}
+
+/**
+ * @brief Set the I2C target (slave) command for the SERCOM peripheral.
+ *
+ * This function issues a specific command to the I2C target (slave) hardware
+ * by updating the SERCOM CTRLB register.
+ *
+ * @param dev Pointer to the I2C device structure.
+ * @param cmd The command to issue to the I2C target.
+ */
+void i2c_target_set_command(const struct device *dev, i2c_mchp_target_cmd_t cmd)
+{
+	sercom_registers_t *i2c_regs = ((const i2c_mchp_dev_config_t *)(dev)->config)->regs;
+
+	/* Clear CMD bits first */
+	i2c_regs->I2CS.SERCOM_CTRLB &= ~SERCOM_I2CS_CTRLB_CMD_Msk;
+
+	switch (cmd) {
+	case I2C_MCHP_TARGET_COMMAND_SEND_ACK:
+		i2c_regs->I2CS.SERCOM_CTRLB =
+			(i2c_regs->I2CS.SERCOM_CTRLB & ~SERCOM_I2CS_CTRLB_ACKACT_Msk) |
+			SERCOM_I2CS_CTRLB_CMD(0x03UL);
+		break;
+	case I2C_MCHP_TARGET_COMMAND_SEND_NACK:
+		i2c_regs->I2CS.SERCOM_CTRLB =
+			(i2c_regs->I2CS.SERCOM_CTRLB | SERCOM_I2CS_CTRLB_ACKACT_Msk) |
+			SERCOM_I2CS_CTRLB_CMD(0x03UL);
+		break;
+	case I2C_MCHP_TARGET_COMMAND_RECEIVE_ACK_NAK:
+		i2c_regs->I2CS.SERCOM_CTRLB |= SERCOM_I2CS_CTRLB_CMD(0x03UL);
+		break;
+	case I2C_MCHP_TARGET_COMMAND_STOP:
+		i2c_regs->I2CS.SERCOM_CTRLB =
+			(i2c_regs->I2CS.SERCOM_CTRLB | SERCOM_I2CS_CTRLB_ACKACT_Msk) |
+			SERCOM_I2CS_CTRLB_CMD(0x02UL);
+		break;
+	default:
+		break;
+	}
 }
 
 /**
@@ -1485,80 +1508,75 @@ static void i2c_target_handler(const struct device *dev)
 	/*Get the current status of target device */
 	i2c_mchp_target_status_flag_t target_status = i2c_target_status_get(dev);
 
-	/* Handle error conditions */
-	if ((int_status & I2C_MCHP_TARGET_INTFLAG_ERROR) == I2C_MCHP_TARGET_INTFLAG_ERROR) {
-		LOG_ERR("Interrupt Error generated");
-		target_cb->stop(&data->target_config);
-		return;
-	}
+	do {
+		/* Handle error conditions */
+		if ((int_status & I2C_MCHP_TARGET_INTFLAG_ERROR) == I2C_MCHP_TARGET_INTFLAG_ERROR) {
+			i2c_target_int_flag_clear(dev, I2C_MCHP_TARGET_INTFLAG_ERROR);
+			LOG_ERR("Interrupt Error generated");
+			target_cb->stop(&data->target_config);
+			break;
+		}
 
-	/* Handle address match */
-	if ((int_status & I2C_MCHP_TARGET_INTFLAG_ADDR_MATCH) ==
-	    I2C_MCHP_TARGET_INTFLAG_ADDR_MATCH) {
-		if ((target_status & I2C_MCHP_TARGET_STATUS_FLAG_DATA_DIR_READ) ==
-		    I2C_MCHP_TARGET_STATUS_FLAG_DATA_DIR_READ) {
-			/* Master is reading */
-			retval = target_cb->read_requested(&data->target_config, &data->rx_tx_data);
+		/* Handle address match */
+		if ((int_status & I2C_MCHP_TARGET_INTFLAG_ADDR_MATCH) ==
+		    I2C_MCHP_TARGET_INTFLAG_ADDR_MATCH) {
 
-			if (retval != 0) {
-				/*stop the communication*/
-				i2c_target_transfer_stop(dev);
-				return;
-			}
-		} else {
-			/* Master is writing */
-			retval = target_cb->write_requested(&data->target_config);
+			i2c_target_set_command(dev, I2C_MCHP_TARGET_COMMAND_SEND_ACK);
 
-			if (retval != 0) {
-				/*stop the communication*/
-				i2c_target_transfer_stop(dev);
-				return;
+			if ((target_status & I2C_MCHP_TARGET_STATUS_FLAG_DATA_DIR_READ) ==
+			    I2C_MCHP_TARGET_STATUS_FLAG_DATA_DIR_READ) {
+				/* Master is reading */
+				target_cb->read_requested(&data->target_config, &data->rx_tx_data);
+				i2c_byte_write(dev, data->rx_tx_data);
+			} else {
+				/* Master is writing */
+				target_cb->write_requested(&data->target_config);
 			}
 		}
-	}
 
-	/* Handle data ready (Read/Write Operations) */
-	if ((int_status & I2C_MCHP_TARGET_INTFLAG_DATA_READY) ==
-	    I2C_MCHP_TARGET_INTFLAG_DATA_READY) {
-		if (((target_status & I2C_MCHP_TARGET_STATUS_FLAG_DATA_DIR_READ) ==
-		     I2C_MCHP_TARGET_STATUS_FLAG_DATA_DIR_READ)) {
-			if ((i2c_get_lastbyte_ack_status(dev) ==
-			     I2C_MCHP_SLAVE_ACK_STATUS_RECEIVED_ACK)) {
-				/* Master is reading */
-				i2c_byte_write(dev, data->rx_tx_data);
-				i2c_target_execute_read_with_ack_nack(dev);
-				retval = target_cb->read_processed(&data->target_config,
-								   &data->rx_tx_data);
+		/* Handle data ready (Read/Write Operations) */
+		if ((int_status & I2C_MCHP_TARGET_INTFLAG_DATA_READY) ==
+		    I2C_MCHP_TARGET_INTFLAG_DATA_READY) {
 
+			if (((target_status & I2C_MCHP_TARGET_STATUS_FLAG_DATA_DIR_READ) ==
+			     I2C_MCHP_TARGET_STATUS_FLAG_DATA_DIR_READ)) {
+
+				if ((i2c_target_get_lastbyte_ack_status(dev) ==
+				     I2C_MCHP_TARGET_ACK_STATUS_RECEIVED_ACK)) {
+					/* Master is reading */
+					target_cb->read_processed(&data->target_config,
+								  &data->rx_tx_data);
+					i2c_byte_write(dev, data->rx_tx_data);
+					i2c_target_set_command(
+						dev, I2C_MCHP_TARGET_COMMAND_RECEIVE_ACK_NAK);
+				} else {
+					i2c_target_set_command(dev, I2C_MCHP_TARGET_COMMAND_STOP);
+				}
+
+			} else {
+				/* Master is writing */
+				i2c_target_set_command(dev, I2C_MCHP_TARGET_COMMAND_SEND_ACK);
+				data->rx_tx_data = i2c_byte_read(dev);
+				retval = target_cb->write_received(&data->target_config,
+								   data->rx_tx_data);
 				if (retval != 0) {
-					/*stop the communication*/
-					i2c_target_transfer_stop(dev);
-					return;
+					i2c_target_set_command(dev,
+							       I2C_MCHP_TARGET_COMMAND_SEND_NACK);
 				}
 			}
-		} else {
-			/* Master is writing */
-			data->rx_tx_data = i2c_byte_read(dev);
-			retval = target_cb->write_received(&data->target_config, data->rx_tx_data);
-
-			if (retval != 0) {
-				/*stop the communication*/
-				i2c_target_transfer_stop(dev);
-				return;
-			}
 		}
-	}
+
+	} while (0);
 
 	/* Handle stop condition interrupt */
 	if ((int_status & I2C_MCHP_TARGET_INTFLAG_STOP) == I2C_MCHP_TARGET_INTFLAG_STOP) {
+		i2c_target_int_flag_clear(dev, I2C_MCHP_TARGET_INTFLAG_STOP);
+
 		/* Notify that a stop condition was received */
 		target_cb->stop(&data->target_config);
 	}
 
 	i2c_target_status_clear(dev, target_status);
-
-	/* Clear all interrupt flags */
-	i2c_target_int_flag_clear(dev, int_status);
 }
 
 #endif
@@ -1580,8 +1598,6 @@ static void i2c_mchp_isr(const struct device *dev)
 	/* Get current interrupt status to identify the cause of the interrupt */
 	i2c_mchp_controller_intflag_t int_status = i2c_controller_int_flag_get(dev);
 
-	i2c_target_int_flag_clear(dev, int_status);
-
 	/* Terminate if there are any critical errors on the bus */
 	if (i2c_is_terminate_on_error(dev) != false) {
 		return;
@@ -1590,6 +1606,7 @@ static void i2c_mchp_isr(const struct device *dev)
 	/* Handle ERROR interrupt flag for controller mode transmit and receive */
 	if (int_status == I2C_MCHP_CONTROLLER_INTFLAG_ERROR) {
 		i2c_controller_transfer_stop(dev);
+
 		/*Disable the all i2c interrupts*/
 		i2c_controller_int_disable(dev, I2C_MCHP_CONTROLLER_INTERRUPT_ALL);
 
