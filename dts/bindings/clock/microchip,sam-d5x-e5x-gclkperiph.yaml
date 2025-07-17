@@ -1,0 +1,15 @@
+# Copyright (c) 2025 Microchip Technology Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+include: [base.yaml]
+
+description: peripheral channel gclk clock configuration.
+compatible: "microchip,sam-d5x-e5x-gclkperiph"
+
+properties:
+  "#clock-cells":
+    const: 1
+    type: int
+
+clock-cells:
+  - subsystem

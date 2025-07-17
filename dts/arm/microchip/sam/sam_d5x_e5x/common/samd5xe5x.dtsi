@@ -5,6 +5,7 @@
  */
 
 #include <arm/armv7-m.dtsi>
+#include <zephyr/dt-bindings/clock/mchp_sam_d5x_e5x_clock.h>
 / {
 	chosen {
 		zephyr,flash-controller = &nvmctrl;
@@ -26,6 +27,22 @@
 	};
 	/* Child nodes inside this block are arranged alphabetically */
 	soc {
+		clock: clock@40000800 {
+			compatible = "microchip,sam-d5x-e5x-clock";
+			reg =	<
+					0x40000800 0x24
+					0x40001000 0x58
+					0x40001400 0x20
+					0x40001c00 0x140>; // mclk, oscctrl, osc32kctrl, gclk
+			gclkperiph: gclkperiph {
+				compatible = "microchip,sam-d5x-e5x-gclkperiph";
+				#clock-cells = <1>;
+			};
+			mclkperiph: mclkperiph {
+				compatible = "microchip,sam-d5x-e5x-mclkperiph";
+				#clock-cells = <1>;
+			};
+		};
 		nvmctrl: nvmctrl@41004000 {
 			compatible = "microchip,nvmctrl-g1";
 			status = "disabled";
