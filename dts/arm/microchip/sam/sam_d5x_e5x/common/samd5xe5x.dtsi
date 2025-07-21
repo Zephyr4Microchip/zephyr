@@ -5,6 +5,8 @@
  */
 
 #include <arm/armv7-m.dtsi>
+#include <zephyr/dt-bindings/clock/mchp_sam_d5x_e5x_clock.h>
+
 / {
 	chosen {
 		zephyr,flash-controller = &nvmctrl;
