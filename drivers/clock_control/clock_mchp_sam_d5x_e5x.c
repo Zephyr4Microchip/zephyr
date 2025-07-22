@@ -317,13 +317,11 @@ static int clock_on_off(const clock_mchp_config_t *config, const clock_mchp_subs
 		break;
 	}
 
-	if (ret_val == CLOCK_SUCCESS) {
-		if (reg32 != NULL) {
-			if (on == true) {
-				*reg32 |= reg32_val;
-			} else {
-				*reg32 &= ~reg32_val;
-			}
+	if ((ret_val == CLOCK_SUCCESS) && (reg32 != NULL)) {
+		if (on == true) {
+			*reg32 |= reg32_val;
+		} else {
+			*reg32 &= ~reg32_val;
 		}
 	}
 
@@ -369,13 +367,10 @@ static int clock_get_rate_gclkgen(const struct device *dev, clock_mchp_gclkgen_t
 			break;
 		}
 
-		switch (gclkgen_src) {
-		case CLOCK_MCHP_GCLK_SRC_DFLL:
+		if (gclkgen_src == CLOCK_MCHP_GCLK_SRC_DFLL) {
 			ret_val = clock_get_rate_dfll(dev, &gclkgen_src_freq);
-			break;
-		default:
+		} else {
 			ret_val = -ENOTSUP;
-			break;
 		}
 		if (ret_val != CLOCK_SUCCESS) {
 			break;
