@@ -1,18 +1,11 @@
 # Copyright (c) 2025 Microchip Technology Inc.
 # SPDX-License-Identifier: Apache-2.0
 
-config UART_MCHP_SERCOM_ID_U2201_5_0_0
-	bool
-	default n
-	help
-	  Internal flag to enable SERCOM ID U2201_5_0_0 specific support.
-
 config UART_MCHP_SERCOM_G1
 	bool "Microchip SERCOM G1 UART driver"
 	default y
 	depends on DT_HAS_MICROCHIP_SERCOM_G1_UART_ENABLED
 	select SERIAL_HAS_DRIVER
 	select PINCTRL
-	select UART_MCHP_SERCOM_ID_U2201_5_0_0 if SOC_FAMILY_MCHP_SAM_D5X_E5X
 	help
-		This option enables the USART driver for Microchip sercom-g1 IPs.
+	  This option enables UART driver for group (g1) of SERCOM peripherals.

@@ -2,9 +2,9 @@
 # SPDX-License-Identifier: Apache-2.0
 
 description: |
-  Microchip sercom-g1 uart driver bindings.
+  Microchip SERCOM UART driver bindings.
 
-  sercom-g1 uart driver supports following hardware module IPs:
+  Group g1 SERCOM UART driver supports following hardware peripherals:
     - module name="SERCOM" id="U2201" version="5.0.0"
 
 compatible: "microchip,sercom-g1-uart"
