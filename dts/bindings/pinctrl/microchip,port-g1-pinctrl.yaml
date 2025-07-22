@@ -9,8 +9,8 @@ description: |
   to route SERCOM0 as UART were RX to pin PAD1 and enable the pull-up resistor
   on the pin.
 
-  The is used in the below families:
-    - SAM D5x/E5x
+  Group g1 PORT PINCTRL driver supports following hardware peripherals:
+    - module name="PORT" id="U2210" version="2.2.0"
 
   The node has the 'pinctrl' node label set in your SoC's devicetree, so you can
   modify it like this:
