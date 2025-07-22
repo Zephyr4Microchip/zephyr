@@ -5,16 +5,25 @@ config SOC_FAMILY_MCHP_SAM_D5X_E5X
 	bool
 
 config SOC_FAMILY
-	default "microchip_sam_d5x_e5x" if SOC_FAMILY_MCHP_SAM_D5X_E5X
+	default "mchp_sam_d5x_e5x" if SOC_FAMILY_MCHP_SAM_D5X_E5X
 
-config SOC_SERIES_REVISION_N
+# List of Peripheral IPs available in SOC_FAMILY_MCHP_SAM_D5X_E5X family
+if SOC_FAMILY_MCHP_SAM_D5X_E5X
+
+config UART_MCHP_SERCOM_U2201_5_0_0
 	bool
-	depends on SOC_FAMILY_MCHP_SAM_D5X_E5X
+	default y
+	depends on SERIAL
+	help
+	  Enable SERCOM UART peripheral IP version 5.0.0 (U2201).
 
-config SOC_SERIES_REVISION
-	string
-	default "n" if SOC_SERIES_REVISION_N
-	default ""
-	depends on SOC_FAMILY_MCHP_SAM_D5X_E5X
+config PINCTRL_MCHP_PORT_U2210_2_2_0
+	bool
+	default y
+	depends on PINCTRL
+	help
+	  Enable PORT pinctrl peripheral IP version 2.2.0 (U2210).
+
+endif # SOC_FAMILY_MCHP_SAM_D5X_E5X
 
 rsource "*/Kconfig.soc"

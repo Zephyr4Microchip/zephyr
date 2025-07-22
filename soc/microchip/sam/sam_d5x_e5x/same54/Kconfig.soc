@@ -8,8 +8,7 @@ config SOC_SERIES_MCHP_SAME54
 	  Enable support for Microchip SAME54 Cortex-M4F microcontrollers.
 
 config SOC_SERIES
-	default "same54" if SOC_SERIES_MCHP_SAME54
-
+	default "mchp_same54" if SOC_SERIES_MCHP_SAME54
 
 config SOC_ATSAME54N19A
 	bool
@@ -26,7 +25,6 @@ config SOC_ATSAME54P19A
 config SOC_ATSAME54P20A
 	bool
 	select SOC_SERIES_MCHP_SAME54
-
 
 config SOC
 	default "atsame54n19a" if SOC_ATSAME54N19A

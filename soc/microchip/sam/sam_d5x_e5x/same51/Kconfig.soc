@@ -7,9 +7,8 @@ config SOC_SERIES_MCHP_SAME51
 	help
 	  Enable support for Microchip SAME51 Cortex-M4F microcontrollers.
 
-
 config SOC_SERIES
-	default "same51" if SOC_SERIES_MCHP_SAME51
+	default "mchp_same51" if SOC_SERIES_MCHP_SAME51
 
 config SOC_ATSAME51G18A
 	bool
@@ -38,7 +37,6 @@ config SOC_ATSAME51N19A
 config SOC_ATSAME51N20A
 	bool
 	select SOC_SERIES_MCHP_SAME51
-
 
 config SOC
 	default "atsame51g18a" if SOC_ATSAME51G18A

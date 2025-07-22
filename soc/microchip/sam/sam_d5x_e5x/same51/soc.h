@@ -9,8 +9,6 @@
 
 #ifndef _ASMLANGUAGE
 
-#define DONT_USE_CMSIS_INIT
-
 #include <zephyr/types.h>
 
 #if defined(CONFIG_SOC_ATSAME51G18A)

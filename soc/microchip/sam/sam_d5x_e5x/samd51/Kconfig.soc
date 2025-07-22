@@ -8,8 +8,7 @@ config SOC_SERIES_MCHP_SAMD51
 	  Enable support for Microchip SAMD51 Cortex-M4F microcontrollers.
 
 config SOC_SERIES
-	default "samd51" if SOC_SERIES_MCHP_SAMD51
-
+	default "mchp_samd51" if SOC_SERIES_MCHP_SAMD51
 
 config SOC_ATSAMD51G18A
 	bool
@@ -46,7 +45,6 @@ config SOC_ATSAMD51P19A
 config SOC_ATSAMD51P20A
 	bool
 	select SOC_SERIES_MCHP_SAMD51
-
 
 config SOC
 	default "atsamd51g18a" if SOC_ATSAMD51G18A

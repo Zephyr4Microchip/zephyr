@@ -8,8 +8,7 @@ config SOC_SERIES_MCHP_SAME53
 	  Enable support for Microchip SAME53 Cortex-M4F microcontrollers.
 
 config SOC_SERIES
-	default "same53" if SOC_SERIES_MCHP_SAME53
-
+	default "mchp_same53" if SOC_SERIES_MCHP_SAME53
 
 config SOC_ATSAME53J18A
 	bool
@@ -30,7 +29,6 @@ config SOC_ATSAME53N19A
 config SOC_ATSAME53N20A
 	bool
 	select SOC_SERIES_MCHP_SAME53
-
 
 config SOC
 	default "atsame53j18a" if SOC_ATSAME53J18A
