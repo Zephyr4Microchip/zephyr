@@ -1,16 +1,9 @@
 # Copyright (c) 2025 Microchip Technology Inc.
 # SPDX-License-Identifier: Apache-2.0
 
-config PINCTRL_MCHP_PORT_ID_U2210_2_2_0
-	bool
-	default n
-	help
-	  Internal flag to enable PORT ID U2210_2_2_0 support.
-
 config PINCTRL_MCHP_PORT_G1
-	bool "Microchip PORT_G1 pin controller driver"
+	bool "Microchip PORT G1 pin controller driver"
 	default y
 	depends on DT_HAS_MICROCHIP_PORT_G1_PINCTRL_ENABLED
-	select PINCTRL_MCHP_PORT_ID_U2210_2_2_0 if SOC_FAMILY_MCHP_SAM_D5X_E5X
 	help
-	  Microchip pin controller driver for Pinctrl group1 IP
+	  This option enables PINCTRL driver for group (g1) of PORT peripherals.
