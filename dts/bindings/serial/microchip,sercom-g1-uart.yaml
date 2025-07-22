@@ -4,8 +4,8 @@
 description: |
   Microchip sercom-g1 uart driver bindings.
 
-  sercom-g1 uart is used in the below families:
-    - SAM D5x/E5x
+  sercom-g1 uart driver supports following hardware module IPs:
+    - module name="SERCOM" id="U2201" version="5.0.0"
 
 compatible: "microchip,sercom-g1-uart"
 
