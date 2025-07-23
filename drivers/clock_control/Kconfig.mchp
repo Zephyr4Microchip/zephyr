@@ -20,6 +20,8 @@ menuconfig CLOCK_CONTROL_MCHP
 # Common features for all SOC families
 if CLOCK_CONTROL_MCHP
 
+# Enable get rate API. Since, clock rate for multiple levels of clock sources are to be
+# calculated, this feature consumes some program size, and can be optional.
 config CLOCK_CONTROL_MCHP_GET_RATE
 	bool "Get clock rate"
 	default y

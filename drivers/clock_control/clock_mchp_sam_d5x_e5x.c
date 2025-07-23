@@ -180,14 +180,10 @@ static enum clock_control_status clock_mchp_get_status(const struct device *dev,
  */
 static int clock_check_subsys(clock_mchp_subsys_t subsys)
 {
-	int ret_val;
-	uint32_t inst_max, gclkperiph_max, mclkbus_max, mclkmaskbit_max;
+	int ret_val = -EINVAL;
+	uint32_t inst_max = 0, gclkperiph_max = GPH_NA, mclkbus_max = MBUS_NA,
+		 mclkmaskbit_max = MMASK_NA;
 
-	ret_val = -EINVAL;
-	inst_max = 0;
-	gclkperiph_max = GPH_NA;
-	mclkbus_max = MBUS_NA;
-	mclkmaskbit_max = MMASK_NA;
 	do {
 		/* Check if turning on all clocks is requested. */
 		if (subsys.val == (uint32_t)CLOCK_CONTROL_SUBSYS_ALL) {
@@ -285,6 +281,7 @@ __IO uint32_t *get_mclkbus_mask_reg(mclk_registers_t *mclk_regs, uint32_t bus)
 		LOG_ERR("Unsupported mclkbus");
 		break;
 	}
+
 	return reg32;
 }
 
@@ -294,15 +291,11 @@ __IO uint32_t *get_mclkbus_mask_reg(mclk_registers_t *mclk_regs, uint32_t bus)
 static int clock_on_off(const clock_mchp_config_t *config, const clock_mchp_subsys_t subsys,
 			bool on)
 {
+	int ret_val = CLOCK_SUCCESS;
 	gclk_registers_t *gclk_regs = config->gclk_regs;
-
-	int ret_val;
 	__IO uint32_t *reg32 = NULL;
 	uint32_t reg32_val = 0;
-	uint8_t inst;
 
-	ret_val = CLOCK_SUCCESS;
-	inst = subsys.bits.inst;
 	switch (subsys.bits.type) {
 	case SUBSYS_TYPE_GCLKPERIPH:
 		reg32 = &gclk_regs->GCLK_PCHCTRL[subsys.bits.gclkperiph];
@@ -335,20 +328,18 @@ static int clock_on_off(const clock_mchp_config_t *config, const clock_mchp_subs
 static int clock_get_rate_gclkgen(const struct device *dev, clock_mchp_gclkgen_t gclkgen_id,
 				  clock_mchp_gclk_src_clock_t gclkgen_called_src, uint32_t *freq)
 {
+	int ret_val = CLOCK_SUCCESS;
 	const clock_mchp_config_t *config = dev->config;
 	gclk_registers_t *gclk_regs = config->gclk_regs;
-
-	int ret_val;
 	clock_mchp_gclk_src_clock_t gclkgen_src;
 	uint32_t gclkgen_src_freq;
 	uint16_t gclkgen_div;
-	bool power_div;
 
-	ret_val = CLOCK_SUCCESS;
-	power_div = (((gclk_regs->GCLK_GENCTRL[gclkgen_id] & GCLK_GENCTRL_DIVSEL_Msk) >>
-		      GCLK_GENCTRL_DIVSEL_Pos) == GCLK_GENCTRL_DIVSEL_DIV1_Val)
-			    ? false
-			    : true;
+	bool power_div = (((gclk_regs->GCLK_GENCTRL[gclkgen_id] & GCLK_GENCTRL_DIVSEL_Msk) >>
+			   GCLK_GENCTRL_DIVSEL_Pos) == GCLK_GENCTRL_DIVSEL_DIV1_Val)
+				 ? false
+				 : true;
+
 	do {
 		/* Return rate as 0, if clock is not on */
 		if (clock_mchp_get_status(dev, (clock_control_subsys_t)MCHP_CLOCK_DERIVE_ID(
@@ -401,6 +392,7 @@ static int clock_get_rate_gclkgen(const struct device *dev, clock_mchp_gclkgen_t
 		}
 		*freq = gclkgen_src_freq / gclkgen_div;
 	} while (0);
+
 	return ret_val;
 }
 
@@ -409,11 +401,10 @@ static int clock_get_rate_gclkgen(const struct device *dev, clock_mchp_gclkgen_t
  */
 static int clock_get_rate_dfll(const struct device *dev, uint32_t *freq)
 {
+	int ret_val = CLOCK_SUCCESS;
 	const clock_mchp_config_t *config = dev->config;
 	oscctrl_registers_t *oscctrl_regs = config->oscctrl_regs;
-	int ret_val;
 
-	ret_val = CLOCK_SUCCESS;
 	if ((oscctrl_regs->OSCCTRL_STATUS & OSCCTRL_STATUS_DFLLRDY_Msk) == 0) {
 		/* Return rate as 0, if clock is not on */
 		*freq = 0;
@@ -424,6 +415,7 @@ static int clock_get_rate_dfll(const struct device *dev, uint32_t *freq)
 		/* in closed loop mode*/
 		ret_val = -ENOTSUP;
 	}
+
 	return ret_val;
 }
 #endif /* CONFIG_CLOCK_CONTROL_MCHP_GET_RATE */
@@ -445,16 +437,13 @@ static int clock_get_rate_dfll(const struct device *dev, uint32_t *freq)
  */
 static int clock_mchp_on(const struct device *dev, clock_control_subsys_t sys)
 {
+	int ret_val = -ENOTSUP;
 	const clock_mchp_config_t *config = dev->config;
-	clock_mchp_subsys_t subsys;
-
-	int ret_val;
+	clock_mchp_subsys_t subsys = {.val = (uint32_t)sys};
 	enum clock_control_status status;
 	bool is_wait = false;
 	uint32_t on_timeout_ms = 0;
 
-	subsys.val = (uint32_t)sys;
-	ret_val = -ENOTSUP;
 	do {
 		/* Validate subsystem. */
 		if (CLOCK_SUCCESS != clock_check_subsys(subsys)) {
@@ -511,14 +500,10 @@ static int clock_mchp_on(const struct device *dev, clock_control_subsys_t sys)
  */
 static int clock_mchp_off(const struct device *dev, clock_control_subsys_t sys)
 {
+	int ret_val = -ENOTSUP;
 	const clock_mchp_config_t *config = dev->config;
-	clock_mchp_subsys_t subsys;
+	clock_mchp_subsys_t subsys = {.val = (uint32_t)sys};
 
-	/* Return value for the operation status. */
-	int ret_val;
-
-	subsys.val = (uint32_t)sys;
-	ret_val = -ENOTSUP;
 	do {
 		/* Validate subsystem. */
 		if (CLOCK_SUCCESS != clock_check_subsys(subsys)) {
@@ -544,19 +529,14 @@ static int clock_mchp_off(const struct device *dev, clock_control_subsys_t sys)
 static enum clock_control_status clock_mchp_get_status(const struct device *dev,
 						       clock_control_subsys_t sys)
 {
+	enum clock_control_status ret_status = CLOCK_CONTROL_STATUS_UNKNOWN;
 	const clock_mchp_config_t *config = dev->config;
 	oscctrl_registers_t *oscctrl_regs = config->oscctrl_regs;
 	gclk_registers_t *gclk_regs = config->gclk_regs;
-	clock_mchp_subsys_t subsys;
+	clock_mchp_subsys_t subsys = {.val = (uint32_t)sys};
 	uint32_t mask;
 	uint8_t inst;
-
 	__IO uint32_t *reg32;
-
-	/* Variable to store the returned status to indicate state is not yet known. */
-	enum clock_control_status ret_status = CLOCK_CONTROL_STATUS_UNKNOWN;
-
-	subsys.val = (uint32_t)sys;
 
 	do {
 		/* Validate subsystem. */
@@ -611,6 +591,7 @@ static enum clock_control_status clock_mchp_get_status(const struct device *dev,
 		default:
 			break;
 		}
+
 	} while (0);
 
 	/* Return the status of the clock for the specified subsystem. */
@@ -632,16 +613,13 @@ static enum clock_control_status clock_mchp_get_status(const struct device *dev,
  */
 static int clock_mchp_get_rate(const struct device *dev, clock_control_subsys_t sys, uint32_t *freq)
 {
+	int ret_val = CLOCK_SUCCESS;
 	const clock_mchp_config_t *config = dev->config;
-	int ret_val;
-	uint8_t cpu_div, inst;
+	clock_mchp_subsys_t subsys = {.val = (uint32_t)sys};
+	uint8_t cpu_div;
 	uint32_t gclkgen_src_freq;
 	clock_mchp_gclkgen_t gclkperiph_src;
-	clock_mchp_subsys_t subsys;
 
-	subsys.val = (uint32_t)sys;
-	ret_val = CLOCK_SUCCESS;
-	inst = subsys.bits.inst;
 	do {
 		/* Validate subsystem. */
 		if (CLOCK_SUCCESS != clock_check_subsys(subsys)) {
@@ -681,6 +659,7 @@ static int clock_mchp_get_rate(const struct device *dev, clock_control_subsys_t 
 			ret_val = -ENOTSUP;
 			break;
 		}
+
 	} while (0);
 
 	return ret_val;
