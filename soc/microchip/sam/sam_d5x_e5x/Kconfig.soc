@@ -46,6 +46,12 @@ config FLASH_MCHP_NVMCTRL_U2409_1_0_0
 	help
 	  Enable FLASH peripheral IP version 1.0.0 (U2409).
 
+config ENTROPY_MCHP_TRNG_U2242_1_1_0
+	bool
+	default y
+	help
+	  Enable ENTROPY peripheral IP version 1.1.0 (U2242).
+
 endif # SOC_FAMILY_MICROCHIP_SAM_D5X_E5X
 
 rsource "*/Kconfig.soc"
