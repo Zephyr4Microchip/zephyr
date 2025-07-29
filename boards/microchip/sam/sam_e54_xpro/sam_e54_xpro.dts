@@ -123,3 +123,16 @@
 	dmas = <&dmac 10 0x12>, <&dmac 11 0x13>;
 	dma-names = "rx", "tx";
 };
+
+&tc0 {
+	status = "disabled";
+	compatible = "microchip,tc-g1-pwm";
+	#pwm-cells = <3>;
+	pinctrl-0 = <&tc0_pwm_default>;
+	pinctrl-names = "default";
+	max-bit-width = <32>;
+	prescaler = <1>;
+	channels = <2>;
+	/* Chained to TC1 for 32-bit operation */
+	client = <&tc1>;
+};
