@@ -5,6 +5,7 @@
  */
 
 #include <arm/armv7-m.dtsi>
+#include <zephyr/dt-bindings/gpio/gpio.h>
 #include <zephyr/dt-bindings/clock/mchp_sam_d5x_e5x_clock.h>
 
 / {
@@ -234,19 +235,35 @@
 			ranges = <0x41008000 0x41008000 0x200>;
 
 			porta: gpio@41008000 {
+				compatible = "microchip,port-g1-gpio";
 				reg = <0x41008000 0x80>;
+				gpio-controller;
+				#gpio-cells = <2>;
+				#microchip,pin-cells = <2>;
 			};
 
 			portb: gpio@41008080 {
+				compatible = "microchip,port-g1-gpio";
 				reg = <0x41008080 0x80>;
+				gpio-controller;
+				#gpio-cells = <2>;
+				#microchip,pin-cells = <2>;
 			};
 
 			portc: gpio@41008100 {
+				compatible = "microchip,port-g1-gpio";
 				reg = <0x41008100 0x80>;
+				gpio-controller;
+				#gpio-cells = <2>;
+				#microchip,pin-cells = <2>;
 			};
 
 			portd: gpio@41008180 {
+				compatible = "microchip,port-g1-gpio";
 				reg = <0x41008180 0x80>;
+				gpio-controller;
+				#gpio-cells = <2>;
+				#microchip,pin-cells = <2>;
 			};
 		};
 
