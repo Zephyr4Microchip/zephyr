@@ -52,6 +52,12 @@ config ENTROPY_MCHP_TRNG_U2242_1_1_0
 	help
 	  Enable ENTROPY peripheral IP version 1.1.0 (U2242).
 
+config GPIO_MCHP_PORT_U2210_2_2_0
+	bool
+	default y
+	help
+	  Enable PORT GPIO peripheral IP version 2.2.0 (U2210).
+
 endif # SOC_FAMILY_MICROCHIP_SAM_D5X_E5X
 
 rsource "*/Kconfig.soc"
