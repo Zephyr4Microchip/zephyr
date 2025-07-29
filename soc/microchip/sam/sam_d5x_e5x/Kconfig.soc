@@ -76,6 +76,12 @@ config INTC_MCHP_EIC_U2254_3_0_0
 	help
 	  Enable EIC peripheral IP version 3.0.0 (U2254).
 
+config RTC_MCHP_U2250_2_1_0
+	bool
+	default y
+	help
+	  Enable RTC peripheral IP version 2.1.0 (U2250).
+
 endif # SOC_FAMILY_MICROCHIP_SAM_D5X_E5X
 
 rsource "*/Kconfig.soc"

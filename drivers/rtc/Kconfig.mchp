@@ -1,0 +1,9 @@
+#Copyright (c) 2025 Microchip Technology Inc.
+#SPDX-License-Identifier: Apache-2.0
+
+config RTC_MCHP_G1
+	bool "MCHP RTC driver for RTC_G1 IP"
+	default y
+	depends on DT_HAS_MICROCHIP_RTC_G1_ENABLED
+	help
+	  Enable RTC driver for Microchip G1 IPs.
