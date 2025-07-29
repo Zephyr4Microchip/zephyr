@@ -164,6 +164,12 @@
 			};
 		};
 
+		rstc: rstc@40000c00 {
+			compatible = "microchip,rstc-g1";
+			status = "okay";
+			reg = <0x40000c00 0x400>;
+		};
+
 		wdog: watchdog@40002000 {
 			compatible = "microchip,wdt-g1";
 			reg = <0x40002000 13>;
