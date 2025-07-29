@@ -262,6 +262,14 @@ config HWINFO_AMBIQ
 	help
 	  Enable AMBIQ hwinfo driver
 
+config HWINFO_MCHP_G1
+	bool "Microchip hwinfo"
+	default y
+	depends on DT_HAS_MICROCHIP_HWINFO_G1_ENABLED
+	select HWINFO_HAS_DRIVER
+	help
+	  Enable mchp hwinfo driver
+
 config HWINFO_NUMAKER
 	bool "NuMaker hwinfo"
 	default y
