@@ -26,6 +26,7 @@
 		led0 = &led0;
 		pwm-led0 = &pwm_led0;
 		sw0 = &button0;
+		rtc = &rtc;
 	};
 
 	leds {
@@ -55,6 +56,14 @@
 			zephyr,code = <INPUT_KEY_0>;
 		};
 	};
+};
+
+&rtc {
+	compatible = "microchip,rtc-g1";
+	prescaler = <1024>;
+	alarms-count = <2>;
+	cal-constant = <1048576>;  /*(8192 * 128 = 1048576)*/
+	status = "okay";
 };
 
 &flash0 {
