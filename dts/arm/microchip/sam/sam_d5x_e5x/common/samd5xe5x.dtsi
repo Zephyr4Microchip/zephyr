@@ -183,6 +183,15 @@
 			min-window-limit = <0x8>;/**< 8 milliseconds */
 		};
 
+		hwinfo: device_id@8061fc {
+			compatible = "microchip,hwinfo-g1";
+			status = "disabled";
+			reg = <0x008061FC 0x4>,
+				<0x00806010 0x4>,
+				<0x00806014 0x4>,
+				<0x00806018 0x4>;
+		};
+
 		sercom0: sercom@40003000 {
 			compatible = "microchip,sercom-g1";
 			status = "disabled";
