@@ -164,6 +164,18 @@
 			};
 		};
 
+		wdog: watchdog@40002000 {
+			compatible = "microchip,wdt-g1";
+			reg = <0x40002000 13>;
+			interrupts = <10 0>;
+			clocks = <&mclkperiph CLOCK_MCHP_MCLKPERIPH_ID_APBA_WDT>;
+			clock-names = "mclk";
+			max-installable-timeout-count = <1>;
+			max-timeout-window = <0x4000>;	/**< 16384 milliseconds */
+			max-timeout-window-mode = <0x8000>;/**< 32768 milliseconds */
+			min-window-limit = <0x8>;/**< 8 milliseconds */
+		};
+
 		sercom0: sercom@40003000 {
 			compatible = "microchip,sercom-g1";
 			status = "disabled";
@@ -257,6 +269,7 @@
 				 <&gclkperiph CLOCK_MCHP_GCLKPERIPH_ID_SERCOM5_CORE>;
 			clock-names = "mclk", "gclk";
 		};
+
 	};
 };
 
