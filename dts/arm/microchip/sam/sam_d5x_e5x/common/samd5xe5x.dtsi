@@ -192,6 +192,17 @@
 			min-window-limit = <0x8>;/**< 8 milliseconds */
 		};
 
+		rtc: rtc@40002400 {
+			compatible = "microchip,rtc-g1";
+			status = "disabled";
+			reg = <0x40002400 0x1C>;
+			interrupts = <11 0>;
+			clocks = <&mclkperiph CLOCK_MCHP_MCLKPERIPH_ID_APBA_RTC>,
+					<&rtcclock CLOCK_MCHP_RTC_ID>;
+			clock-names =  "mclk" ,"rtcclk";
+			prescaler = <1>;
+		};
+
 		eic: eic@40002800 {
 			compatible = "microchip,eic-g1-intc";
 			status = "okay";
