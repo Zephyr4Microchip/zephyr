@@ -28,6 +28,12 @@ config DMA_MCHP_DMAC_U2503_1_0_1
 	help
 	  Enable DMAC peripheral IP version 1.0.1 (U2503).
 
+config WDT_MCHP_U2251_1_1_0
+	bool
+	default y
+	help
+	  The SoC contains Watchdog IP version 1.1.0 (U2251).
+
 endif # SOC_FAMILY_MICROCHIP_SAM_D5X_E5X
 
 rsource "*/Kconfig.soc"
