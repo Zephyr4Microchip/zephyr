@@ -12,6 +12,7 @@ ram: 256
 supported:
   - dma
   - entropy
+  - eic
   - flash
   - gpio
   - hwinfo

@@ -200,8 +200,8 @@
 				     <16 0>, <17 0>, <18 0>, <19 0>,
 				     <20 0>, <21 0>, <22 0>, <23 0>,
 				     <24 0>, <25 0>, <26 0>, <27 0>;
-			clocks = <&mclk CLOCK_MCHP_SAM_D5X_E5X_MCLK_APBA_EIC>,
-					 <&gclk CLOCK_MCHP_SAM_D5X_E5X_GCLK_EIC>;
+			clocks = <&mclkperiph CLOCK_MCHP_MCLKPERIPH_ID_APBA_EIC>,
+					<&gclkperiph CLOCK_MCHP_GCLKPERIPH_ID_EIC>;
 			clock-names = "mclk", "gclk";
 			low-power-mode;
 		};
