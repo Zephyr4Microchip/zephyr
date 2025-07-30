@@ -34,7 +34,6 @@ config PINCTRL_MCHP_PORT_U2210_2_2_0
 	help
 	  Enable PORT pinctrl peripheral IP version 2.2.0 (U2210).
 
-<<<<<<< HEAD
 config UART_MCHP_SERCOM_U2201_5_0_0
 	bool
 	default y
@@ -100,6 +99,12 @@ config I2C_MCHP_SERCOM_U2201_5_0_0
 	default y
 	help
 	  Enable SERCOM I2C peripheral IP version 5.0.0 (U2201).
+
+config PWM_MCHP_TCC_U2213_3_1_0
+	bool
+	default y
+	help
+	  The SoC contains peripheral TCC IP version 3.1.0 (U2213).
 
 config PWM_MCHP_TC_U2249_3_0_0
 	bool
