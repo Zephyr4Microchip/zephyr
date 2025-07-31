@@ -20,6 +20,24 @@ menuconfig CLOCK_CONTROL_MCHP
 # Common features for all SOC families
 if CLOCK_CONTROL_MCHP
 
+config CLOCK_CONTROL_MCHP_CONFIG_BOOTUP
+	bool "Bootup clock configuration"
+	default y
+	help
+	  This option enables bootup clock configuration from device tree node.
+
+config CLOCK_CONTROL_MCHP_CONFIG_RUNTIME
+	bool "Runtime clock configuration"
+	default y
+	help
+	  This option enables runtime clock configuration using API.
+
+config CLOCK_CONTROL_MCHP_ASYNC_ON
+	bool "Async clock on"
+	default n
+	help
+	  This option enables async on API.
+
 # Enable get rate API. Since, clock rate for multiple levels of clock sources are to be
 # calculated, this feature consumes some program size, and can be optional.
 config CLOCK_CONTROL_MCHP_GET_RATE
@@ -28,5 +46,11 @@ config CLOCK_CONTROL_MCHP_GET_RATE
 	help
 	  This option enables get rate API.
 
+config CLOCK_CONTROL_MCHP_SET_RATE
+	bool "Set clock rate"
+	default n
+	depends on CLOCK_CONTROL_MCHP_GET_RATE
+	help
+	  This option enables set rate API.
 
 endif # CLOCK_CONTROL_MCHP
