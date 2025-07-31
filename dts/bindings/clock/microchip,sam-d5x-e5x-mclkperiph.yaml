@@ -22,3 +22,17 @@ properties:
 
 clock-cells:
   - subsystem
+
+child-binding:
+  properties:
+    subsystem:
+      type: int
+      required: true
+      description: Clock subsystem
+    mclk_en:
+      type: int
+      enum:
+        - 0
+        - 1
+      required: true
+      description: Enable mclk to the peripheral

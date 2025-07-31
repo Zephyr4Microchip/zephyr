@@ -1,0 +1,157 @@
+# Copyright (c) 2025 Microchip Technology Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+include: [base.yaml]
+
+description: |
+  Digital Phase Locked Loop (FDPLL200Mn) configuration.
+
+compatible: "microchip,sam-d5x-e5x-fdpll"
+
+child-binding:
+  properties:
+    subsystem:
+      type: int
+      required: true
+      description: Clock subsystem
+
+    fdpll_on_demand_en:
+      type: int
+      enum:
+        - 0
+        - 1
+      default: 0
+      description: |
+        0: The oscillator is always on
+        1: The oscillator is running when a peripheral is requesting the oscillator to be used as a
+        clock source. The oscillator is not running if no peripheral is requesting the clock source.
+        Important: Initializing it with 1, along with clock enabled, can lead to indefinite wait
+        for the clock to be on, if there is no peripheral request for the clock in the sequence of
+        clock Initialization. If required, better to turn on the clock using API, instead of
+        enabling both during startup.
+
+    fdpll_run_in_standby_en:
+      type: int
+      enum:
+        - 0
+        - 1
+      default: 0
+      description: |
+        0: The DPLLn is not running in standby sleep mode if no peripheral requests the clock.
+        1: The DPLLn is running in standby sleep mode.
+        If ONDEMAND is one, the DPLLn will be running when a peripheral is requesting the clock. If
+        ONDEMAND is false, the clock source will always be running in standby sleep mode.
+
+    fdpll_en:
+      type: int
+      enum:
+        - 0
+        - 1
+      default: 0
+      description: |
+        Oscillator Enable
+
+    fdpll_divider_ratio_int:
+      type: int
+      default: 0
+      description: |
+        Set the integer part of the frequency multiplier. (0 - 4095)
+
+    fdpll_divider_ratio_frac:
+      type: int
+      default: 0
+      description: |
+        Set the fractional part of the frequency multiplier. (0 - 31)
+
+    fdpll_xosc_clock_divider:
+      type: int
+      default: 0
+      description: |
+        Set the XOSC clock division factor (0 - 2047)
+
+    fdpll_dco_en:
+      type: int
+      enum:
+        - 0
+        - 1
+      default: 0
+      description: |
+        DCO Filter Enable
+
+    fdpll_dco_filter_select:
+      type: string
+      enum:
+        - "3.21mhz"
+        - "1.6mhz"
+        - "1.1mhz"
+        - "0.8mhz"
+        - "0.64mhz"
+        - "0.55mhz"
+        - "0.45mhz"
+        - "0.4mhz"
+      default: "3.21mhz"
+      description: |
+        Sigma-Delta DCO Filter Selection, Bandwidth Fn (MHz)
+
+    fdpll_lock_bypass_en:
+      type: int
+      enum:
+        - 0
+        - 1
+      default: 0
+      description: |
+        Lock Bypass
+
+    fdpll_src:
+      type: string
+      enum:
+        - "gclk0"
+        - "gclk1"
+        - "gclk2"
+        - "gclk3"
+        - "gclk4"
+        - "gclk5"
+        - "gclk6"
+        - "gclk7"
+        - "gclk8"
+        - "gclk9"
+        - "gclk10"
+        - "gclk11"
+        - "osc32k"
+        - "xosc0"
+        - "xosc1"
+      default: "xosc0"
+      description: |
+        Reference source clock selection
+
+    fdpll_wakeup_fast_en:
+      type: int
+      enum:
+        - 0
+        - 1
+      default: 0
+      description: |
+        Wake Up Fast
+
+    fdpll_pi_filter_type:
+      type: string
+      enum:
+        - "92.7khz_0.76damp"
+        - "131khz_1.08damp"
+        - "46.4khz_0.38damp"
+        - "65.6khz_0.54damp"
+        - "131khz_0.56damp"
+        - "185khz_0.79damp"
+        - "65.6khz_0.28damp"
+        - "92.7khz_0.39damp"
+        - "46.4khz_1.49damp"
+        - "65.6khz_2.11damp"
+        - "23.2khz_0.75damp"
+        - "32.8khz_1.06damp"
+        - "65.6khz_1.07damp"
+        - "92.7khz_1.51damp"
+        - "32.8khz_0.53damp"
+        - "46.4khz_0.75damp"
+      default: "92.7khz_0.76damp"
+      description: |
+        Proportional Integral Filter Selection
