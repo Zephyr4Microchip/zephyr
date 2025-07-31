@@ -5,7 +5,9 @@ include:
   - name: base.yaml
   - name: pinctrl-device.yaml
 
-description: Binding for Microchip SAM_D5x_E5x SOC family clock (OSCCTRL, OSC32KCTRL, GCLK, MCLK)
+description: |
+  Binding for Microchip SAM_D5x_E5x SOC family clock (OSCCTRL, OSC32KCTRL, GCLK, MCLK)
+
 compatible: "microchip,sam-d5x-e5x-clock"
 
 properties:
@@ -13,6 +15,7 @@ properties:
     type: int
     default: 5
     description: |
-      Timeout in miliseconds for clock to be on.
+      Timeout in milliseconds for clock to be on.
+
       Driver waits in clock on API to check if the clock is actually on,
       so that the waiting time is not indefinite.

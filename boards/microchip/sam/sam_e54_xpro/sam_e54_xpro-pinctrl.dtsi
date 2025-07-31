@@ -10,7 +10,7 @@
 	sercom2_uart_default: sercom2_uart_default {
 		group1 {
 			pinmux = <PB25D_SERCOM2_PAD0>,
-					 <PB24D_SERCOM2_PAD1>;
+				 <PB24D_SERCOM2_PAD1>;
 		};
 	};
 };

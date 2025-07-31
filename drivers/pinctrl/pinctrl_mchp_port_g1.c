@@ -24,9 +24,11 @@
  *
  * @param nodelabel The node label to check in the device tree.
  */
-#define MCHP_PORT_ADDR_OR_NONE(nodelabel)                                                          \
+/* clang-format off */
+#define MCHP_PORT_ADDR_OR_NONE(nodelabel)                              \
 	IF_ENABLED(DT_NODE_EXISTS(DT_NODELABEL(nodelabel)),            \
 		(DT_REG_ADDR(DT_NODELABEL(nodelabel))))
+/* clang-format on */
 
 /**
  * @brief Array of port addresses for the MCHP SAMD5x_E5x series.

@@ -1,20 +1,14 @@
 # Copyright (c) 2025 Microchip Technology Inc.
 # SPDX-License-Identifier: Apache-2.0
 
-config SOC_FAMILY_MCHP_SAM_D5X_E5X
+config SOC_FAMILY_MICROCHIP_SAM_D5X_E5X
 	bool
 
 config SOC_FAMILY
-	default "mchp_sam_d5x_e5x" if SOC_FAMILY_MCHP_SAM_D5X_E5X
+	default "microchip_sam_d5x_e5x" if SOC_FAMILY_MICROCHIP_SAM_D5X_E5X
 
-# List of Peripheral IPs available in SOC_FAMILY_MCHP_SAM_D5X_E5X family
-if SOC_FAMILY_MCHP_SAM_D5X_E5X
-
-config UART_MCHP_SERCOM_U2201_5_0_0
-	bool
-	default y
-	help
-	  Enable SERCOM UART peripheral IP version 5.0.0 (U2201).
+# List of Peripheral IPs available in SOC_FAMILY_MICROCHIP_SAM_D5X_E5X family
+if SOC_FAMILY_MICROCHIP_SAM_D5X_E5X
 
 config PINCTRL_MCHP_PORT_U2210_2_2_0
 	bool
@@ -22,6 +16,12 @@ config PINCTRL_MCHP_PORT_U2210_2_2_0
 	help
 	  Enable PORT pinctrl peripheral IP version 2.2.0 (U2210).
 
-endif # SOC_FAMILY_MCHP_SAM_D5X_E5X
+config UART_MCHP_SERCOM_U2201_5_0_0
+	bool
+	default y
+	help
+	  Enable SERCOM UART peripheral IP version 5.0.0 (U2201).
+
+endif # SOC_FAMILY_MICROCHIP_SAM_D5X_E5X
 
 rsource "*/Kconfig.soc"

@@ -45,7 +45,6 @@ properties:
       |     3 | SERCOM_PAD[3] |
       +-------+---------------+
 
-
   txpo:
     type: int
     required: true
@@ -70,8 +69,10 @@ properties:
 
   clock-external:
     type: boolean
-    description: select external clock for uart (external clock if true).
+    description: |
+      select external clock for uart (external clock if true).
 
   collision-detection:
     type: boolean
-    description: Enable collision detection for half-duplex mode.
+    description: |
+      Enable collision detection for half-duplex mode.

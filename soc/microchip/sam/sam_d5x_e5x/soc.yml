@@ -4,7 +4,7 @@
 family:
 - name: microchip_sam_d5x_e5x
   series:
-  - name: samd51
+  - name: atsamd51
     socs:
     - name: atsamd51g18a
     - name: atsamd51g19a
@@ -15,7 +15,7 @@ family:
     - name: atsamd51n20a
     - name: atsamd51p19a
     - name: atsamd51p20a
-  - name: same51
+  - name: atsame51
     socs:
     - name: atsame51g18a
     - name: atsame51g19a
@@ -24,14 +24,14 @@ family:
     - name: atsame51j20a
     - name: atsame51n19a
     - name: atsame51n20a
-  - name: same53
+  - name: atsame53
     socs:
     - name: atsame53j18a
     - name: atsame53j19a
     - name: atsame53j20a
     - name: atsame53n19a
     - name: atsame53n20a
-  - name: same54
+  - name: atsame54
     socs:
     - name: atsame54n19a
     - name: atsame54n20a

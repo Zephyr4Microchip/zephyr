@@ -3,7 +3,9 @@
 
 include: [base.yaml]
 
-description: peripheral channel gclk clock configuration.
+description: |
+  peripheral channel gclk clock configuration.
+
 compatible: "microchip,sam-d5x-e5x-gclkperiph"
 
 properties:
@@ -12,6 +14,7 @@ properties:
     type: int
     description: |
       The subsystem cell is to identify a clock controller sub-system.
+
       The subsystem can be referred from include\zephyr\dt-bindings\clock\mchp_sam_d5x_e5x_clock.h,
       under the GCLKPERIPH_TYPE section of ids.
       All clock control API use this value to specify the clock on which the API operates.

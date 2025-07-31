@@ -5,7 +5,7 @@
  */
 
 /dts-v1/;
-#include <microchip/sam/sam_d5x_e5x/same54/atsame54p20a.dtsi>
+#include <microchip/sam/sam_d5x_e5x/atsame54/atsame54p20a.dtsi>
 #include "sam_e54_xpro-pinctrl.dtsi"
 #include <zephyr/dt-bindings/input/input-event-codes.h>
 
@@ -46,6 +46,8 @@
 &sercom2 {
 	status = "okay";
 	compatible = "microchip,sercom-g1-uart";
+	#address-cells = <1>;
+	#size-cells = <0>;
 
 	current-speed = <115200>;
 	data-bits = <8>;
@@ -54,9 +56,6 @@
 
 	rxpo = <1>;
 	txpo = <0>;
-
-	#address-cells = <1>;
-	#size-cells = <0>;
 
 	pinctrl-0 = <&sercom2_uart_default>;
 	pinctrl-names = "default";

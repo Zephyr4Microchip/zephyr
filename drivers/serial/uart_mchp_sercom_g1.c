@@ -185,6 +185,7 @@ static int uart_config_data_bits(sercom_registers_t *regs, bool clock_external, 
 			break;
 		}
 
+		/* Writing to the CTRLB register requires synchronization */
 		if (clock_external == false) {
 			regs->USART_INT.SERCOM_CTRLB &= ~SERCOM_USART_INT_CTRLB_CHSIZE_Msk;
 			regs->USART_INT.SERCOM_CTRLB |= value;
@@ -192,7 +193,6 @@ static int uart_config_data_bits(sercom_registers_t *regs, bool clock_external, 
 			regs->USART_EXT.SERCOM_CTRLB &= ~SERCOM_USART_EXT_CTRLB_CHSIZE_Msk;
 			regs->USART_EXT.SERCOM_CTRLB |= value;
 		}
-
 		uart_wait_sync(regs, clock_external);
 	} while (0);
 
@@ -215,7 +215,8 @@ static void uart_config_parity(sercom_registers_t *regs, bool clock_external,
 		case UART_CFG_PARITY_ODD: {
 			regs->USART_INT.SERCOM_CTRLA |=
 				SERCOM_USART_INT_CTRLA_FORM_USART_FRAME_WITH_PARITY;
-			uart_wait_sync(regs, clock_external);
+
+			/* Writing to the CTRLB register requires synchronization */
 			regs->USART_INT.SERCOM_CTRLB |= SERCOM_USART_INT_CTRLB_PMODE_Msk;
 			uart_wait_sync(regs, clock_external);
 			break;
@@ -223,7 +224,8 @@ static void uart_config_parity(sercom_registers_t *regs, bool clock_external,
 		case UART_CFG_PARITY_EVEN: {
 			regs->USART_INT.SERCOM_CTRLA |=
 				SERCOM_USART_INT_CTRLA_FORM_USART_FRAME_WITH_PARITY;
-			uart_wait_sync(regs, clock_external);
+
+			/* Writing to the CTRLB register requires synchronization */
 			regs->USART_INT.SERCOM_CTRLB &= ~SERCOM_USART_INT_CTRLB_PMODE_Msk;
 			uart_wait_sync(regs, clock_external);
 			break;
@@ -231,7 +233,6 @@ static void uart_config_parity(sercom_registers_t *regs, bool clock_external,
 		default: {
 			regs->USART_INT.SERCOM_CTRLA |=
 				SERCOM_USART_INT_CTRLA_FORM_USART_FRAME_NO_PARITY;
-			uart_wait_sync(regs, clock_external);
 			break;
 		}
 		}
@@ -241,7 +242,8 @@ static void uart_config_parity(sercom_registers_t *regs, bool clock_external,
 		case UART_CFG_PARITY_ODD: {
 			regs->USART_EXT.SERCOM_CTRLA |=
 				SERCOM_USART_EXT_CTRLA_FORM_USART_FRAME_WITH_PARITY;
-			uart_wait_sync(regs, clock_external);
+
+			/* Writing to the CTRLB register requires synchronization */
 			regs->USART_EXT.SERCOM_CTRLB |= SERCOM_USART_EXT_CTRLB_PMODE_Msk;
 			uart_wait_sync(regs, clock_external);
 			break;
@@ -249,7 +251,8 @@ static void uart_config_parity(sercom_registers_t *regs, bool clock_external,
 		case UART_CFG_PARITY_EVEN: {
 			regs->USART_EXT.SERCOM_CTRLA |=
 				SERCOM_USART_EXT_CTRLA_FORM_USART_FRAME_WITH_PARITY;
-			uart_wait_sync(regs, clock_external);
+
+			/* Writing to the CTRLB register requires synchronization */
 			regs->USART_EXT.SERCOM_CTRLB &= ~SERCOM_USART_EXT_CTRLB_PMODE_Msk;
 			uart_wait_sync(regs, clock_external);
 			break;
@@ -257,7 +260,6 @@ static void uart_config_parity(sercom_registers_t *regs, bool clock_external,
 		default: {
 			regs->USART_EXT.SERCOM_CTRLA |=
 				SERCOM_USART_EXT_CTRLA_FORM_USART_FRAME_NO_PARITY;
-			uart_wait_sync(regs, clock_external);
 			break;
 		}
 		}
@@ -298,6 +300,7 @@ static int uart_config_stop_bits(sercom_registers_t *regs, bool clock_external, 
 		}
 		uart_wait_sync(regs, clock_external);
 	} while (0);
+
 	return retval;
 }
 
@@ -328,8 +331,6 @@ static void uart_config_pinout(const uart_mchp_dev_cfg_t *const cfg)
 			(SERCOM_USART_EXT_CTRLA_RXPO(rxpo) | SERCOM_USART_EXT_CTRLA_TXPO(txpo));
 		regs->USART_EXT.SERCOM_CTRLA = reg_value;
 	}
-
-	uart_wait_sync(regs, cfg->clock_external);
 }
 
 /**
@@ -354,8 +355,6 @@ static void uart_set_clock_polarity(sercom_registers_t *regs, bool clock_externa
 			regs->USART_EXT.SERCOM_CTRLA |= SERCOM_USART_EXT_CTRLA_CPOL_Msk;
 		}
 	}
-
-	uart_wait_sync(regs, clock_external);
 }
 
 /**
@@ -378,8 +377,6 @@ static void uart_set_clock_source(sercom_registers_t *regs, bool clock_external)
 		regs->USART_INT.SERCOM_CTRLA =
 			reg_value | SERCOM_USART_INT_CTRLA_MODE_USART_INT_CLK;
 	}
-
-	uart_wait_sync(regs, clock_external);
 }
 
 /**
@@ -404,8 +401,6 @@ static void uart_set_lsb_first(sercom_registers_t *regs, bool clock_external, bo
 			regs->USART_EXT.SERCOM_CTRLA &= ~SERCOM_USART_EXT_CTRLA_DORD_Msk;
 		}
 	}
-
-	uart_wait_sync(regs, clock_external);
 }
 
 /**
@@ -417,7 +412,6 @@ static void uart_set_lsb_first(sercom_registers_t *regs, bool clock_external, bo
  */
 static void uart_rx_on_off(sercom_registers_t *regs, bool clock_external, bool enable)
 {
-	uart_wait_sync(regs, clock_external);
 	if (clock_external == false) {
 		if (enable == true) {
 			regs->USART_INT.SERCOM_CTRLB |= SERCOM_USART_INT_CTRLB_RXEN_Msk;
@@ -432,6 +426,7 @@ static void uart_rx_on_off(sercom_registers_t *regs, bool clock_external, bool e
 		}
 	}
 
+	/* Writing to the CTRLB register requires synchronization */
 	uart_wait_sync(regs, clock_external);
 }
 
@@ -444,7 +439,6 @@ static void uart_rx_on_off(sercom_registers_t *regs, bool clock_external, bool e
  */
 static void uart_tx_on_off(sercom_registers_t *regs, bool clock_external, bool enable)
 {
-	uart_wait_sync(regs, clock_external);
 	if (clock_external == false) {
 		if (enable == true) {
 			regs->USART_INT.SERCOM_CTRLB |= SERCOM_USART_INT_CTRLB_TXEN_Msk;
@@ -459,6 +453,7 @@ static void uart_tx_on_off(sercom_registers_t *regs, bool clock_external, bool e
 		}
 	}
 
+	/* Writing to the CTRLB register requires synchronization */
 	uart_wait_sync(regs, clock_external);
 }
 
@@ -504,7 +499,6 @@ static int uart_set_baudrate(sercom_registers_t *regs, bool clock_external, uint
 			regs->USART_EXT.SERCOM_CTRLA &= ~SERCOM_USART_EXT_CTRLA_SAMPR_Msk;
 			regs->USART_EXT.SERCOM_BAUD = baud;
 		}
-		uart_wait_sync(regs, clock_external);
 	} while (0);
 
 	return retval;
@@ -519,7 +513,6 @@ static int uart_set_baudrate(sercom_registers_t *regs, bool clock_external, uint
  */
 static void uart_enable(sercom_registers_t *regs, bool clock_external, bool enable)
 {
-	uart_wait_sync(regs, clock_external);
 	if (clock_external == false) {
 		if (enable == true) {
 			regs->USART_INT.SERCOM_CTRLA |= SERCOM_USART_INT_CTRLA_RUNSTDBY_Msk;
@@ -536,6 +529,7 @@ static void uart_enable(sercom_registers_t *regs, bool clock_external, bool enab
 		}
 	}
 
+	/* Enabling and disabling the SERCOM (CTRLA.ENABLE) requires synchronization */
 	uart_wait_sync(regs, clock_external);
 }
 
@@ -557,6 +551,7 @@ static inline bool uart_is_rx_complete(sercom_registers_t *regs, bool clock_exte
 	} else {
 		retval = ((regs->USART_EXT.SERCOM_INTFLAG & SERCOM_USART_EXT_INTFLAG_RXC_Msk) != 0);
 	}
+
 	return retval;
 }
 
@@ -578,6 +573,7 @@ static inline unsigned char uart_get_received_char(sercom_registers_t *regs, boo
 	} else {
 		retval = (unsigned char)regs->USART_EXT.SERCOM_DATA;
 	}
+
 	return retval;
 }
 
@@ -599,6 +595,7 @@ static inline bool uart_is_tx_ready(sercom_registers_t *regs, bool clock_externa
 	} else {
 		retval = ((regs->USART_EXT.SERCOM_INTFLAG & SERCOM_USART_EXT_INTFLAG_DRE_Msk) != 0);
 	}
+
 	return retval;
 }
 
@@ -710,14 +707,12 @@ static int uart_mchp_poll_in(const struct device *dev, unsigned char *data)
 	bool clock_external = cfg->clock_external;
 	int retval = UART_SUCCESS;
 
-	do {
-		if (uart_is_rx_complete(regs, clock_external) == false) {
-			retval = -EBUSY;
-			break;
-		}
-
+	if (uart_is_rx_complete(regs, clock_external) == false) {
+		retval = -EBUSY;
+	} else {
 		*data = uart_get_received_char(regs, clock_external);
-	} while (0);
+	}
+
 	return retval;
 }
 
