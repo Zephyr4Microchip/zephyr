@@ -59,4 +59,7 @@
 
 	pinctrl-0 = <&sercom2_uart_default>;
 	pinctrl-names = "default";
+
+	dmas = <&dmac 1 8>, <&dmac 2 9>;
+	dma-names = "rx", "tx";
 };

@@ -31,6 +31,7 @@ properties:
     required: true
     description: |
       Define the receive data (RxD) pin configuration.
+
       An enumeration with the following values:
 
       +-------+---------------+
@@ -76,3 +77,36 @@ properties:
     type: boolean
     description: |
       Enable collision detection for half-duplex mode.
+
+  run-in-standby-en:
+    type: int
+    enum:
+      - 0
+      - 1
+    default: 1
+    description: |
+      This property defines the functionality in standby sleep mode.
+
+      0: Generic clock is disabled when ongoing transfer is finished. The device
+         will not wake up on Transfer Complete interrupt unless the appropriate
+         ONDEMAND bits are set in the clocking chain.
+      1: Wake on Receive Complete interrupt. Generic clock is enabled in all sleep modes.
+         Any interrupt can wake up the device.
+
+  dmas:
+    description: |
+      Optional TX & RX dma specifiers.
+
+      Each specifier will have a phandle reference to the dmac controller,
+      the channel number, and peripheral trigger source.
+
+      For example dmas for TX, RX on SERCOM3
+         dmas = <&dmac 0 0xb>, <&dmac 0 0xa>;
+
+  dma-names:
+    description: |
+      Required if the dmas property exists.  This should be "tx" and "rx"
+      to match the dmas property.
+
+      For example
+         dma-names = "tx", "rx";
