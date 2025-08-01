@@ -11,7 +11,7 @@
  * This file contains the device tree helper macros.
  */
 
-#ifndef SOC_MICROCHIP_SAM_D5X_E5X_COMMON_DT_HELPER_H_
+#ifndef SOC_MICROCHIP_SAM_D5X_E5X_COMMON_MCHP_DT_HELPER_H_
 
 /* Helper macros for use with DMAC controller
  * return 0xff as default value if there is no 'dmas' property
@@ -27,4 +27,4 @@
 			(DT_INST_DMAS_CTLR_BY_NAME(n, name)),				\
 			(DT_INVALID_NODE))
 
-#endif /* SOC_MICROCHIP_SAM_D5X_E5X_COMMON_DT_HELPER_H_ */
+#endif /* SOC_MICROCHIP_SAM_D5X_E5X_COMMON_MCHP_DT_HELPER_H_ */

@@ -44,4 +44,4 @@ config HEAP_MEM_POOL_ADD_SIZE_DMA
 	  in the memory pool (in bytes). Ensuring sufficient heap memory helps prevent
 	  allocation failures and ensures reliable DMA operation.
 
-endif # DMA_MCHP_DMAC_U2503
+endif # DMA_MCHP_DMAC_G1

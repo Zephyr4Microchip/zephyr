@@ -5,7 +5,7 @@
  */
 
 /**
- * @file dma_mchp_dmac_u2503.c
+ * @file dma_mchp_dmac_g1.c
  * @brief Zephyr DMA driver for Microchip DMAC-U2503 peripheral
  *
  * Provides DMA support using Zephyr's DMA API for the DMAC-U2503 controller
@@ -23,7 +23,7 @@
 
 #define DT_DRV_COMPAT microchip_dmac_u2503
 
-LOG_MODULE_REGISTER(dma_mchp_dmac_u2503, CONFIG_DMA_MCHP_LOG_LEVEL);
+LOG_MODULE_REGISTER(dma_mchp_dmac_g1, CONFIG_DMA_MCHP_LOG_LEVEL);
 
 /* Shortcut to access ADC registers from device configuration */
 #undef DMAC_REGS
@@ -1006,7 +1006,7 @@ void dma_mchp_desc_return_pool(dma_mchp_dev_data_t *dev_data, int channel)
 
 	/* Retrieve used descriptors and enqueue them back into the pool */
 	while ((desc = dmac_desc_get_used(dev_data->dmac_desc_data, channel)) != NULL) {
-		if (dev_data->dma_desc_pool_cnt == CONFIG_DMA_MCHP_DMAC_U2503_MAX_DESC) {
+		if (dev_data->dma_desc_pool_cnt == CONFIG_DMA_MCHP_DMAC_G1_MAX_DESC) {
 			break;
 		}
 		/* Add the descriptor to the pool for reuse */
@@ -1678,7 +1678,7 @@ static int dma_mchp_init(const struct device *dev)
 		/* Create the pool of descriptors */
 		ret = dma_mchp_desc_pool_create(
 			&dev_data->dma_desc_pool, &dev_data->dma_desc_pool_cnt,
-			dev_data->dma_alignment, CONFIG_DMA_MCHP_DMAC_U2503_MAX_DESC);
+			dev_data->dma_alignment, CONFIG_DMA_MCHP_DMAC_G1_MAX_DESC);
 		if (ret < 0) {
 			LOG_ERR("DMA Pool creation failed!");
 			break;
