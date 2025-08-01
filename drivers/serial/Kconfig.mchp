@@ -6,6 +6,14 @@ config UART_MCHP_SERCOM_G1
 	default y
 	depends on DT_HAS_MICROCHIP_SERCOM_G1_UART_ENABLED
 	select SERIAL_HAS_DRIVER
+	select SERIAL_SUPPORT_INTERRUPT
+	select SERIAL_SUPPORT_ASYNC
 	select PINCTRL
 	help
-	  This option enables UART driver for group (g1) of SERCOM peripherals.
+	  This option enables UART driver support for SERCOM group 1 (G1) peripherals.
+
+config UART_MCHP_ASYNC
+	bool "Async UART support for Microchip UART Peripheral"
+	depends on UART_MCHP_SERCOM_G1
+	depends on UART_ASYNC_API
+	depends on DMA
