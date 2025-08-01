@@ -7,7 +7,7 @@ description: |
   Group G1 DMA driver supports following hardware peripherals:
     - module name="DMAC" id="U2503" version="1.0.1"
 
-compatible: "microchip,dmac-g1"
+compatible: "microchip,dmac-g1-dma"
 
 include: dma-controller.yaml
 
@@ -15,40 +15,46 @@ properties:
   reg:
     type: array
     required: true
-    description: >
+    description: |
       Specifies the base address and size of the DMA controller's
       memory-mapped registers.
 
   interrupts:
     type: array
     required: true
-    description: Defines the list of interrupt numbers associated with the DMA controller.
+    description: |
+      Defines the list of interrupt numbers associated with the DMA controller.
 
   clocks:
     type: phandle-array
     required: true
-    description: A reference to the clock source used by the DMA controller.
+    description: |
+      A reference to the clock source used by the DMA controller.
 
   clock-names:
     type: string-array
     required: true
-    description: The name of the clock source referenced in the 'clocks' property.
+    description: |
+      The name of the clock source referenced in the 'clocks' property.
 
   dma-channels:
     type: int
     required: true
-    description: The number of DMA channels available in the DMA controller.
+    description: |
+      The number of DMA channels available in the DMA controller.
 
   dma-alignment:
     type: int
-    description: Specifies the required memory alignment for DMA transfers.
-      The value should be set to 16 for 128-bit alignment.
     default: 16
+    description: |
+      Specifies the required memory alignment for DMA transfers.
+      The value should be set to 16 for 128-bit alignment.
 
   "#dma-cells":
     type: int
     const: 2
-    description: Specifies the number of cells used for the DMA specifier.
+    description: |
+      Specifies the number of cells used for the DMA specifier.
 
 # #dma-cells : Must be <2>.
 # The 1st cell specifies the DMAC channel to be used for the data transfer.
