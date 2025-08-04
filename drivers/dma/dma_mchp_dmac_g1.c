@@ -6,9 +6,9 @@
 
 /**
  * @file dma_mchp_dmac_g1.c
- * @brief Zephyr DMA driver for Microchip DMAC-U2503 peripheral
+ * @brief Zephyr DMA driver for Microchip G1 peripherals
  *
- * Provides DMA support using Zephyr's DMA API for the DMAC-U2503 controller
+ * Provides DMA support using Zephyr's DMA API for the DMAC G1 controller
  * found in Microchip SAM E5x and similar MCUs.
  */
 
@@ -21,7 +21,7 @@
 #include <zephyr/drivers/clock_control/mchp_clock_control.h>
 #include <zephyr/kernel.h>
 
-#define DT_DRV_COMPAT microchip_dmac_u2503
+#define DT_DRV_COMPAT microchip_dmac_g1_dma
 
 LOG_MODULE_REGISTER(dma_mchp_dmac_g1, CONFIG_DMA_MCHP_LOG_LEVEL);
 
@@ -73,13 +73,13 @@ LOG_MODULE_REGISTER(dma_mchp_dmac_g1, CONFIG_DMA_MCHP_LOG_LEVEL);
  * that indicate the outcome of a DMA transaction.
  */
 typedef enum {
-	/** DMA transfer encountered an error */
+	/* DMA transfer encountered an error */
 	DMA_MCHP_INT_ERROR = -1,
 
-	/** DMA transfer completed successfully */
+	/* DMA transfer completed successfully */
 	DMA_MCHP_INT_SUCCESS = 0,
 
-	/** DMA transfer was suspended */
+	/* DMA transfer was suspended */
 	DMA_MCHP_INT_SUSPENDED = 1,
 } dma_mchp_int_sts_t;
 
@@ -90,15 +90,15 @@ typedef enum {
  * Represents the different states a DMA channel can be in during its lifecycle.
  */
 typedef enum dma_mchp_ch_state {
-	/** DMA channel is idle */
+	/* DMA channel is idle */
 	DMA_MCHP_CH_IDLE,
-	/** DMA Channel is pending */
+	/* DMA Channel is pending */
 	DMA_MCHP_CH_PENDING,
-	/** DMA channel is suspended */
+	/* DMA channel is suspended */
 	DMA_MCHP_CH_SUSPENDED,
-	/** DMA channel is actively transferring data */
+	/* DMA channel is actively transferring data */
 	DMA_MCHP_CH_ACTIVE,
-	/** DMA channel is prepared for transfer */
+	/* DMA channel is prepared for transfer */
 	DMA_MCHP_CH_PREPARED,
 } dma_mchp_ch_state_t;
 
@@ -109,16 +109,16 @@ typedef enum dma_mchp_ch_state {
  * constraints and capabilities for DMA transfers.
  */
 typedef enum dma_mchp_attribute_type {
-	/** Required alignment (in bytes) of the DMA buffer address. */
+	/* Required alignment (in bytes) of the DMA buffer address. */
 	DMA_MCHP_ATTR_BUFFER_ADDRESS_ALIGNMENT,
 
-	/** Required alignment (in bytes) of the total buffer size. */
+	/* Required alignment (in bytes) of the total buffer size. */
 	DMA_MCHP_ATTR_BUFFER_SIZE_ALIGNMENT,
 
-	/** Required alignment (in bytes) for each DMA copy transfer. */
+	/* Required alignment (in bytes) for each DMA copy transfer. */
 	DMA_MCHP_ATTR_COPY_ALIGNMENT,
 
-	/** Maximum number of blocks supported per DMA transfer. */
+	/* Maximum number of blocks supported per DMA transfer. */
 	DMA_MCHP_ATTR_MAX_BLOCK_COUNT,
 } dma_mchp_attribute_type_t;
 
@@ -130,10 +130,10 @@ typedef enum dma_mchp_attribute_type {
  */
 typedef struct dma_mchp_dmac {
 
-	/** DMA descriptors for channel configurations (must be 16-byte aligned). */
+	/* DMA descriptors for channel configurations (must be 16-byte aligned). */
 	__aligned(16) dmac_descriptor_registers_t descriptors[DMAC_CH_NUM];
 
-	/** DMA write-back descriptors for tracking completed transfers (16-byte aligned). */
+	/* DMA write-back descriptors for tracking completed transfers (16-byte aligned). */
 	__aligned(16) dmac_descriptor_registers_t descriptors_wb[DMAC_CH_NUM];
 
 } dma_mchp_dmac_t;

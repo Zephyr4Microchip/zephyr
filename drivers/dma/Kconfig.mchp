@@ -5,7 +5,7 @@ config DMA_MCHP_DMAC_G1
 	bool "Microchip DMA driver for DMAC G1 Peripherals"
 	default y
 	select KERNEL_MEM_POOL
-	depends on DT_HAS_MICROCHIP_DMAC_G1_ENABLED && !DMA_64BIT
+	depends on DT_HAS_MICROCHIP_DMAC_G1_DMA_ENABLED && !DMA_64BIT
 	help
 	  Enables the DMA driver support for Microchip MCUs.
 
