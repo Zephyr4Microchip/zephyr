@@ -29,7 +29,7 @@ child-binding:
       type: int
       required: true
       description: Clock subsystem
-    mclk_en:
+    mclk-en:
       type: int
       enum:
         - 0

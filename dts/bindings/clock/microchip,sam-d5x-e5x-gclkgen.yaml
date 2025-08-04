@@ -16,14 +16,14 @@ child-binding:
       description: |
         Clock subsystem
 
-    gclkgen_div_factor:
+    gclkgen-div-factor:
       type: int
       default: 0
       description: |
         Represent a division value for the corresponding Generator. The actual division factor is
-        dependent on the state of div_select (gclk1 0 - 65535, others 0 - 255)
+        dependent on the state of div-select (gclk1 0 - 65535, others 0 - 255)
 
-    gclkgen_run_in_standby_en:
+    gclkgen-run-in-standby-en:
       type: int
       enum:
         - 0
@@ -34,18 +34,18 @@ child-binding:
         GCLK_IOn pin. If output is not configured to a pin, this field has no effect and the
         generator will only be running if a peripheral requires the clock.
 
-    gclkgen_div_select:
+    gclkgen-div-select:
       type: string
       enum:
         - "div-factor"
         - "div-factor-power"
       default: "div-factor"
       description: |
-        The Generator clock frequency equals the clock source frequency divided by div_factor
+        The Generator clock frequency equals the clock source frequency divided by div-factor
         DIV_FACTOR_POWER: The Generator clock frequency equals the clock source frequency divided
-        by 2^(N+1), where N is the div_factor
+        by 2^(N+1), where N is the div-factor
 
-    gclkgen_pin_output_en:
+    gclkgen-pin-output-en:
       type: int
       enum:
         - 0
@@ -55,17 +55,17 @@ child-binding:
         Generator clock output to the corresponding pin, if that pin is not configured as input
         source.
 
-    gclkgen_pin_output_off_val:
+    gclkgen-pin-output-off-val:
       type: string
       enum:
         - "low"
         - "high"
       default: "low"
       description: |
-        Output value of the corresponding pin, when the Generator is turned off or the output_en is
+        Output value of the corresponding pin, when the Generator is turned off or the output-en is
         false, as long as the pin is not source.
 
-    gclkgen_duty_50_50_en:
+    gclkgen-duty-50-50-en:
       type: int
       enum:
         - 0
@@ -74,7 +74,7 @@ child-binding:
       description: |
         Improve the duty cycle of the Generator output to 50/50 for odd division factors
 
-    gclkgen_en:
+    gclkgen-en:
       type: int
       enum:
         - 0
@@ -83,7 +83,7 @@ child-binding:
       description: |
         Enable gclk generator
 
-    gclkgen_src:
+    gclkgen-src:
       type: string
       enum:
         - "xosc0"
@@ -99,7 +99,7 @@ child-binding:
       description: |
         Generator source clock selection
 
-    gclkgen_pin_src_freq:
+    gclkgen-pin-src-freq:
       type: int
       default: 0
       description: |

@@ -48,31 +48,31 @@
 				compatible = "microchip,sam-d5x-e5x-xosc";
 				xosc1 {
 					subsystem = <CLOCK_MCHP_XOSC_ID_XOSC1>;
-					xosc_frequency = <12000000>;
-					xosc_en = <1>;
-					xosc_xtal_en = <1>;
-					xosc_run_in_standby_en = <1>;
+					xosc-frequency = <12000000>;
+					xosc-en = <1>;
+					xosc-xtal-en = <1>;
+					xosc-run-in-standby-en = <1>;
 				};
 			};
 
 			dfll: dfll {
 				compatible = "microchip,sam-d5x-e5x-dfll";
-				dfll_run_in_standby_en = <1>;
-				dfll_en = <1>;
-				dfll_src_gclk = "gclk2";
+				dfll-run-in-standby-en = <1>;
+				dfll-en = <1>;
+				dfll-src-gclk = "gclk2";
 			};
 
 			fdpll: fdpll {
 				compatible = "microchip,sam-d5x-e5x-fdpll";
 				fdpll0 {
 					subsystem = <CLOCK_MCHP_FDPLL_ID_FDPLL0>;
-					fdpll_divider_ratio_int = <3661>;
-					fdpll_divider_ratio_frac = <3>;
-					fdpll_src = "gclk2";
-					fdpll_lock_bypass_en = <1>;
-					fdpll_run_in_standby_en = <0>;
-					fdpll_en = <1>;
-					fdpll_wakeup_fast_en = <1>;
+					fdpll-divider-ratio-int = <3661>;
+					fdpll-divider-ratio-frac = <3>;
+					fdpll-src = "gclk2";
+					fdpll-lock-bypass-en = <1>;
+					fdpll-run-in-standby-en = <0>;
+					fdpll-en = <1>;
+					fdpll-wakeup-fast-en = <1>;
 				};
 			};
 
@@ -83,12 +83,12 @@
 
 			osc32k: osc32k {
 				compatible = "microchip,sam-d5x-e5x-osc32k";
-				osc32k_32khz_en = <1>;
-				osc32k_xtal_en = <1>;
-				osc32k_startup_time = <62>;
-				osc32k_run_in_standby_en = <1>;
-				osc32k_gain_mode = "standard";
-				osc32k_en = <1>;
+				osc32k-32khz-en = <1>;
+				osc32k-xtal-en = <1>;
+				osc32k-startup-time = <62>;
+				osc32k-run-in-standby-en = <1>;
+				osc32k-gain-mode = "standard";
+				osc32k-en = <1>;
 			};
 
 			gclkgen: gclkgen {
@@ -96,28 +96,28 @@
 
 				gclkgen2 {
 					subsystem = <CLOCK_MCHP_GCLKGEN_ID_GEN2>;
-					gclkgen_div_factor = <1>;
-					gclkgen_run_in_standby_en = <1>;
-					gclkgen_src = "osc32k";
-					gclkgen_en = <1>;
+					gclkgen-div-factor = <1>;
+					gclkgen-run-in-standby-en = <1>;
+					gclkgen-src = "osc32k";
+					gclkgen-en = <1>;
 				};
 
 				gclkgen1 {
 					subsystem = <CLOCK_MCHP_GCLKGEN_ID_GEN1>;
-					gclkgen_div_factor = <1>;
-					gclkgen_run_in_standby_en = <1>;
-					gclkgen_pin_output_en = <1>;
-					gclkgen_src = "xosc1";
-					gclkgen_duty_50_50_en = <1>;
-					gclkgen_en = <1>;
+					gclkgen-div-factor = <1>;
+					gclkgen-run-in-standby-en = <1>;
+					gclkgen-pin-output-en = <1>;
+					gclkgen-src = "xosc1";
+					gclkgen-duty-50-50-en = <1>;
+					gclkgen-en = <1>;
 				};
 
 				gclkgen0 {
 					subsystem = <CLOCK_MCHP_GCLKGEN_ID_GEN0>;
-					gclkgen_div_factor = <1>;
-					gclkgen_run_in_standby_en = <1>;
-					gclkgen_src = "fdpll0";
-					gclkgen_en = <1>;
+					gclkgen-div-factor = <1>;
+					gclkgen-run-in-standby-en = <1>;
+					gclkgen-src = "fdpll0";
+					gclkgen-en = <1>;
 				};
 			};
 
@@ -127,20 +127,20 @@
 
 				sercom2 {
 					subsystem = <CLOCK_MCHP_GCLKPERIPH_ID_SERCOM2_CORE>;
-					gclkperiph_src = "gclk0";
-					gclkperiph_en = <1>;
+					gclkperiph-src = "gclk0";
+					gclkperiph-en = <1>;
 				};
 
 				sercom1 {
 					subsystem = <CLOCK_MCHP_GCLKPERIPH_ID_SERCOM1_CORE>;
-					gclkperiph_src = "gclk0";
-					gclkperiph_en = <1>;
+					gclkperiph-src = "gclk0";
+					gclkperiph-en = <1>;
 				};
 			};
 
 			mclkcpu: mclkcpu {
 				compatible = "microchip,sam-d5x-e5x-mclkcpu";
-				mclk_cpu_div = <1>;
+				mclk-cpu-div = <1>;
 			};
 
 			mclkperiph: mclkperiph {
@@ -149,17 +149,17 @@
 
 				sercom2 {
 					subsystem = <CLOCK_MCHP_MCLKPERIPH_ID_APBB_SERCOM2>;
-					mclk_en = <1>;
+					mclk-en = <1>;
 				};
 
 				sercom1 {
 					subsystem = <CLOCK_MCHP_MCLKPERIPH_ID_APBA_SERCOM1>;
-					mclk_en = <1>;
+					mclk-en = <1>;
 				};
 
 				dmac {
 					subsystem = <CLOCK_MCHP_MCLKPERIPH_ID_AHB_DMAC>;
-					mclk_en = <1>;
+					mclk-en = <1>;
 				};
 			};
 		};

@@ -30,7 +30,7 @@ child-binding:
       required: true
       description: Clock subsystem
 
-    gclkperiph_src:
+    gclkperiph-src:
       type: string
       enum:
         - "gclk0"
@@ -49,7 +49,7 @@ child-binding:
       description: |
         Generator to be used as the source of a peripheral clock
 
-    gclkperiph_en:
+    gclkperiph-en:
       type: int
       enum:
         - 0

@@ -9,7 +9,7 @@ description: |
 compatible: "microchip,sam-d5x-e5x-mclkcpu"
 
 properties:
-  mclk_cpu_div:
+  mclk-cpu-div:
     type: int
     enum:
       - 1

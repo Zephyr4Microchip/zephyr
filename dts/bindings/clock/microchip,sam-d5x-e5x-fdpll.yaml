@@ -15,7 +15,7 @@ child-binding:
       required: true
       description: Clock subsystem
 
-    fdpll_on_demand_en:
+    fdpll-on-demand-en:
       type: int
       enum:
         - 0
@@ -30,7 +30,7 @@ child-binding:
         clock Initialization. If required, better to turn on the clock using API, instead of
         enabling both during startup.
 
-    fdpll_run_in_standby_en:
+    fdpll-run-in-standby-en:
       type: int
       enum:
         - 0
@@ -42,7 +42,7 @@ child-binding:
         If ONDEMAND is one, the DPLLn will be running when a peripheral is requesting the clock. If
         ONDEMAND is false, the clock source will always be running in standby sleep mode.
 
-    fdpll_en:
+    fdpll-en:
       type: int
       enum:
         - 0
@@ -51,25 +51,25 @@ child-binding:
       description: |
         Oscillator Enable
 
-    fdpll_divider_ratio_int:
+    fdpll-divider-ratio-int:
       type: int
       default: 0
       description: |
         Set the integer part of the frequency multiplier. (0 - 4095)
 
-    fdpll_divider_ratio_frac:
+    fdpll-divider-ratio-frac:
       type: int
       default: 0
       description: |
         Set the fractional part of the frequency multiplier. (0 - 31)
 
-    fdpll_xosc_clock_divider:
+    fdpll-xosc-clock-divider:
       type: int
       default: 0
       description: |
         Set the XOSC clock division factor (0 - 2047)
 
-    fdpll_dco_en:
+    fdpll-dco-en:
       type: int
       enum:
         - 0
@@ -78,7 +78,7 @@ child-binding:
       description: |
         DCO Filter Enable
 
-    fdpll_dco_filter_select:
+    fdpll-dco-filter-select:
       type: string
       enum:
         - "3.21mhz"
@@ -93,7 +93,7 @@ child-binding:
       description: |
         Sigma-Delta DCO Filter Selection, Bandwidth Fn (MHz)
 
-    fdpll_lock_bypass_en:
+    fdpll-lock-bypass-en:
       type: int
       enum:
         - 0
@@ -102,7 +102,7 @@ child-binding:
       description: |
         Lock Bypass
 
-    fdpll_src:
+    fdpll-src:
       type: string
       enum:
         - "gclk0"
@@ -124,7 +124,7 @@ child-binding:
       description: |
         Reference source clock selection
 
-    fdpll_wakeup_fast_en:
+    fdpll-wakeup-fast-en:
       type: int
       enum:
         - 0
@@ -133,25 +133,25 @@ child-binding:
       description: |
         Wake Up Fast
 
-    fdpll_pi_filter_type:
+    fdpll-pi-filter-type:
       type: string
       enum:
-        - "92.7khz_0.76damp"
-        - "131khz_1.08damp"
-        - "46.4khz_0.38damp"
-        - "65.6khz_0.54damp"
-        - "131khz_0.56damp"
-        - "185khz_0.79damp"
-        - "65.6khz_0.28damp"
-        - "92.7khz_0.39damp"
-        - "46.4khz_1.49damp"
-        - "65.6khz_2.11damp"
-        - "23.2khz_0.75damp"
-        - "32.8khz_1.06damp"
-        - "65.6khz_1.07damp"
-        - "92.7khz_1.51damp"
-        - "32.8khz_0.53damp"
-        - "46.4khz_0.75damp"
-      default: "92.7khz_0.76damp"
+        - "92.7khz-0.76damp"
+        - "131khz-1.08damp"
+        - "46.4khz-0.38damp"
+        - "65.6khz-0.54damp"
+        - "131khz-0.56damp"
+        - "185khz-0.79damp"
+        - "65.6khz-0.28damp"
+        - "92.7khz-0.39damp"
+        - "46.4khz-1.49damp"
+        - "65.6khz-2.11damp"
+        - "23.2khz-0.75damp"
+        - "32.8khz-1.06damp"
+        - "65.6khz-1.07damp"
+        - "92.7khz-1.51damp"
+        - "32.8khz-0.53damp"
+        - "46.4khz-0.75damp"
+      default: "92.7khz-0.76damp"
       description: |
         Proportional Integral Filter Selection

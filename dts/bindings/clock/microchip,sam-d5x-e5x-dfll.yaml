@@ -9,7 +9,7 @@ description: |
 compatible: "microchip,sam-d5x-e5x-dfll"
 
 properties:
-  dfll_on_demand_en:
+  dfll-on-demand-en:
     type: int
     enum:
       - 0
@@ -24,7 +24,7 @@ properties:
       Initialization. If required, better to turn on the clock using API, instead of enabling both
       during startup.
 
-  dfll_run_in_standby_en:
+  dfll-run-in-standby-en:
     type: int
     enum:
       - 0
@@ -36,7 +36,7 @@ properties:
       If ONDEMAND is one, the DFLL will be running when a peripheral is requesting the clock. If
       ONDEMAND is false, the clock source will always be running in standby sleep mode.
 
-  dfll_en:
+  dfll-en:
     type: int
     enum:
       - 0
@@ -45,7 +45,7 @@ properties:
     description: |
       Oscillator Enable
 
-  dfll_wait_lock_en:
+  dfll-wait-lock-en:
     type: int
     enum:
       - 0
@@ -54,7 +54,7 @@ properties:
     description: |
       If enabled, clock available only after DFLL is locked (Fine lock)
 
-  dfll_bypass_coarse_lock_en:
+  dfll-bypass-coarse-lock-en:
     type: int
     enum:
       - 0
@@ -63,7 +63,7 @@ properties:
     description: |
       To bypass coarse lock procedure
 
-  dfll_quick_lock_dis:
+  dfll-quick-lock-dis:
     type: int
     enum:
       - 0
@@ -72,7 +72,7 @@ properties:
     description: |
       Disable quick lock
 
-  dfll_chill_cycle_dis:
+  dfll-chill-cycle-dis:
     type: int
     enum:
       - 0
@@ -81,7 +81,7 @@ properties:
     description: |
       Disable chill cycle
 
-  dfll_usb_recovery_en:
+  dfll-usb-recovery-en:
     type: int
     enum:
       - 0
@@ -90,7 +90,7 @@ properties:
     description: |
       Enable USB Clock Recovery Mode
 
-  dfll_lose_lock_en:
+  dfll-lose-lock-en:
     type: int
     enum:
       - 0
@@ -100,7 +100,7 @@ properties:
       If enabled, locks will be lost after waking up from sleep modes,
       if the DFLL clock has been stopped
 
-  dfll_stable_freq_en:
+  dfll-stable-freq-en:
     type: int
     enum:
       - 0
@@ -110,7 +110,7 @@ properties:
       0: FINE calibration tracks changes in output frequency.
       1: FINE calibration register value will be fixed after a fine lock.
 
-  dfll_closed_loop_en:
+  dfll-closed-loop-en:
     type: int
     enum:
       - 0
@@ -120,26 +120,26 @@ properties:
       0: The DFLL operates in open-loop operation.
       1: The DFLL operates in closed-loop operation.
 
-  dfll_coarse_max_step:
+  dfll-coarse-max-step:
     type: int
     default: 0
     description: |
       Indicates the maximum step size allowed during coarse adjustment in closed-loop mode (0 - 31)
 
-  dfll_fine_max_step:
+  dfll-fine-max-step:
     type: int
     default: 0
     description: |
       Indicates the maximum step size allowed during fine adjustment in closed-loop mode (0 - 255)
 
-  dfll_multiply_factor:
+  dfll-multiply-factor:
     type: int
     default: 0
     description: |
       Determines the ratio of the CLK_DFLL output frequency to the CLK_DFLL_REF input frequency (0
       - 65535)
 
-  dfll_src_gclk:
+  dfll-src-gclk:
     type: string
     enum:
       - "gclk0"
