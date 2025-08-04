@@ -897,9 +897,11 @@ static int clock_mchp_on(const struct device *dev, clock_control_subsys_t sys)
 	/* Wait until the clock state becomes ON. */
 	while (is_wait == true) {
 		/* For OSC32K, need to wait for the oscillator to be on. get_status only return if
-		 * EN1K or EN32K is on, which does not indicate the status of OSC32K */
+		 * EN1K or EN32K is on, which does not indicate the status of OSC32K
+		 */
 		if (subsys.bits.type == SUBSYS_TYPE_OSC32K) {
 			osc32kctrl_registers_t *osc32kctrl_regs = config->osc32kctrl_regs;
+
 			if ((osc32kctrl_regs->OSC32KCTRL_STATUS &
 			     OSC32KCTRL_STATUS_XOSC32KRDY_Msk) != 0) {
 				/* Successfully turned on clock. */
