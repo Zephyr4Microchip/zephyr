@@ -16,6 +16,12 @@ config ADC_MCHP_U2500_1_0_0
 	help
 	  Enable ADC peripheral IP version 1.0.0 (U2500).
 
+config DAC_MCHP_U2502_1_0_0
+	bool
+	default y
+	help
+	  Enable DAC peripheral IP version 1.0.0 (U2502).
+
 config PINCTRL_MCHP_PORT_U2210_2_2_0
 	bool
 	default y
