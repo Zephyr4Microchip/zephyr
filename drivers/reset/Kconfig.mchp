@@ -4,6 +4,6 @@
 config RESET_MCHP_RSTC_G1
 	bool "Microchip Reset Controller g1 peripheral driver"
 	default y
-	depends on DT_HAS_MICROCHIP_RSTC_G1_ENABLED
+	depends on DT_HAS_MICROCHIP_RSTC_G1_RESET_ENABLED
 	help
 	  Enable RESET driver for Microchip G1 IPs.

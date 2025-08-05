@@ -18,8 +18,14 @@
 #include <zephyr/device.h>
 #include <zephyr/drivers/reset.h>
 
-/* Define compatible string */
-#define DT_DRV_COMPAT microchip_rstc_g1
+/******************************************************************************
+ * @brief Devicetree definitions
+ *****************************************************************************/
+#define DT_DRV_COMPAT microchip_rstc_g1_reset
+
+/******************************************************************************
+ * @brief Const and Macro Defines
+ *****************************************************************************/
 
 /** @brief Maximum number of reset lines supported by the controller. */
 #define MCHP_RST_LINE_MAX 8
@@ -32,6 +38,9 @@
  */
 #define RESET_REGS(dev) (((const reset_mchp_config_t *)((dev)->config))->regs)
 
+/******************************************************************************
+ * Typedefs and Enum Declarations
+ *****************************************************************************/
 /**
  * @brief Configuration structure for the Microchip RSTC g1 reset controller.
  */
@@ -39,6 +48,9 @@ typedef struct reset_mchp_config {
 	rstc_registers_t *regs; /* Pointer to the reset controller registers */
 } reset_mchp_config_t;
 
+/******************************************************************************
+ * @brief API functions
+ *****************************************************************************/
 /**
  * @brief Get the status of a reset line.
  *
@@ -113,11 +125,9 @@ static int reset_mchp_line_toggle(const struct device *dev, uint32_t id)
 	return -ENOTSUP;
 }
 
-/**
- * @brief Reset driver API structure for Microchip RSTC g1.
- *
- * This structure provides pointers to the driver functions implementing the reset API.
- */
+/******************************************************************************
+ * @brief Zephyr driver instance creation
+ *****************************************************************************/
 static DEVICE_API(reset, reset_mchp_api) = {
 	.status = reset_mchp_status,
 	.line_assert = reset_mchp_line_assert,
