@@ -22,14 +22,14 @@
 #include <zephyr/drivers/clock_control/mchp_clock_control.h>
 #include <string.h>
 
-/*******************************************
- * Const and Macro Defines
- ******************************************
- */
-
-/* Define compatible string */
+/******************************************************************************
+ * @brief Devicetree definitions
+ *****************************************************************************/
 #define DT_DRV_COMPAT microchip_sercom_g1_uart
 
+/******************************************************************************
+ * @brief Macro definitions
+ *****************************************************************************/
 #define UART_SUCCESS           0
 #define BITSHIFT_FOR_BAUD_CALC 20
 
@@ -75,8 +75,9 @@
 #define UART_MCHP_IRQ_HANDLER(n)
 #endif /* CONFIG_UART_INTERRUPT_DRIVEN || CONFIG_UART_MCHP_ASYNC */
 
-/* Do the peripheral clock related configuration */
-
+/******************************************************************************
+ * @brief Data type definitions
+ *****************************************************************************/
 /**
  * @brief Clock configuration structure for the UART.
  *
@@ -239,9 +240,11 @@ typedef struct uart_mchp_dev_data {
 #endif /* CONFIG_UART_MCHP_ASYNC */
 } uart_mchp_dev_data_t;
 
+/******************************************************************************
+ * @brief Function forward declarations
+ *****************************************************************************/
 #if CONFIG_UART_MCHP_ASYNC
 
-/* Forward declarations */
 static void uart_mchp_tx_timeout(struct k_work *work);
 
 static void uart_mchp_rx_timeout(struct k_work *work);
@@ -254,6 +257,9 @@ static void uart_mchp_dma_rx_done(const struct device *dma_dev, void *arg, uint3
 
 #endif /* CONFIG_UART_MCHP_ASYNC */
 
+/******************************************************************************
+ * @brief Helper functions
+ *****************************************************************************/
 /**
  * @brief Wait for synchronization of the UART.
  *
@@ -1270,6 +1276,9 @@ static void uart_mchp_isr(const struct device *dev)
 
 #endif /* CONFIG_UART_INTERRUPT_DRIVEN || CONFIG_UART_MCHP_ASYNC */
 
+/******************************************************************************
+ * @brief API functions
+ *****************************************************************************/
 /**
  * @brief Initialize the UART device.
  *
@@ -2522,6 +2531,9 @@ static int uart_mchp_rx_disable(const struct device *dev)
 
 #endif /* CONFIG_UART_MCHP_ASYNC */
 
+/******************************************************************************
+ * @brief Zephyr driver instance creation
+ *****************************************************************************/
 static DEVICE_API(uart, uart_mchp_driver_api) = {
 #ifdef CONFIG_UART_USE_RUNTIME_CONFIGURE
 	.configure = uart_mchp_configure,
