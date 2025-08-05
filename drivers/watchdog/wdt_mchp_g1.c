@@ -20,15 +20,15 @@
 #include <zephyr/drivers/watchdog.h>
 #include <zephyr/drivers/clock_control/mchp_clock_control.h>
 
-/*******************************************
- * Const and Macro Defines
- ******************************************
- */
-
-LOG_MODULE_REGISTER(wdt_mchp_g1, CONFIG_WDT_LOG_LEVEL);
-
-/* Define compatible string */
+/****************************************************************************
+ * @brief Devicetree definitions
+ ****************************************************************************/
 #define DT_DRV_COMPAT microchip_wdt_g1
+
+/****************************************************************************
+ * Const and Macro Defines
+ ****************************************************************************/
+LOG_MODULE_REGISTER(wdt_mchp_g1, CONFIG_WDT_LOG_LEVEL);
 
 /**
  * @brief Type definition for the WDT lock.
