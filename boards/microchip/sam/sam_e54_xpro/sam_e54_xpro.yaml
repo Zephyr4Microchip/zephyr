@@ -12,6 +12,7 @@ ram: 256
 supported:
   - adc
   - dac
+  - comparator
   - dma
   - entropy
   - eic

@@ -22,6 +22,12 @@ config DAC_MCHP_U2502_1_0_0
 	help
 	  Enable DAC peripheral IP version 1.0.0 (U2502).
 
+config COMPARATOR_MCHP_AC_U2501_1_0_0
+	bool
+	default y
+	help
+	  Enable AC peripheral IP version 1.0.0 (U2501).
+
 config PINCTRL_MCHP_PORT_U2210_2_2_0
 	bool
 	default y
