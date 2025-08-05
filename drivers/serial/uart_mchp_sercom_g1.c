@@ -37,6 +37,7 @@
 
 /* Do the peripheral interrupt related configuration */
 #if CONFIG_UART_INTERRUPT_DRIVEN || CONFIG_UART_MCHP_ASYNC
+
 #if DT_INST_IRQ_HAS_IDX(0, 3)
 /**
  * @brief Configure UART IRQ handler for multiple interrupts.
@@ -54,7 +55,7 @@
 		MCHP_UART_IRQ_CONNECT(n, 2);                                                       \
 		MCHP_UART_IRQ_CONNECT(n, 3);                                                       \
 	}
-#else
+#else /* DT_INST_IRQ_HAS_IDX(0, 3) */
 /**
  * @brief Configure UART IRQ handler for a single interrupt.
  *
@@ -68,10 +69,11 @@
 	{                                                                                          \
 		MCHP_UART_IRQ_CONNECT(n, 0);                                                       \
 	}
-#endif
-#else
+#endif /* DT_INST_IRQ_HAS_IDX(0, 3) */
+
+#else /* CONFIG_UART_INTERRUPT_DRIVEN || CONFIG_UART_MCHP_ASYNC */
 #define UART_MCHP_IRQ_HANDLER(n)
-#endif
+#endif /* CONFIG_UART_INTERRUPT_DRIVEN || CONFIG_UART_MCHP_ASYNC */
 
 /* Do the peripheral clock related configuration */
 
@@ -147,12 +149,13 @@ typedef struct uart_mchp_dev_cfg {
 
 #if CONFIG_UART_MCHP_ASYNC
 	mchp_uart_dma_t uart_dma;
-#endif
+#endif /* CONFIG_UART_MCHP_ASYNC */
 
 #if CONFIG_UART_INTERRUPT_DRIVEN || CONFIG_UART_MCHP_ASYNC
 	/* IRQ configuration function */
 	void (*irq_config_func)(const struct device *dev);
-#endif
+#endif /* CONFIG_UART_INTERRUPT_DRIVEN || CONFIG_UART_MCHP_ASYNC */
+
 	/* Clock configuration */
 	mchp_uart_clock_t uart_clock;
 
@@ -177,7 +180,7 @@ typedef struct uart_mchp_dev_data {
 
 	/* Cached status of TX completion */
 	bool is_tx_completed_cache;
-#endif
+#endif /* CONFIG_UART_INTERRUPT_DRIVEN */
 
 #if CONFIG_UART_MCHP_ASYNC
 	/* Device structure */
@@ -233,7 +236,7 @@ typedef struct uart_mchp_dev_data {
 
 	/* RX timeout from ISR flag */
 	bool rx_timeout_from_isr;
-#endif
+#endif /* CONFIG_UART_MCHP_ASYNC */
 } uart_mchp_dev_data_t;
 
 #if CONFIG_UART_MCHP_ASYNC
@@ -624,6 +627,7 @@ static void uart_tx_on_off(sercom_registers_t *regs, bool clock_external, bool e
  * @param baudrate Desired baud rate.
  * @param clk_freq_hz Clock frequency in Hz.
  * @return 0 on success, -ERANGE if the calculated baud rate is out of range.
+ * @retval -EINVAL for invalid argument.
  */
 static int uart_set_baudrate(sercom_registers_t *regs, bool clock_external, uint32_t baudrate,
 			     uint32_t clk_freq_hz)
@@ -1187,10 +1191,10 @@ static void uart_mchp_isr(const struct device *dev)
 	uart_mchp_dev_data_t *const dev_data = dev->data;
 
 #if CONFIG_UART_INTERRUPT_DRIVEN
-	if (dev_data->cb) {
+	if (dev_data->cb != NULL) {
 		dev_data->cb(dev, dev_data->cb_data);
 	}
-#endif
+#endif /* CONFIG_UART_INTERRUPT_DRIVEN */
 
 #if CONFIG_UART_MCHP_ASYNC
 	const uart_mchp_dev_cfg_t *const cfg = dev->config;
@@ -1261,7 +1265,7 @@ static void uart_mchp_isr(const struct device *dev)
 			dma_start(cfg->uart_dma.dma_dev, cfg->uart_dma.rx_dma_channel);
 		}
 	}
-#endif
+#endif /* CONFIG_UART_MCHP_ASYNC */
 }
 
 #endif /* CONFIG_UART_INTERRUPT_DRIVEN || CONFIG_UART_MCHP_ASYNC */
@@ -1758,6 +1762,7 @@ static int uart_mchp_irq_rx_ready(const struct device *dev)
  * @param rx_data Pointer to the buffer to store received data.
  * @param size Size of the buffer.
  * @return Number of bytes read from the FIFO.
+ * @retval -EINVAL for invalid argument.
  */
 static int uart_mchp_fifo_read(const struct device *dev, uint8_t *rx_data, const int size)
 {
@@ -1892,6 +1897,7 @@ static void uart_mchp_irq_callback_set(const struct device *dev, uart_irq_callba
  *
  * @param dev_data Pointer to the UART device data structure.
  * @return 0 on success, negative error code on failure.
+ * @retval -EINVAL for invalid option.
  */
 static int uart_mchp_tx_halt(uart_mchp_dev_data_t *dev_data)
 {
@@ -2217,7 +2223,7 @@ static int uart_mchp_callback_set(const struct device *dev, uart_callback_t call
 #if defined(CONFIG_UART_EXCLUSIVE_API_CALLBACKS)
 	dev_data->cb = NULL;
 	dev_data->cb_data = NULL;
-#endif
+#endif /* CONFIG_UART_EXCLUSIVE_API_CALLBACKS */
 
 	return 0;
 }
@@ -2233,6 +2239,7 @@ static int uart_mchp_callback_set(const struct device *dev, uart_callback_t call
  * @param timeout Timeout for the transmission.
  *
  * @return 0 on success, negative error code on failure.
+ * @retval -EINVAL for invalid argument.
  */
 static int uart_mchp_tx(const struct device *dev, const uint8_t *buf, size_t len, int32_t timeout)
 {
@@ -2323,6 +2330,7 @@ static int uart_mchp_tx_abort(const struct device *dev)
  * @param len Length of the new RX buffer.
  *
  * @return 0 on success, negative error code on failure.
+ * @retval -EINVAL for invalid argument.
  */
 static int uart_mchp_rx_buf_rsp(const struct device *dev, uint8_t *buf, size_t len)
 {
@@ -2367,6 +2375,7 @@ static int uart_mchp_rx_buf_rsp(const struct device *dev, uint8_t *buf, size_t l
  * @param timeout Timeout for the RX operation.
  *
  * @return 0 on success, negative error code on failure.
+ * @retval -EINVAL for invalid argument.
  */
 static int uart_mchp_rx_enable(const struct device *dev, uint8_t *buf, size_t len, int32_t timeout)
 {
@@ -2517,7 +2526,7 @@ static DEVICE_API(uart, uart_mchp_driver_api) = {
 #ifdef CONFIG_UART_USE_RUNTIME_CONFIGURE
 	.configure = uart_mchp_configure,
 	.config_get = uart_mchp_config_get,
-#endif
+#endif /* CONFIG_UART_USE_RUNTIME_CONFIGURE */
 
 	.poll_in = uart_mchp_poll_in,
 	.poll_out = uart_mchp_poll_out,
@@ -2538,7 +2547,7 @@ static DEVICE_API(uart, uart_mchp_driver_api) = {
 	.irq_err_disable = uart_mchp_irq_err_disable,
 	.irq_update = uart_mchp_irq_update,
 	.irq_callback_set = uart_mchp_irq_callback_set,
-#endif
+#endif /* CONFIG_UART_INTERRUPT_DRIVEN */
 
 #if CONFIG_UART_MCHP_ASYNC
 	.callback_set = uart_mchp_callback_set,
@@ -2547,7 +2556,7 @@ static DEVICE_API(uart, uart_mchp_driver_api) = {
 	.rx_enable = uart_mchp_rx_enable,
 	.rx_buf_rsp = uart_mchp_rx_buf_rsp,
 	.rx_disable = uart_mchp_rx_disable,
-#endif
+#endif /* CONFIG_UART_MCHP_ASYNC */
 };
 
 #if CONFIG_UART_INTERRUPT_DRIVEN || CONFIG_UART_MCHP_ASYNC
@@ -2562,10 +2571,10 @@ static DEVICE_API(uart, uart_mchp_driver_api) = {
 #define UART_MCHP_IRQ_HANDLER_DECL(n) static void uart_mchp_irq_config_##n(const struct device *dev)
 #define UART_MCHP_IRQ_HANDLER_FUNC(n) .irq_config_func = uart_mchp_irq_config_##n,
 
-#else
+#else /* CONFIG_UART_INTERRUPT_DRIVEN || CONFIG_UART_MCHP_ASYNC */
 #define UART_MCHP_IRQ_HANDLER_DECL(n)
 #define UART_MCHP_IRQ_HANDLER_FUNC(n)
-#endif
+#endif /* CONFIG_UART_INTERRUPT_DRIVEN || CONFIG_UART_MCHP_ASYNC */
 
 #if CONFIG_UART_MCHP_ASYNC
 #define UART_MCHP_DMA_CHANNELS(n)                                                                  \
@@ -2574,7 +2583,7 @@ static DEVICE_API(uart, uart_mchp_driver_api) = {
 	.uart_dma.tx_dma_channel = MCHP_DT_INST_DMA_CHANNEL(n, tx),                                \
 	.uart_dma.rx_dma_request = MCHP_DT_INST_DMA_TRIGSRC(n, rx),                                \
 	.uart_dma.rx_dma_channel = MCHP_DT_INST_DMA_CHANNEL(n, rx),
-#else
+#else /* CONFIG_UART_MCHP_ASYNC */
 #define UART_MCHP_DMA_CHANNELS(n)
 #endif /* CONFIG_UART_MCHP_ASYNC */
 
