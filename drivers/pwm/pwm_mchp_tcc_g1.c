@@ -141,7 +141,6 @@ typedef struct {
 	void *regs;                                      /**< Pointer to PWM peripheral registers */
 	uint32_t max_bit_width;
 	uint16_t prescaler; /**< Prescaler value for PWM */
-	uint8_t id;         /**< The id of the pwm peripheral */
 	uint8_t channels;   /**< Number of PWM channels */
 	uint32_t freq;      /**< Frequency of the PWM signal */
 } pwm_mchp_config_t;
@@ -470,7 +469,6 @@ static int pwm_mchp_init(const struct device *pwm_dev)
 		.prescaler = DT_INST_PROP(n, prescaler),                                           \
 		.pinctrl_config = PINCTRL_DT_INST_DEV_CONFIG_GET(n),                               \
 		.channels = DT_INST_PROP(n, channels),                                             \
-		.id = DT_INST_PROP(n, instance_id),                                                \
 		.regs = (void *)DT_INST_REG_ADDR(n),                                               \
 		.max_bit_width = DT_INST_PROP(n, max_bit_width),                                   \
 		PWM_MCHP_CLOCK_ASSIGN(n)}

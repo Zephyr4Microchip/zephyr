@@ -19,11 +19,14 @@
 #include <zephyr/drivers/clock_control.h>
 #include <zephyr/drivers/clock_control/mchp_clock_control.h>
 
+/******************************************************************************
+ * @brief Devicetree definitions
+ *****************************************************************************/
+#define DT_DRV_COMPAT microchip_tc_g1_pwm
+
 /*******************************************
  * Const and Macro Defines
- ******************************************
- */
-#define DT_DRV_COMPAT microchip_tc_g1_pwm
+ *******************************************/
 
 LOG_MODULE_REGISTER(pwm_mchp_tc_g1, CONFIG_PWM_LOG_LEVEL);
 
@@ -79,15 +82,9 @@ LOG_MODULE_REGISTER(pwm_mchp_tc_g1, CONFIG_PWM_LOG_LEVEL);
  */
 #define MCHP_PWM_DATA_UNLOCK(p_lock) k_mutex_unlock(p_lock)
 
-/** This represents the highest peripheral ID that supports chaining with the client peripheral in
- * 32-bit mode.
- */
-#define PERIPH_ID_MAX 2
-
 /***********************************
  * Typedefs and Enum Declarations
- **********************************
- */
+ ***********************************/
 typedef enum {
 	BIT_MODE_8 = 8,
 	BIT_MODE_16 = 16,
@@ -132,11 +129,11 @@ typedef struct mchp_counter_clock {
 	const struct device *clock_dev;
 
 	/* Main clock subsystem. */
-	clock_control_subsys_t host_core_sync_clk;
-	clock_control_subsys_t client_core_sync_clk;
+	clock_control_subsys_t host_mclk;
+	clock_control_subsys_t client_mclk;
 
 	/* Generic clock subsystem. */
-	clock_control_subsys_t periph_async_clk;
+	clock_control_subsys_t host_gclk;
 } pwm_mchp_clock_t;
 
 /**
@@ -151,15 +148,13 @@ typedef struct {
 	pwm_mchp_clock_t pwm_clock;                      /* PWM clock configuration */
 	const struct pinctrl_dev_config *pinctrl_config; /* Pin control configuration */
 	uint16_t prescaler;                              /* Prescaler value for PWM */
-	uint8_t id;                                      /* The id of the pwm peripheral */
 	uint8_t channels;                                /* Number of PWM channels */
 	uint32_t freq;                                   /* Frequency of the PWM signal */
 } pwm_mchp_config_t;
 
 /***********************************
  * Internal functions
- **********************************
- */
+ ***********************************/
 /*
  *This function maps a given prescaler constant to its corresponding numerical
  *value. If the prescaler does not match any predefined constants, it returns 0.
@@ -199,6 +194,7 @@ static uint32_t tc_get_prescale_val(uint32_t prescaler)
 			"prescaler of DIV1");
 		break;
 	}
+
 	return prescaler_val;
 }
 
@@ -214,6 +210,7 @@ static bool check_slave_status(const void *pwm_reg)
 
 	ret = PWM_MODE8(pwm_reg)->TC_STATUS & TC_STATUS_SLAVE_Msk;
 	LOG_DBG("%s", (ret ? "tc is a slave" : "tc is not a slave"));
+
 	return ret;
 }
 /*
@@ -251,6 +248,7 @@ static void tc_sync_wait(const void *pwm_reg, const uint32_t max_bit_width)
 		break;
 	}
 }
+
 /*
  *This function resets the TC registers for the given PWM.
  *It sets the TC_CTRLA register to initiate a software reset based on the
@@ -258,7 +256,6 @@ static void tc_sync_wait(const void *pwm_reg, const uint32_t max_bit_width)
  *complete.
  */
 static int tc_reset_regs(const void *pwm_reg, const uint32_t max_bit_width)
-
 {
 	int32_t ret_val = MCHP_PWM_SUCCESS;
 
@@ -290,6 +287,7 @@ static int tc_reset_regs(const void *pwm_reg, const uint32_t max_bit_width)
 		LOG_DBG("%s invoked %d", __func__, max_bit_width);
 		tc_sync_wait(pwm_reg, max_bit_width);
 	} while (0);
+
 	return ret_val;
 }
 
@@ -345,6 +343,7 @@ static int32_t tc_enable(const void *pwm_reg, const uint32_t max_bit_width, bool
 
 		tc_sync_wait(pwm_reg, max_bit_width);
 	} while (0);
+
 	return ret_val;
 }
 
@@ -391,6 +390,7 @@ static int32_t tc_set_mode(const void *pwm_reg, const uint32_t max_bit_width)
 		tc_sync_wait(pwm_reg, max_bit_width);
 		LOG_DBG("Mode set = %x\n", TC_CTRLA_MODE(TC_CTRLA_MODE_COUNT8_Val));
 	} while (0);
+
 	return ret_val;
 }
 
@@ -436,6 +436,7 @@ static int32_t tc_set_pulse(const void *pwm_reg, uint32_t max_bit_width, uint32_
 			break;
 		}
 	} while (0);
+
 	return ret_val;
 }
 
@@ -481,6 +482,7 @@ static int32_t tc_set_period(const void *pwm_reg, const uint32_t max_bit_width,
 		LOG_DBG("period %d set to %x", max_bit_width, period);
 		tc_sync_wait(pwm_reg, max_bit_width);
 	} while (0);
+
 	return ret_val;
 }
 
@@ -530,6 +532,7 @@ static int32_t tc_set_invert(const void *pwm_reg, const uint32_t max_bit_width, 
 		tc_enable(pwm_reg, max_bit_width, true);
 		tc_sync_wait(pwm_reg, max_bit_width);
 	} while (0);
+
 	return ret_val;
 }
 
@@ -563,6 +566,7 @@ static bool tc_get_invert_status(const void *pwm_reg, const uint32_t max_bit_wid
 		LOG_ERR("%s : Unsupported PWM mode %d", __func__, max_bit_width);
 		break;
 	}
+
 	return (invert_status == 0) ? true : false;
 }
 
@@ -604,6 +608,7 @@ static int32_t tc_set_prescaler(const void *pwm_reg, const uint32_t max_bit_widt
 		}
 		tc_sync_wait(pwm_reg, max_bit_width);
 	} while (0);
+
 	return ret_val;
 }
 
@@ -649,6 +654,7 @@ static int32_t tc_set_wave_type(const void *pwm_reg, const uint32_t max_bit_widt
 		tc_sync_wait(pwm_reg, max_bit_width);
 		LOG_DBG("%s invoked", __func__);
 	} while (0);
+
 	return ret_val;
 }
 
@@ -700,12 +706,12 @@ static int tc_init(const pwm_mchp_config_t *const mchp_pwm_cfg)
 		}
 
 	} while (0);
+
 	return ret;
 }
 /***********************************
  * Zephyr APIs
- **********************************
- */
+ ***********************************/
 /**
  * @brief Set the PWM cycles for a specific channel.
  *
@@ -771,6 +777,7 @@ static int pwm_mchp_set_cycles(const struct device *pwm_dev, uint32_t channel, u
 		}
 	} while (0);
 	MCHP_PWM_DATA_UNLOCK(&mchp_pwm_data->lock);
+
 	return ret_val;
 }
 
@@ -805,14 +812,19 @@ static int pwm_mchp_get_cycles_per_sec(const struct device *pwm_dev, uint32_t ch
 		/* clang-format off */
 		clock_control_get_rate(
 			mchp_pwm_cfg->pwm_clock.clock_dev,
-			mchp_pwm_cfg->pwm_clock.periph_async_clk,
+			mchp_pwm_cfg->pwm_clock.host_gclk,
 			&periph_clk_freq);
 		/* clang-format on */
 		*cycles = periph_clk_freq / mchp_pwm_cfg->prescaler;
 	} while (0);
 	MCHP_PWM_DATA_UNLOCK(&mchp_pwm_data->lock);
+
 	return ret_val;
 }
+
+/******************************************************************************
+ * @brief Zephyr driver instance creation
+ *****************************************************************************/
 
 /**
  * @brief PWM driver API structure for the Microchip PWM device.
@@ -821,9 +833,7 @@ static int pwm_mchp_get_cycles_per_sec(const struct device *pwm_dev, uint32_t ch
  * cycles, getting the number of cycles per second, and optionally configuring, enabling, and
  * disabling PWM capture.
  */
-static DEVICE_API(pwm, pwm_mchp_driver_api) = {
-/* static const struct pwm_driver_api pwm_mchp_driver_api = {
- */	/* Turn the clock on for the specified subsystem. */
+static DEVICE_API(pwm, pwm_mchp_api) = {
 	.set_cycles = pwm_mchp_set_cycles,
 	.get_cycles_per_sec = pwm_mchp_get_cycles_per_sec,
 #ifdef CONFIG_PWM_CAPTURE
@@ -853,36 +863,36 @@ static int pwm_mchp_init(const struct device *pwm_dev)
 	MCHP_PWM_DATA_LOCK_INIT(&mchp_pwm_data->lock);
 	do {
 		ret_val = clock_control_on(mchp_pwm_cfg->pwm_clock.clock_dev,
-					   mchp_pwm_cfg->pwm_clock.periph_async_clk);
-		if (ret_val < 0) {
-			LOG_ERR("Failed to enable the periph_async_clk for PWM: %d", ret_val);
+					   mchp_pwm_cfg->pwm_clock.host_gclk);
+		if ((ret_val < 0) && (ret_val != -EALREADY)) {
+			LOG_ERR("Failed to enable the host_gclk for PWM: %d", ret_val);
 			break;
 		}
 		ret_val = clock_control_on(mchp_pwm_cfg->pwm_clock.clock_dev,
-					   mchp_pwm_cfg->pwm_clock.host_core_sync_clk);
-		if (ret_val < 0) {
-			LOG_ERR("Failed to enable the host_core_sync_clk for PWM: %d", ret_val);
+					   mchp_pwm_cfg->pwm_clock.host_mclk);
+		if ((ret_val < 0) && (ret_val != -EALREADY)) {
+			LOG_ERR("Failed to enable the host_mclk for PWM: %d", ret_val);
 			break;
 		}
 		/* If the mode is 32 bit the turn on the clock of the client peripheral as well.
-		 * Need to ensure that the peripheral id of the current instance is less than the
-		 * given limit. This is because only till PERIPH_ID_MAX is capable of chaining to a
-		 * client peripheral for 32 bit mode
+		 * If the client clock is not provided in the device tree that means it is not
+		 * supported for that particular instance. The MCLK of the client peripheral is to
+		 * be turned on in case 32 bit mode is to be enabled
 		 */
-		if ((mchp_pwm_cfg->max_bit_width == BIT_MODE_32) &&
-		    ((mchp_pwm_cfg->id) <= PERIPH_ID_MAX) && (((mchp_pwm_cfg->id) & 1) == 0)) {
-			ret_val = clock_control_on(mchp_pwm_cfg->pwm_clock.clock_dev,
-						   (mchp_pwm_cfg->pwm_clock.client_core_sync_clk));
-			if (ret_val < 0) {
-				LOG_ERR("Failed to enable the client_core_sync_clk for PWM: %d",
-					ret_val);
+		if (mchp_pwm_cfg->max_bit_width == BIT_MODE_32) {
+			if (mchp_pwm_cfg->pwm_clock.client_mclk != NULL) {
+
+				ret_val = clock_control_on(mchp_pwm_cfg->pwm_clock.clock_dev,
+							   (mchp_pwm_cfg->pwm_clock.client_mclk));
+				if ((ret_val < 0) && (ret_val != -EALREADY)) {
+					LOG_ERR("Failed to enable the client_mclk: %d", ret_val);
+					break;
+				}
+			} else {
+				LOG_ERR("Peripheral does not support 32 bit mode");
+				ret_val = -ENOTSUP;
 				break;
 			}
-		} else if (mchp_pwm_cfg->max_bit_width == BIT_MODE_32) {
-			LOG_ERR("The selected mode is not supported for the peripheral tc %d",
-				mchp_pwm_cfg->id);
-			ret_val = -EINVAL;
-			break;
 		}
 
 		ret_val = pinctrl_apply_state(mchp_pwm_cfg->pinctrl_config, PINCTRL_STATE_DEFAULT);
@@ -892,18 +902,25 @@ static int pwm_mchp_init(const struct device *pwm_dev)
 		}
 		ret_val = tc_init(mchp_pwm_cfg);
 	} while (0);
+	ret_val = (ret_val == -EALREADY) ? 0 : ret_val;
+
 	return ret_val;
 }
 
-/**                                                                                                \
- * @brief Macro to define the PWM data structure for a specific instance.                          \
- *                                                                                                 \
- * This macro defines the PWM data structure for a specific instance of the Microchip PWM device.  \
- *                                                                                                 \
- * @param n Instance number.                                                                       \
+/**
+ * @brief Macro to define the PWM data structure for a specific instance.
+ *
+ * This macro defines the PWM data structure for a specific instance of the Microchip PWM device.
+ *
+ * @param n Instance number.
  */
 #define PWM_MCHP_DATA_DEFN(n) static pwm_mchp_data_t pwm_mchp_data_##n
-
+/* clang-format off */
+#define GET_THE_CLIENT_MCLOCK_IF_AVAILABLE(n)						\
+	COND_CODE_1(DT_INST_CLOCKS_HAS_NAME(n, client_mclk),				\
+	((void *)(DT_INST_CLOCKS_CELL_BY_NAME(n, client_mclk, subsystem))),		\
+	NULL)
+/* clang-format on */
 /**
  * @brief Macro to assign clock configurations for the Microchip PWM device.
  *
@@ -917,19 +934,13 @@ static int pwm_mchp_init(const struct device *pwm_dev)
  *       and peripheral asynchronous clock configurations based on the presence
  *       of relevant device tree properties.
  */
+
 /* clang-format off */
-#define PWM_MCHP_CLOCK_ASSIGN(n)								\
-	.pwm_clock.clock_dev = DEVICE_DT_GET(DT_NODELABEL(clock)),				\
-	.pwm_clock.host_core_sync_clk = (void *)(DT_INST_CLOCKS_CELL_BY_NAME(n, mclk, subsystem)),\
-	COND_CODE_1(DT_NODE_HAS_PROP(DT_NODELABEL(tc##n), client),				\
-	(.pwm_clock.client_core_sync_clk = (void *)DT_CLOCKS_CELL_BY_NAME(			\
-	DT_PHANDLE(DT_NODELABEL(tc##n), client), mclk, subsystem),), ())			\
-	COND_CODE_1(DT_NODE_EXISTS(DT_INST_CLOCKS_CTLR_BY_NAME(n, rtcclk)),			\
-	(.pwm_clock.periph_async_clk = (void *)DT_INST_CLOCKS_CELL_BY_NAME(n, rtcclk, subsystem)\
-	,), ())											\
-	COND_CODE_1(DT_NODE_EXISTS(DT_INST_CLOCKS_CTLR_BY_NAME(n, gclk)),			\
-	(.pwm_clock.periph_async_clk = (void *)DT_INST_CLOCKS_CELL_BY_NAME(n, gclk, subsystem),),\
-	())
+#define PWM_MCHP_CLOCK_ASSIGN(n)								  \
+	.pwm_clock.clock_dev = DEVICE_DT_GET(DT_NODELABEL(clock)),				  \
+	.pwm_clock.host_mclk = (void *)(DT_INST_CLOCKS_CELL_BY_NAME(n, mclk, subsystem)),\
+	.pwm_clock.host_gclk = (void *)DT_INST_CLOCKS_CELL_BY_NAME(n, gclk, subsystem),    \
+	.pwm_clock.client_mclk = GET_THE_CLIENT_MCLOCK_IF_AVAILABLE(n)
 /* clang-format on */
 
 /**
@@ -945,7 +956,6 @@ static int pwm_mchp_init(const struct device *pwm_dev)
 		.prescaler = DT_INST_PROP(n, prescaler),                                           \
 		.pinctrl_config = PINCTRL_DT_INST_DEV_CONFIG_GET(n),                               \
 		.channels = DT_INST_PROP(n, channels),                                             \
-		.id = DT_INST_PROP(n, instance_id),                                                \
 		.regs = (void *)DT_INST_REG_ADDR(n),                                               \
 		.max_bit_width = DT_INST_PROP(n, max_bit_width),                                   \
 		PWM_MCHP_CLOCK_ASSIGN(n)}
@@ -961,7 +971,7 @@ static int pwm_mchp_init(const struct device *pwm_dev)
  */
 #define PWM_MCHP_DEVICE_DT_DEFN(n)                                                                 \
 	DEVICE_DT_INST_DEFINE(n, pwm_mchp_init, NULL, &pwm_mchp_data_##n, &pwm_mchp_config_##n,    \
-			      POST_KERNEL, CONFIG_PWM_INIT_PRIORITY, &pwm_mchp_driver_api)
+			      POST_KERNEL, CONFIG_PWM_INIT_PRIORITY, &pwm_mchp_api)
 
 /**
  * Initialize the PWM device with pin control, data, and configuration definitions.
