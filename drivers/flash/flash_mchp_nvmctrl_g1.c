@@ -23,11 +23,13 @@
 LOG_MODULE_REGISTER(flash_mchp_nvmctrl_g1);
 
 /*******************************************
+ * @brief Devicetree definitions
+ *******************************************/
+#define DT_DRV_COMPAT microchip_nvmctrl_g1_flash
+
+/*******************************************
  * Const and Macro Defines
  *******************************************/
-
-/* Define compatible string */
-#define DT_DRV_COMPAT microchip_nvmctrl_g1_flash
 
 /* Number of lock regions in the SoC non-volatile flash. */
 #define SOC_NV_FLASH_LOCK_REGIONS DT_INST_PROP(0, lock_regions)
