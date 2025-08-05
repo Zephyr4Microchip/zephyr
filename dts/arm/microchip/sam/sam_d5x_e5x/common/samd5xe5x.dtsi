@@ -202,7 +202,7 @@
 		};
 
 		nvmctrl: nvmctrl@41004000 {
-			compatible = "microchip,nvmctrl-g1";
+			compatible = "microchip,nvmctrl-g1-flash";
 			status = "disabled";
 			reg = <0x41004000 0x30>;
 			interrupts = <29 0>, <30 0>;
@@ -211,11 +211,13 @@
 			lock-regions = <32>;
 			#address-cells = <1>;
 			#size-cells = <1>;
+
 			flash0: flash@0 {
 				compatible = "soc-nv-flash";
 				write-block-size = <8>;
 				erase-block-size = <8192>;
 			};
+
 		    userrow: nvmuserrow@804000 {
 				compatible = "soc-nv-flash";
 				reg = <0x00804000 0x200>;

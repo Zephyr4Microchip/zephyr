@@ -7,7 +7,7 @@ description: |
   Group g1 NVMCTRL Flash driver supports following hardware peripherals:
     - module name="NVMCTRL" id="U2409" version="1.0.0"
 
-compatible: "microchip,nvmctrl-g1"
+compatible: "microchip,nvmctrl-g1-flash"
 
 include: flash-controller.yaml
 
