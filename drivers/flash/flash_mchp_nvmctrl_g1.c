@@ -11,8 +11,6 @@
  * Implements Zephyr Flash API support with basic flash memory
  * operations.
  *
- * Supported SoC Families:
- * - SOC_FAMILY_MCHP_SAM_D5X_E5X
  */
 
 #include <soc.h>
@@ -27,8 +25,9 @@ LOG_MODULE_REGISTER(flash_mchp_nvmctrl_g1);
 /*******************************************
  * Const and Macro Defines
  *******************************************/
-/* Device tree compatible string for Microchip nvmctrl g1. */
-#define DT_DRV_COMPAT microchip_nvmctrl_g1
+
+/* Define compatible string */
+#define DT_DRV_COMPAT microchip_nvmctrl_g1_flash
 
 /* Number of lock regions in the SoC non-volatile flash. */
 #define SOC_NV_FLASH_LOCK_REGIONS DT_INST_PROP(0, lock_regions)
@@ -100,12 +99,6 @@ LOG_MODULE_REGISTER(flash_mchp_nvmctrl_g1);
  * @brief Macro indicating successful operation.
  */
 #define FLASH_MCHP_SUCCESS 0
-
-/**
- * @def FLASH_MCHP_FAIL
- * @brief Macro indicating failed operation.
- */
-#define FLASH_MCHP_FAIL -1
 
 /**< Encodes the write mode value for the NVMCTRL_CTRLA register. */
 #define FLASH_SET_WMODE(mode) ((mode) << NVMCTRL_CTRLA_WMODE_Pos)
@@ -251,11 +244,11 @@ typedef enum {
  *                  be a power of two.
  *
  * @return FLASH_MCHP_SUCCESS if the value is aligned to the specified alignment,
- *         FLASH_MCHP_FAIL otherwise.
+ *         -EINVAL otherwise.
  */
 static inline int flash_aligned(size_t value, size_t alignment)
 {
-	return (((value & (alignment - 1)) == 0) ? FLASH_MCHP_SUCCESS : FLASH_MCHP_FAIL);
+	return (((value & (alignment - 1)) == 0) ? FLASH_MCHP_SUCCESS : -EINVAL);
 }
 
 /**
@@ -337,6 +330,7 @@ static inline void flash_clear_interrupt_flag(const struct device *dev)
 	flash_mchp_dev_data_t *mchp_flash_data = dev->data;
 
 	mchp_flash_data->interrupt_flag_status = NVM_REGS->NVMCTRL_INTFLAG;
+
 	/* Clear NVMCTRL INTFLAG register */
 	NVM_REGS->NVMCTRL_INTFLAG = mchp_flash_data->interrupt_flag_status;
 }
@@ -350,7 +344,7 @@ static inline void flash_clear_interrupt_flag(const struct device *dev)
  * failure code based on the presence of errors.
  *
  * @return Returns `FLASH_MCHP_SUCCESS` if no errors are detected, or
- *         `FLASH_MCHP_FAIL` if any error flags are set.
+ *         `-EIO` if any error flags are set.
  */
 static int flash_get_interrupt_status_error(const struct device *dev)
 {
@@ -365,7 +359,7 @@ static int flash_get_interrupt_status_error(const struct device *dev)
 
 	if ((status & error_mask) != 0) {
 		LOG_ERR("flash operation failed with status 0x%x", status);
-		ret = FLASH_MCHP_FAIL;
+		ret = -EIO;
 	}
 
 	return ret;
@@ -429,7 +423,6 @@ static inline void flash_pagebuffer_clear(const struct device *dev)
  * @param address Destination address in flash memory where the data will be written.
  *
  * @retval FLASH_MCHP_SUCCESS if the write operation is successful.
- * @retval FLASH_MCHP_FAIL if the write operation fails.
  */
 static int flash_doubleword_write(const struct device *dev, const void *data, uint32_t address)
 {
@@ -452,9 +445,6 @@ static int flash_doubleword_write(const struct device *dev, const void *data, ui
 	flash_status_ready_wait(dev);
 
 	ret = flash_get_interrupt_status_error(dev);
-	if (ret != FLASH_MCHP_SUCCESS) {
-		ret = FLASH_MCHP_FAIL;
-	}
 
 	return ret;
 }
@@ -472,7 +462,6 @@ static int flash_doubleword_write(const struct device *dev, const void *data, ui
  * @param address Destination address in flash memory where the data will be written.
  *
  * @retval FLASH_MCHP_SUCCESS if the write operation is successful.
- * @retval FLASH_MCHP_FAIL if the write operation fails.
  */
 static int flash_quadword_write(const struct device *dev, const void *data, uint32_t address)
 {
@@ -495,9 +484,6 @@ static int flash_quadword_write(const struct device *dev, const void *data, uint
 	flash_status_ready_wait(dev);
 
 	ret = flash_get_interrupt_status_error(dev);
-	if (ret != FLASH_MCHP_SUCCESS) {
-		ret = FLASH_MCHP_FAIL;
-	}
 
 	return ret;
 }
@@ -514,10 +500,7 @@ static int flash_quadword_write(const struct device *dev, const void *data, uint
  * @param dev Pointer to the device structure representing the flash controller.
  * @param address The memory address of the block to be erased.
  *
- * @return Returns `FLASH_MCHP_SUCCESS` if the block erase operation is
- *         successful, or `FLASH_MCHP_FAIL` if an error occurs during the
- *         operation.
- *
+ * @retval FLASH_MCHP_SUCCESS if the erase operation is successful.
  */
 static int flash_erase_block(const struct device *dev, uint32_t address)
 {
@@ -530,9 +513,7 @@ static int flash_erase_block(const struct device *dev, uint32_t address)
 	flash_status_ready_wait(dev);
 
 	ret = flash_get_interrupt_status_error(dev);
-	if (ret != FLASH_MCHP_SUCCESS) {
-		ret = FLASH_MCHP_FAIL;
-	}
+
 	return ret;
 }
 
@@ -549,7 +530,7 @@ static int flash_erase_block(const struct device *dev, uint32_t address)
  * @param data    Pointer to the source data buffer to be written (must be 32-bit aligned).
  * @param address Destination address in flash memory where the data will be written.
  *
- * @return FLASH_MCHP_SUCCESS (0) on success, or FLASH_MCHP_FAIL on failure.
+ * @retval FLASH_MCHP_SUCCESS if the write operation is successful.
  */
 static int flash_page_write(const struct device *dev, const void *data, uint32_t address)
 {
@@ -572,9 +553,6 @@ static int flash_page_write(const struct device *dev, const void *data, uint32_t
 	flash_status_ready_wait(dev);
 
 	ret = flash_get_interrupt_status_error(dev);
-	if (ret != FLASH_MCHP_SUCCESS) {
-		ret = FLASH_MCHP_FAIL;
-	}
 
 	return ret;
 }
@@ -705,6 +683,7 @@ static int flash_handle_unaligned_end(const struct device *dev, off_t offset, co
 			LOG_ERR("double word write failed at 0x%lx", (long)aligned_addr);
 		}
 	}
+
 	return ret;
 }
 #endif /*CONFIG_FLASH_HAS_UNALIGNED_WRITE*/
@@ -767,6 +746,7 @@ static int flash_mchp_write(const struct device *dev, off_t offset, const void *
 #endif /*CONFIG_FLASH_HAS_UNALIGNED_WRITE*/
 
 		while (len >= FLASH_MCHP_DOUBLE_WORD_SIZE) {
+
 			/* 512-byte page write */
 			if ((len >= FLASH_MCHP_PAGE_SIZE) &&
 			    (flash_aligned(offset, FLASH_MCHP_PAGE_SIZE) == FLASH_MCHP_SUCCESS)) {
@@ -826,6 +806,7 @@ static int flash_mchp_write(const struct device *dev, off_t offset, const void *
 	} while (0);
 
 	FLASH_MCHP_DATA_UNLOCK(&mchp_flash_data->flash_data_lock);
+
 	return ret;
 }
 
@@ -879,6 +860,7 @@ static int flash_mchp_erase(const struct device *dev, off_t offset, size_t size)
 		}
 
 		while (size > 0U) {
+
 			/* Erase the block */
 			ret = flash_erase_block(dev, offset);
 			if (ret != FLASH_MCHP_SUCCESS) {
@@ -988,7 +970,7 @@ static void flash_mchp_page_layout(const struct device *dev,
  *
  * @param address The address to be checked.
  * @return Returns FLASH_MCHP_SUCCESS if the address is within the user row range,
- *         otherwise returns FLASH_MCHP_FAIL if the address is outside the range.
+ *         otherwise returns -EINVAL if the address is outside the range.
  */
 static int flash_check_offset_user_range(uint32_t address)
 {
@@ -997,7 +979,7 @@ static int flash_check_offset_user_range(uint32_t address)
 	/* Check if the address is outside the user row range */
 	if ((address < SOC_NV_USERROW_BASE_ADDR) ||
 	    (address > (SOC_NV_USERROW_BASE_ADDR + SOC_NV_USERROW_SIZE))) {
-		ret = FLASH_MCHP_FAIL;
+		ret = -EINVAL;
 	}
 
 	return ret;
@@ -1015,9 +997,7 @@ static int flash_check_offset_user_range(uint32_t address)
  * @param[in] dev Pointer to the device structure representing the NVMCTRL hardware instance.
  * @param address The memory address of the user row to be erased.
  *
- * @return Returns `FLASH_MCHP_SUCCESS` if the user row erase operation is
- *         successful, or `FLASH_MCHP_FAIL` if an error occurs during the
- *         operation.
+ * @retval FLASH_MCHP_SUCCESS if the erase operation is successful.
  */
 static int flash_user_row_erase(const struct device *dev, uint32_t address)
 {
@@ -1030,9 +1010,7 @@ static int flash_user_row_erase(const struct device *dev, uint32_t address)
 	flash_status_ready_wait(dev);
 
 	ret = flash_get_interrupt_status_error(dev);
-	if (ret != FLASH_MCHP_SUCCESS) {
-		ret = FLASH_MCHP_FAIL;
-	}
+
 	return ret;
 }
 
@@ -1145,7 +1123,6 @@ static int flash_ex_op_user_row_erase(const struct device *dev, const uintptr_t 
  * @param out Unused output parameter (reserved for future use or interface compatibility).
  *
  * @retval FLASH_MCHP_SUCCESS if all regions are successfully locked.
- * @retval FLASH_MCHP_FAIL if locking any region fails.
  */
 static int flash_ex_op_region_lock(const struct device *dev, const uintptr_t in, void *out)
 {
@@ -1162,7 +1139,6 @@ static int flash_ex_op_region_lock(const struct device *dev, const uintptr_t in,
 
 		ret = flash_get_interrupt_status_error(dev);
 		if (ret != FLASH_MCHP_SUCCESS) {
-			ret = FLASH_MCHP_FAIL;
 			break;
 		}
 	}
@@ -1182,7 +1158,6 @@ static int flash_ex_op_region_lock(const struct device *dev, const uintptr_t in,
  * @param out Unused output parameter (reserved for future use or interface compatibility).
  *
  * @retval FLASH_MCHP_SUCCESS if all regions are successfully unlocked.
- * @retval FLASH_MCHP_FAIL if unlocking any region fails.
  */
 static int flash_ex_op_region_unlock(const struct device *dev, const uintptr_t in, void *out)
 {
@@ -1199,7 +1174,6 @@ static int flash_ex_op_region_unlock(const struct device *dev, const uintptr_t i
 
 		ret = flash_get_interrupt_status_error(dev);
 		if (ret != FLASH_MCHP_SUCCESS) {
-			ret = FLASH_MCHP_FAIL;
 			break;
 		}
 	}
@@ -1278,18 +1252,26 @@ static void flash_mchp_isr(const struct device *dev)
  */
 static int flash_mchp_init(const struct device *dev)
 {
-	const flash_mchp_dev_config_t *const mchp_flash_cfg = DEV_CFG(dev);
-	flash_mchp_dev_data_t *mchp_flash_data = dev->data;
+	int ret = FLASH_MCHP_SUCCESS;
 
-	FLASH_MCHP_DATA_MUTEX_INIT(&(mchp_flash_data->flash_data_lock));
+	do {
+		const flash_mchp_dev_config_t *const mchp_flash_cfg = DEV_CFG(dev);
+		flash_mchp_dev_data_t *mchp_flash_data = dev->data;
 
-	clock_control_on(mchp_flash_cfg->flash_clock.clock_dev,
-			 mchp_flash_cfg->flash_clock.mclk_sys);
+		FLASH_MCHP_DATA_MUTEX_INIT(&(mchp_flash_data->flash_data_lock));
 
-	mchp_flash_cfg->irq_config_func(dev);
-	flash_controller_init(dev);
+		ret = clock_control_on(mchp_flash_cfg->flash_clock.clock_dev,
+				       mchp_flash_cfg->flash_clock.mclk_sys);
+		if ((ret != FLASH_MCHP_SUCCESS) && (ret != -EALREADY)) {
+			break;
+		}
 
-	return 0;
+		mchp_flash_cfg->irq_config_func(dev);
+
+		flash_controller_init(dev);
+	} while (0);
+
+	return ret;
 }
 
 /**
