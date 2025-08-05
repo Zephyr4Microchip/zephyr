@@ -165,7 +165,7 @@
 		};
 
 		rstc: rstc@40000c00 {
-			compatible = "microchip,rstc-g1";
+			compatible = "microchip,rstc-g1-reset";
 			status = "okay";
 			reg = <0x40000c00 0x400>;
 		};
