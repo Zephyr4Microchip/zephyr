@@ -27,7 +27,9 @@
 
 LOG_MODULE_REGISTER(wdt_mchp_g1, CONFIG_WDT_LOG_LEVEL);
 
-#define DT_DRV_COMPAT microchip_wdt_g1 /*Device Tree Driver Compatibility */
+/* Define compatible string */
+#define DT_DRV_COMPAT microchip_wdt_g1
+
 /**
  * @brief Type definition for the WDT lock.
  *
@@ -223,6 +225,7 @@ static void wdt_sync_wait(const wdt_registers_t *regs)
 static int wdt_enable(wdt_registers_t *regs, bool enable)
 {
 	int ret = WDT_MCHP_SUCCESS;
+
 	/* enable watchdog peripheral bit in the ctrl register*/
 	if (enable != 0) {
 		regs->WDT_CTRLA |= WDT_CTRLA_ENABLE(1);
@@ -236,6 +239,7 @@ static int wdt_enable(wdt_registers_t *regs, bool enable)
 	}
 	wdt_sync_wait(regs);
 	LOG_DBG("ctrl reg = 0x%x\n", regs->WDT_CTRLA);
+
 	return ret;
 }
 /**
@@ -265,6 +269,7 @@ static uint32_t wdt_get_period_idx(uint32_t timeout_ms)
 		next_period = (1ULL << 32) >> __builtin_clz(cycles - 1);
 		ret_val = find_msb_set(next_period >> 4);
 	} while (0);
+
 	return ret_val;
 }
 
@@ -288,6 +293,7 @@ static wdt_mchp_channel_data_t wdt_get_timeout_val(uint32_t window_closed_time,
 	new_timeout.window.max =
 		(window_closed_time ? (PERIOD_VALUE(per_index) + PERIOD_VALUE(window_index))
 				    : PERIOD_VALUE(per_index));
+
 	return new_timeout;
 }
 /**
@@ -386,6 +392,7 @@ static inline int wdt_validate_window(uint32_t timeout_min, uint32_t timeout_max
 static inline int wdt_interrupt_enable(wdt_registers_t *regs)
 {
 	ARG_UNUSED(regs);
+
 	return WDT_MCHP_FAIL;
 }
 /**
@@ -397,6 +404,7 @@ static inline int wdt_interrupt_enable(wdt_registers_t *regs)
 static inline int wdt_interrupt_flag_clear(wdt_registers_t *regs)
 {
 	ARG_UNUSED(regs);
+
 	return WDT_MCHP_FAIL;
 }
 /**
@@ -432,6 +440,7 @@ static wdt_mchp_channel_data_t wdt_set_timeout(wdt_registers_t *regs, uint32_t w
 
 	wdt_mchp_channel_data_t set_timeout = {0};
 	uint8_t window = wdt_get_period_idx(window_closed_time);
+
 	/* The difference is taken as the total time of WDT
 	 * defined by the CONFIG.window + CONFIG.per register value
 	 */
@@ -441,6 +450,7 @@ static wdt_mchp_channel_data_t wdt_set_timeout(wdt_registers_t *regs, uint32_t w
 		WDT_CONFIG_PER(per));
 
 	set_timeout.window.min = window_closed_time ? PERIOD_VALUE(window) : 0;
+
 	/*Based on the mode the window mode or normal mode, timeout max is returned
 	 */
 	set_timeout.window.max = (window_closed_time ? (PERIOD_VALUE(per) + PERIOD_VALUE(window))
@@ -448,6 +458,7 @@ static wdt_mchp_channel_data_t wdt_set_timeout(wdt_registers_t *regs, uint32_t w
 	regs->WDT_CONFIG = WDT_CONFIG_WINDOW(window) | WDT_CONFIG_PER(per);
 	wdt_sync_wait(regs);
 	LOG_DBG("wdt_config = 0x%x\n\r", regs->WDT_CONFIG);
+
 	return set_timeout;
 }
 /**
@@ -472,6 +483,7 @@ static int wdt_apply_options(wdt_registers_t *regs, uint8_t options)
 	if ((options & WDT_OPT_PAUSE_IN_SLEEP) != 0) {
 		ret_val = -ENOTSUP;
 	}
+
 	return ret_val;
 }
 /***********************************
@@ -540,6 +552,7 @@ static int wdt_mchp_setup(const struct device *wdt_dev, uint8_t options)
 		LOG_DBG("watchdog enabled : 0x%x\n\r", wdt_is_enabled(regs));
 	} while (0);
 	WDT_DATA_UNLOCK(&mchp_wdt_data->lock);
+
 	return ret;
 }
 
@@ -566,6 +579,7 @@ static int wdt_mchp_disable(const struct device *wdt_dev)
 	irq_key = irq_lock();
 	do {
 		mchp_wdt_data->installed_timeout_cnt = 0;
+
 		/*if watchdog is not enabled, then return fault*/
 		if (wdt_is_enabled(regs) == false) {
 			ret = -EFAULT;
@@ -614,6 +628,7 @@ static int wdt_mchp_install_timeout(const struct device *wdt_dev, const struct w
 		mchp_wdt_data->window_mode = (((cfg->window.min) > 0) ? true : false);
 		mchp_wdt_data->interrupt_enabled =
 			((mchp_wdt_data->callback != NULL) ? true : false);
+
 		/* CONFIG is enable protected, error out if already enabled */
 		if (wdt_is_enabled(regs) != 0) {
 			LOG_ERR("Watchdog already setup");
@@ -622,6 +637,7 @@ static int wdt_mchp_install_timeout(const struct device *wdt_dev, const struct w
 		}
 #if defined(WDT_FLAG_ONLY_ONE_TIMEOUT_VALUE_SUPPORTED)
 		wdt_mchp_channel_data_t new_set_timeout = {0};
+
 		/*Check whether the new timeout is different from the already existing
 		 *timeout
 		 */
@@ -643,12 +659,14 @@ static int wdt_mchp_install_timeout(const struct device *wdt_dev, const struct w
 			ret = -ENOMEM;
 			break;
 		}
+
 		/*Set the behaviour of the watchdog peripheral based on the flags supplied
 		 */
 		ret = wdt_reset_type_set(cfg->flags);
 		if (ret < 0) {
 			break;
 		}
+
 		/*validate the timeout window to be in the range available for the
 		 *peripheral
 		 */
@@ -658,6 +676,7 @@ static int wdt_mchp_install_timeout(const struct device *wdt_dev, const struct w
 			ret = -EINVAL;
 			break;
 		}
+
 		/*register the provided callback and enable the interrupt*/
 		if (mchp_wdt_data->interrupt_enabled != 0) {
 			mchp_wdt_data->callback = cfg->callback;
@@ -678,6 +697,7 @@ static int wdt_mchp_install_timeout(const struct device *wdt_dev, const struct w
 			break;
 		}
 		actual_set_timeout = wdt_set_timeout(regs, cfg->window.min, cfg->window.max);
+
 		/*Update the channel_data structure with the window parameters of each
 		 *channel
 		 */
@@ -697,6 +717,7 @@ static int wdt_mchp_install_timeout(const struct device *wdt_dev, const struct w
 		irq_unlock(irq_key);
 	} while (0);
 	WDT_DATA_UNLOCK(&mchp_wdt_data->lock);
+
 	return ret;
 }
 /**
@@ -733,12 +754,14 @@ static int wdt_mchp_feed(const struct device *wdt_dev, int channel_id)
 			ret = -EINVAL;
 			break;
 		}
+
 		/* Clear the watchdog timer */
 		regs->WDT_CLEAR = WDT_CLEAR_CLEAR_KEY_Val;
 	} while (0);
 	if (k_is_in_isr() == false) {
 		WDT_DATA_UNLOCK(&mchp_wdt_data->lock);
 	}
+
 	return ret;
 }
 /**
@@ -783,6 +806,7 @@ static int wdt_mchp_init(const struct device *wdt_dev)
 		mchp_wdt_cfg->irq_config_func(wdt_dev);
 	} while (0);
 	ret_val = (ret_val == -EALREADY) ? 0 : ret_val;
+
 	return ret_val;
 }
 
