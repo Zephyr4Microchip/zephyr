@@ -34,6 +34,12 @@ config WDT_MCHP_U2251_1_1_0
 	help
 	  The SoC contains Watchdog IP version 1.1.0 (U2251).
 
+config RESET_MCHP_RSTC_U2239_4_0_0
+	bool
+	default y
+	help
+	  Enable RESET peripheral IP version 4.0.0 (U2239).
+
 endif # SOC_FAMILY_MICROCHIP_SAM_D5X_E5X
 
 rsource "*/Kconfig.soc"

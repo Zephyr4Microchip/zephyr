@@ -12,6 +12,7 @@ ram: 256
 supported:
   - dma
   - pinctrl
+  - reset
   - shell
   - uart
   - watchdog
