@@ -318,20 +318,19 @@
 			compatible = "microchip,tc-g1";
 			reg = <0x40003800 0x400>;
 			interrupts = <107 0>;
-			instance-id = <PWM_COUNTER_MCHP_SAM_D5X_E5X_TC0_ID>;
 			clocks = <&mclkperiph CLOCK_MCHP_MCLKPERIPH_ID_APBA_TC0>,
-					<&gclkperiph CLOCK_MCHP_GCLKPERIPH_ID_TC0>;
-			clock-names = "mclk", "gclk";
+				 <&gclkperiph CLOCK_MCHP_GCLKPERIPH_ID_TC0>,
+				 <&mclkperiph CLOCK_MCHP_MCLKPERIPH_ID_APBA_TC1>;
+			clock-names = "mclk", "gclk" ,"client_mclk" ;
 			prescaler = <1>;
-			client = <&tc1>;
 		};
+
 		tc1: tc@40003c00 {
 			compatible = "microchip,tc-g1";
 			reg = <0x40003c00 0x400>;
 			interrupts = <108 0>;
-			instance-id = <PWM_COUNTER_MCHP_SAM_D5X_E5X_TC1_ID>;
 			clocks = <&mclkperiph CLOCK_MCHP_MCLKPERIPH_ID_APBA_TC1>,
-					<&gclkperiph CLOCK_MCHP_GCLKPERIPH_ID_TC1>;
+				 <&gclkperiph CLOCK_MCHP_GCLKPERIPH_ID_TC1>;
 			clock-names = "mclk", "gclk";
 			prescaler = <1>;
 		};
@@ -397,21 +396,20 @@
 			compatible = "microchip,tc-g1";
 			reg = <0x4101a000 0x400>;
 			interrupts = <109 0>;
-			instance-id = <PWM_COUNTER_MCHP_SAM_D5X_E5X_TC2_ID>;
 			clocks = <&mclkperiph CLOCK_MCHP_MCLKPERIPH_ID_APBB_TC2>,
-				 <&gclkperiph CLOCK_MCHP_GCLKPERIPH_ID_TC2>;
-			clock-names = "mclk", "gclk";
+				 <&gclkperiph CLOCK_MCHP_GCLKPERIPH_ID_TC2>,
+				 <&mclkperiph CLOCK_MCHP_MCLKPERIPH_ID_APBB_TC3>;
+			clock-names = "mclk", "gclk","client_mclk" ;
 			prescaler = <1>;
-			client = <&tc3>;
+
 		};
 
 		tc3: tc@4101c000 {
 			compatible = "microchip,tc-g1";
 			reg = <0x4101c000 0x400>;
 			interrupts = <110 0>;
-			instance-id = <PWM_COUNTER_MCHP_SAM_D5X_E5X_TC3_ID>;
 			clocks = <&mclkperiph CLOCK_MCHP_MCLKPERIPH_ID_APBB_TC3>,
-					<&gclkperiph CLOCK_MCHP_GCLKPERIPH_ID_TC3>;
+				 <&gclkperiph CLOCK_MCHP_GCLKPERIPH_ID_TC3>;
 			clock-names = "mclk", "gclk";
 			prescaler = <1>;
 		};

@@ -1,7 +1,7 @@
 # Copyright (c) 2025 Microchip Technology Inc.
 # SPDX-License-Identifier: Apache-2.0
 
-description: >
+description: |
   Microchip TC g1 peripherals are used for creating the PWM output on different channels
   as well as used as a timer/counter.
   This yaml supports the following peripherals
@@ -16,25 +16,30 @@ include:
 
 properties:
   reg:
-    description: >
+    description: |
       Specifies the base address and size of the register set for the timer counter peripheral.
     required: true
 
   interrupts:
-    description: >
+    description: |
       Defines the interrupt lines used by the timer counter peripheral. This property
       specifies the interrupt number and priority.
     required: true
 
   clocks:
-    description: >
+    description: |
       Specifies the clock sources and their configurations for the timer counter peripheral.
       This property ensures the peripheral is provided with the necessary clock signals.
+      The following are the clock names applicable to this property.
+       - mclk
+       - gclk
+       - client_mclk : This is the clock subsystem of the client with
+         which the instance can be paired
     required: true
 
   prescaler:
     type: int
-    description: >
+    description: |
       Timer prescaler values. The prescaler divides the input clock frequency to
       achieve the desired timer frequency. Common prescaler values include 1, 2,
       4, 8, 16, 64, 256, and 1024.
@@ -47,18 +52,3 @@ properties:
       - 64
       - 256
       - 1024
-
-  client:
-    type: phandle
-    description: >
-      A client reference to another device node, allowing linkage between
-      this TC module and another component in the device tree.
-
-  instance-id:
-    type: int
-    required: true
-    description: >
-      Unique identifier indicating the sequence or instance number of the peripheral.
-      This is primarily used for scenarios like chaining peripherals (e.g., for 32-bit
-      PWM or counter operation). The value determines the peripheral's position in
-      the chaining hierarchy.
