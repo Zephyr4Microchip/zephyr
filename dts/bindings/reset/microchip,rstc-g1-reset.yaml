@@ -14,4 +14,5 @@ compatible: "microchip,rstc-g1-reset"
 properties:
   reg:
     required: true
-    description: Base address and size of the RSTC register block.
+    description: |
+      Base address and size of the RSTC register block.
