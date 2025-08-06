@@ -23,8 +23,6 @@
 #include <zephyr/drivers/entropy.h>
 #include <zephyr/logging/log.h>
 
-LOG_MODULE_REGISTER(entropy_mchp_trng_g1, CONFIG_INTC_LOG_LEVEL);
-
 /*******************************************
  * @brief Devicetree definitions
  *******************************************/
@@ -33,6 +31,8 @@ LOG_MODULE_REGISTER(entropy_mchp_trng_g1, CONFIG_INTC_LOG_LEVEL);
 /*******************************************
  * Const and Macro Defines
  *******************************************/
+LOG_MODULE_REGISTER(entropy_mchp_trng_g1, CONFIG_INTC_LOG_LEVEL);
+
 /** @brief Timeout value for TRNG readiness polling. */
 #define TRNG_TIMEOUT 1000000
 
@@ -42,12 +42,15 @@ LOG_MODULE_REGISTER(entropy_mchp_trng_g1, CONFIG_INTC_LOG_LEVEL);
 /** @brief Macro to access the TRNG register block from the device config. */
 #define ENTROPY_REGS ((const entropy_mchp_config_t *)(dev)->config)->regs
 
+/*******************************************
+ * @brief Data type definitions
+ ******************************************/
 /**
  * @struct entropy_mchp_clock
  * @brief Clock configuration structure for entropy (TRNG) peripheral.
  *
- * This structure defines the clock configuration for the entropy (TRNG) peripheral,
- * including the clock device and subsystem.
+ * This structure defines the clock configuration for the entropy (TRNG)
+ *  peripheral, including the clock device and subsystem.
  */
 
 typedef struct entropy_mchp_clock {
@@ -74,6 +77,9 @@ typedef struct entropy_mchp_config {
 
 } entropy_mchp_config_t;
 
+/*******************************************
+ * @brief Helper functions
+ ******************************************/
 /**
  * @brief Check if TRNG data is ready.
  *
@@ -114,6 +120,7 @@ static int entropy_wait_ready(const struct device *dev)
 		}
 		timeout--;
 	}
+
 	return ret;
 }
 
@@ -171,6 +178,9 @@ static int entropy_read(const struct device *dev, uint8_t *buffer, uint16_t leng
 	return ret;
 }
 
+/******************************************************************************
+ * @brief API functions
+ *****************************************************************************/
 /**
  * @brief Get entropy (random data) from the TRNG (blocking).
  *
@@ -270,6 +280,9 @@ static int entropy_mchp_init(const struct device *dev)
 	return ret_val;
 }
 
+/******************************************************************************
+ * @brief Zephyr driver instance creation
+ *****************************************************************************/
 /** Entropy driver API structure. */
 static DEVICE_API(entropy, entropy_mchp_api) = {.get_entropy = entropy_mchp_get_entropy,
 						.get_entropy_isr = entropy_mchp_get_entropy_isr};
