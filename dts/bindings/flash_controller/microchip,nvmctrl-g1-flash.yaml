@@ -17,6 +17,7 @@ properties:
     required: true
     description: |
       Number of lock regions.
+
       The main address space is divided into 32 equal size regions. The region size is
       dependent on the flash memory size.Each region can be protected against write or
       erase operation.
