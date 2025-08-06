@@ -20,8 +20,6 @@
 #include <zephyr/drivers/clock_control/mchp_clock_control.h>
 #include <zephyr/drivers/flash/mchp_flash.h>
 
-LOG_MODULE_REGISTER(flash_mchp_nvmctrl_g1);
-
 /*******************************************
  * @brief Devicetree definitions
  *******************************************/
@@ -30,6 +28,7 @@ LOG_MODULE_REGISTER(flash_mchp_nvmctrl_g1);
 /*******************************************
  * Const and Macro Defines
  *******************************************/
+LOG_MODULE_REGISTER(flash_mchp_nvmctrl_g1);
 
 /* Number of lock regions in the SoC non-volatile flash. */
 #define SOC_NV_FLASH_LOCK_REGIONS DT_INST_PROP(0, lock_regions)

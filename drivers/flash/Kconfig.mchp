@@ -16,6 +16,7 @@ config FLASH_MCHP_NVMCTRL_G1
 
 config FLASH_HAS_UNALIGNED_WRITE
 	bool "Provide unaligned write support"
+	depends on FLASH_MCHP_NVMCTRL_G1
 	help
 	  Enable this option to allow the Zephyr flash API to write data to flash
 	  memory at offsets that are not aligned to the device's write block size
