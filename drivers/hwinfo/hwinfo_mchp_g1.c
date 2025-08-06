@@ -18,8 +18,6 @@
 #include <zephyr/logging/log.h>
 #include <zephyr/sys/byteorder.h>
 
-LOG_MODULE_REGISTER(hwinfo_mchp_g1, LOG_LEVEL_ERR);
-
 /*******************************************
  * @brief Devicetree definitions
  *******************************************/
@@ -28,10 +26,15 @@ LOG_MODULE_REGISTER(hwinfo_mchp_g1, LOG_LEVEL_ERR);
 /*******************************************
  * Const and Macro Defines
  *******************************************/
+LOG_MODULE_REGISTER(hwinfo_mchp_g1, LOG_LEVEL_ERR);
+
 #define HWINFO_ID_WORDS 4
 
 #define RSTC_BASE_ADDR DT_REG_ADDR(DT_NODELABEL(rstc))
 
+/*******************************************
+ * @brief Data type definitions
+ ******************************************/
 /**
  * @brief Structure to hold a hardware unique identifier.
  *
@@ -42,6 +45,9 @@ typedef struct hwinfo_id {
 	uint32_t id[HWINFO_ID_WORDS];
 } hwinfo_id_t;
 
+/******************************************************************************
+ * @brief API functions
+ *****************************************************************************/
 /**
  * @brief Get the unique device ID.
  *
@@ -66,7 +72,8 @@ ssize_t z_impl_hwinfo_get_device_id(uint8_t *buffer, size_t length)
 		length = sizeof(dev_id.id);
 	}
 
-	uint8_t *src = (uint8_t*)dev_id.id;
+	uint8_t *src = (uint8_t *)dev_id.id;
+
 	for (size_t i = 0; i < length; i++) {
 		buffer[i] = src[i];
 	}
