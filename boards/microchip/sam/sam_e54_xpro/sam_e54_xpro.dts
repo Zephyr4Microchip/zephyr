@@ -85,3 +85,17 @@
 	dmas = <&dmac 1 8>, <&dmac 2 9>;
 	dma-names = "rx", "tx";
 };
+
+&sercom6 {
+	status = "okay";
+	compatible = "microchip,sercom-g1-spi";
+
+	dipo = <3>;
+	dopo = <0>;
+
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	pinctrl-0 = <&sercom6_spi_default>;
+	pinctrl-names = "default";
+};

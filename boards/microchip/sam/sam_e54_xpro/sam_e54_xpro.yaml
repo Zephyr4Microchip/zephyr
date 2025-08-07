@@ -17,6 +17,7 @@ supported:
   - pinctrl
   - reset
   - shell
+  - spi
   - uart
   - watchdog
 vendor: microchip
