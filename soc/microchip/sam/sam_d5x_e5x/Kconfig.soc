@@ -58,6 +58,12 @@ config GPIO_MCHP_PORT_U2210_2_2_0
 	help
 	  Enable PORT GPIO peripheral IP version 2.2.0 (U2210).
 
+config SPI_MCHP_SERCOM_U2201_5_0_0
+	bool
+	default y
+	help
+	  Enable SERCOM SPI peripheral IP version 5.0.0 (U2201).
+
 endif # SOC_FAMILY_MICROCHIP_SAM_D5X_E5X
 
 rsource "*/Kconfig.soc"
