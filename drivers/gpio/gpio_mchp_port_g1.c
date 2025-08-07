@@ -37,6 +37,7 @@ struct gpio_mchp_config {
 
 	/* Pointer to port group registers */
 	port_group_registers_t *gpio_regs;
+
 	/*Contains the ID of the gpio port*/
 	uint8_t gpio_port_id;
 };
@@ -50,6 +51,8 @@ struct gpio_mchp_data {
 
 	/* Pointer to device structure */
 	const struct device *dev;
+
+	/* Variable used for enabling or disabling debounce */
 	gpio_port_pins_t debounce;
 #ifdef CONFIG_INTC_MCHP_EIC_G1
 	/* provided by gpio_utils
@@ -586,6 +589,7 @@ static void gpio_mchp_isr(uint32_t pins, void *arg)
 
 	gpio_fire_callbacks(&data->callbacks, data->dev, pins);
 }
+
 /**
  * @brief Configure interrupt for a specific GPIO pin.
  *
