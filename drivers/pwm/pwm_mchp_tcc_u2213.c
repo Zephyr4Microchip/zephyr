@@ -392,13 +392,13 @@ static int pwm_mchp_init(const struct device *pwm_dev)
 
 		ret_val = clock_control_on(mchp_pwm_cfg->pwm_clock.clock_dev,
 					   mchp_pwm_cfg->pwm_clock.periph_async_clk);
-		if (ret_val < 0) {
+		if ((ret_val < 0) && (ret_val != -EALREADY)) {
 			LOG_ERR("Failed to enable the periph_async_clk for PWM: %d", ret_val);
 			break;
 		}
 		ret_val = clock_control_on(mchp_pwm_cfg->pwm_clock.clock_dev,
 					   mchp_pwm_cfg->pwm_clock.host_core_sync_clk);
-		if (ret_val < 0) {
+		if ((ret_val < 0) && (ret_val != -EALREADY)) {
 			LOG_ERR("Failed to enable the host_core_sync_clk for PWM: %d", ret_val);
 			break;
 		}
@@ -409,6 +409,7 @@ static int pwm_mchp_init(const struct device *pwm_dev)
 		}
 		tcc_init(mchp_pwm_cfg->regs, mchp_pwm_cfg->prescaler);
 	} while (0);
+	ret_val = (ret_val == -EALREADY) ? 0 : ret_val;
 	return ret_val;
 }
 
