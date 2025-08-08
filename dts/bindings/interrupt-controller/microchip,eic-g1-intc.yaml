@@ -3,6 +3,7 @@
 
 description: |
   Microchip External Interrupt Controller for g1 peripherals
+
   Group g1 EIC driver supports following hardware peripherals:
     - module name="EIC" id="U2254" version="3.0.0"
 
