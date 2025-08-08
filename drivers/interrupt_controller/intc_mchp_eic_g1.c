@@ -102,7 +102,6 @@ typedef struct mchp_eic_line_assignment {
 /*
  * Configuration structure for EIC device settings and options.
  */
-
 typedef struct eic_mchp_dev_cfg {
 	eic_registers_t *regs;
 	mchp_eic_clock_t eic_clock;
@@ -196,6 +195,7 @@ uint8_t find_eic_line_from_pin(int port, int pin)
 		}
 		break;
 	}
+
 	return eic_line;
 }
 
@@ -220,6 +220,7 @@ static inline void eic_enable(eic_registers_t *regs, bool enable)
 		regs->EIC_CTRLA &= ~EIC_CTRLA_ENABLE_Msk;
 	}
 }
+
 /***********************************
  * Zephyr APIs
  ***********************************/
@@ -241,6 +242,7 @@ static void enable_interrupt_line(eic_registers_t *regs, uint8_t eic_line, bool 
 		regs->EIC_INTENCLR |= pin_mask;
 	}
 }
+
 /**
  * This function disables the EIC interrupt associated with the specified pin configuration.
  * It checks if the pin is currently assigned to an EIC line, disables the interrupt line if so,
@@ -284,8 +286,10 @@ int eic_mchp_disable_interrupt(eic_config_params_t *eic_pin_config)
 		eic_data->port_assigned_line[eic_pin_config->port_id] &= ~BIT(eic_line);
 	} while (0);
 	EIC_DATA_UNLOCK(eic_data->lock);
+
 	return ret_val;
 }
+
 /**
  * This function checks which pins in the specified port have pending EIC interrupts.
  * It returns a bitmask where each set bit corresponds to a pin with a pending interrupt.
@@ -545,6 +549,7 @@ static int eic_mchp_init(const struct device *dev)
 			n\
 		)                                                                          \
 	}
+
 /*
  * Create interrupt handlers for each IRQ of the EIC instance. Listify
  */

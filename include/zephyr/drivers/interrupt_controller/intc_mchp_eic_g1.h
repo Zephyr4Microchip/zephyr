@@ -76,6 +76,7 @@ typedef enum mchp_eic_line {
 	EIC_LINE_15,
 	EIC_LINE_MAX,
 } mchp_eic_line_t;
+
 /**
  * @struct eic_config_params
  * @brief Configuration parameters for a Microchip EIC (External Interrupt Controller) line.
