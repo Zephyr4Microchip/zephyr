@@ -90,7 +90,6 @@ ssize_t z_impl_hwinfo_get_device_id(uint8_t *buffer, size_t length)
  *
  * @return 0 on success
  */
-
 int z_impl_hwinfo_get_supported_reset_cause(uint32_t *supported)
 {
 	*supported = RESET_POR | RESET_BROWNOUT | RESET_PIN | RESET_WATCHDOG | RESET_SOFTWARE |
@@ -110,7 +109,6 @@ int z_impl_hwinfo_get_supported_reset_cause(uint32_t *supported)
  * @return 0 on success, -EINVAL if cause is NULL and -ENOSYS if the RSTC base address is not
  * defined.
  */
-
 int z_impl_hwinfo_get_reset_cause(uint32_t *cause)
 {
 	int ret = 0;
