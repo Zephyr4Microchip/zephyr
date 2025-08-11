@@ -10,9 +10,6 @@
  *
  * Implements Zephyr ADC API support with interrupt-driven sampling,
  * hardware gain/reference configuration, and context-managed reads.
- *
- * Supported SoC Families:
- * - SOC_FAMILY_MCHP_SAM_D5X_E5X
  */
 
 #include <soc.h>
@@ -25,16 +22,17 @@
 #define ADC_CONTEXT_USES_KERNEL_TIMER
 #include "adc_context.h"
 
-/*******************************************
- * Constants and Macro Definitions
- *******************************************/
-
-/* Compatibility string for device tree matching */
-#define DT_DRV_COMPAT microchip_adc_g1
-
 /* Register a logging module for ADC driver with configured log level */
 LOG_MODULE_REGISTER(adc_mchp_g1, CONFIG_ADC_LOG_LEVEL);
 
+/******************************************************************************
+ * @brief Devicetree definitions
+ *****************************************************************************/
+#define DT_DRV_COMPAT microchip_adc_g1
+
+/******************************************************************************
+ * @brief Macro definitions
+ *****************************************************************************/
 /* Reference voltage of the ADC in millivolts, obtained from device tree */
 #define ADC_MCHP_VREF_MV DT_INST_PROP(0, vref_mv)
 
@@ -73,6 +71,14 @@ LOG_MODULE_REGISTER(adc_mchp_g1, CONFIG_ADC_LOG_LEVEL);
 #define ADC_PRESCALER_DIV_256 256
 
 #define ADC_DEFAULT_SAMPLEN 3
+
+/* Define limits for input_positive */
+#define ADC_INPUT_POS_MAX_VALUE 0x1E
+#define ADC_INPUT_POS_RANGE_MIN 0x10
+#define ADC_INPUT_POS_RANGE_MAX 0x17
+
+/* Define limits for input_negative */
+#define ADC_INPUT_NEG_MAX_VALUE 7
 
 /* If the SUPC API support is not available, define direct access
  * to SUPC registers and shortcuts for voltage reference register
@@ -306,24 +312,30 @@ static int8_t adc_validate_channel_params(enum adc_gain gain, enum adc_reference
 	    gain != ADC_GAIN_1) {
 		ret = -EINVAL;
 	}
+
 	/* Validate reference */
 	if (reference < ADC_REF_VDD_1 || reference > ADC_REF_EXTERNAL1) {
 		ret = -EINVAL;
 	}
+
 	/* Valid sample length is in the range [0, 63] */
 	if (sample_length >= 64U) {
 		ret = -EINVAL;
 	}
+
 	/*
 	 * Validate input_positive:
 	 * - Must be <= 0x1E (highest valid value is DAC0)
 	 * - Values 0x10 to 0x17 are reserved and must not be used
 	 */
-	if (input_positive > 0x1E || (input_positive >= 0x10 && input_positive <= 0x17)) {
+	if (input_positive > ADC_INPUT_POS_MAX_VALUE ||
+	    (input_positive >= ADC_INPUT_POS_RANGE_MIN &&
+	     input_positive <= ADC_INPUT_POS_RANGE_MAX)) {
 		ret = -EINVAL;
 	}
+
 	/* Validate the input_negative range: must be within 0–7 */
-	if (input_negative > 7) {
+	if (input_negative > ADC_INPUT_NEG_MAX_VALUE) {
 		ret = -EINVAL;
 	}
 
@@ -438,6 +450,7 @@ static int8_t adc_set_gain(adc_registers_t *adc_reg, enum adc_gain gain)
 
 		/* Apply the calculated gain correction if no error occurred */
 		if (ret == 0) {
+
 			/* Set the gain correction value in the ADC register */
 			adc_reg->ADC_GAINCORR = ADC_GAINCORR_GAINCORR(gain_corr);
 
@@ -468,7 +481,9 @@ static int8_t adc_set_input_positive(adc_registers_t *adc_reg, uint8_t input_pos
 	 * - Must be <= 0x1E (highest valid value is DAC0)
 	 * - Values 0x10 to 0x17 are reserved and must not be used
 	 */
-	if (input_positive > 0x1E || (input_positive >= 0x10 && input_positive <= 0x17)) {
+	if (input_positive > ADC_INPUT_POS_MAX_VALUE ||
+	    (input_positive >= ADC_INPUT_POS_RANGE_MIN &&
+	     input_positive <= ADC_INPUT_POS_RANGE_MAX)) {
 		ret = -EINVAL;
 	}
 
@@ -799,6 +814,7 @@ static int8_t adc_apply_channel_config(const struct device *dev,
 				       struct adc_channel_cfg *channel_config)
 {
 	int8_t ret = 0;
+
 	/* ADC Device config */
 	const adc_mchp_dev_config_t *const dev_cfg = DEV_CFG(dev);
 
@@ -1239,8 +1255,10 @@ static int adc_mchp_init(const struct device *dev)
 {
 	/* Get device config */
 	const adc_mchp_dev_config_t *const dev_cfg = DEV_CFG(dev);
+
 	/* Get device data */
 	adc_mchp_dev_data_t *dev_data = dev->data;
+
 	int8_t ret = 0;
 
 	/* Enable the ADC Clock */
@@ -1253,6 +1271,7 @@ static int adc_mchp_init(const struct device *dev)
 			LOG_ERR("Failed to enable the GCLK for ADC: %d", ret);
 			break;
 		}
+
 		/* On Main clock for ADC */
 		ret = clock_control_on(dev_cfg->adc_clock.clock_dev, dev_cfg->adc_clock.mclk_sys);
 		if ((ret != 0) && (ret != -EALREADY)) {
@@ -1307,7 +1326,7 @@ static int adc_mchp_init(const struct device *dev)
  *
  * Provides function pointers to implement the ADC driver interface in Zephyr.
  */
-static const struct adc_driver_api adc_mchp_api = {
+static DEVICE_API(adc, adc_mchp_api) = {
 	.channel_setup = adc_mchp_channel_setup,
 	.read = adc_mchp_read,
 	.ref_internal = ADC_MCHP_VREF_MV,

@@ -158,7 +158,7 @@ source "drivers/adc/Kconfig.rts5912"
 
 source "drivers/adc/Kconfig.ti_am335x"
 
-source "drivers/adc/Kconfig.mcux"
+source "drivers/adc/Kconfig.ch32v00x"
 
 source "drivers/adc/Kconfig.mchp"
 
