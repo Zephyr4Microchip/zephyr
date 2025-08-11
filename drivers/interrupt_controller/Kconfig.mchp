@@ -8,5 +8,3 @@ config INTC_MCHP_EIC_G1
 	help
 	  Enable EIC driver for Microchip EIC G1 peripherals. This is required for
 	  GPIO interrupt support.
-	  This driver supports Microchip device families:
-	  - SOC_FAMILY_MCHP_SAM_D5X_E5X
