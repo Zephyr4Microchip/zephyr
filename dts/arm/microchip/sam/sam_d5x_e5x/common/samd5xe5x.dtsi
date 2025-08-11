@@ -33,11 +33,6 @@
 	};
 
 	soc {
-		flash0: flash@0 {
-			compatible = "soc-nv-flash";
-			write-block-size = <8>;
-		};
-
 		hwinfo: device_id@8061fc {
 			compatible = "microchip,hwinfo-g1";
 			status = "disabled";
