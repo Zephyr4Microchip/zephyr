@@ -328,9 +328,9 @@ static int8_t adc_validate_channel_params(enum adc_gain gain, enum adc_reference
 	 * - Must be <= 0x1E (highest valid value is DAC0)
 	 * - Values 0x10 to 0x17 are reserved and must not be used
 	 */
-	if (input_positive > ADC_INPUT_POS_MAX_VALUE ||
-	    (input_positive >= ADC_INPUT_POS_RANGE_MIN &&
-	     input_positive <= ADC_INPUT_POS_RANGE_MAX)) {
+	if ((input_positive > ADC_INPUT_POS_MAX_VALUE) ||
+	    ((input_positive >= ADC_INPUT_POS_RANGE_MIN) &&
+	     (input_positive <= ADC_INPUT_POS_RANGE_MAX))) {
 		ret = -EINVAL;
 	}
 
@@ -481,9 +481,9 @@ static int8_t adc_set_input_positive(adc_registers_t *adc_reg, uint8_t input_pos
 	 * - Must be <= 0x1E (highest valid value is DAC0)
 	 * - Values 0x10 to 0x17 are reserved and must not be used
 	 */
-	if (input_positive > ADC_INPUT_POS_MAX_VALUE ||
-	    (input_positive >= ADC_INPUT_POS_RANGE_MIN &&
-	     input_positive <= ADC_INPUT_POS_RANGE_MAX)) {
+	if ((input_positive > ADC_INPUT_POS_MAX_VALUE) ||
+	    ((input_positive >= ADC_INPUT_POS_RANGE_MIN) &&
+	     (input_positive <= ADC_INPUT_POS_RANGE_MAX))) {
 		ret = -EINVAL;
 	}
 
