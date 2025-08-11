@@ -569,6 +569,7 @@ static mchp_eic_trigger_t get_eic_trig_type(uint32_t trigger_mode)
 		LOG_ERR("Unknown trigger mode 0x%x", trigger_mode);
 		break;
 	}
+
 	return trig_type;
 }
 
@@ -620,6 +621,7 @@ static int gpio_mchp_pin_interrupt_configure(const struct device *dev, gpio_pin_
 		(mode == GPIO_INT_MODE_DISABLED) ? GPIO_INT_MODE_DISABLED : (mode | trig);
 
 	gpio_data->dev = dev;
+
 	/* initialise the config params structure */
 	eic_pin_config.port_id = gpio_config->gpio_port_id;
 	eic_pin_config.pin_num = pin;
@@ -652,6 +654,7 @@ static int gpio_mchp_pin_interrupt_configure(const struct device *dev, gpio_pin_
 		break;
 	}
 	LOG_DBG("retval = %d", ret_val);
+
 	return ret_val;
 }
 
@@ -675,6 +678,7 @@ static int gpio_mchp_manage_callback(const struct device *dev, struct gpio_callb
 				     bool set)
 {
 	struct gpio_mchp_data *const data = dev->data;
+
 	/**Adds or remove user specified callback on to the syslist */
 	return gpio_manage_callback(&data->callbacks, callback, set);
 }
