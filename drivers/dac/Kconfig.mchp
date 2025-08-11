@@ -2,9 +2,9 @@
 # SPDX-License-Identifier: Apache-2.0
 
 config DAC_MCHP_COMMON
-        bool
-        help
-          Common option for microchip DAC drivers
+	bool
+	help
+	  Common option for microchip DAC drivers
 
 config DAC_MCHP_G1
 	bool "Microchip DAC Driver for DAC G1 Peripherals"
@@ -14,9 +14,6 @@ config DAC_MCHP_G1
 	select PINCTRL
 	help
 	  Enable support for the Microchip DAC driver on G1 DAC peripherals.
-
-	  This driver supports Microchip device families:
-	  - SOC_FAMILY_MCHP_SAM_D5X_E5X
 
 if CLOCK_CONTROL_MCHP_COMMON
 

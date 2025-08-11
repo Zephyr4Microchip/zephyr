@@ -10,9 +10,6 @@
  *
  * This file contains the implementation of a DAC driver
  * for microchip dac g1 peripherals.
- *
- * Supported SoC Families:
- * - SOC_FAMILY_MCHP_SAM_D5X_E5X
  */
 
 #include <soc.h>
@@ -22,12 +19,16 @@
 #include <zephyr/drivers/pinctrl.h>
 #include <zephyr/drivers/clock_control/mchp_clock_control.h>
 
-LOG_MODULE_REGISTER(dac_mchp_g1, CONFIG_DAC_LOG_LEVEL);
-
-/* Define compatible string for device tree.*/
+/******************************************************************************
+ * @brief Devicetree definitions
+ *****************************************************************************/
 #define DT_DRV_COMPAT microchip_dac_g1
 
-/* Maximum number of DAC channels supported by the device.*/
+/******************************************************************************
+ * @brief Macro definitions
+ *****************************************************************************/
+LOG_MODULE_REGISTER(dac_mchp_g1, CONFIG_DAC_LOG_LEVEL);
+
 #define DAC_MAX_CHANNELS DT_PROP(DT_NODELABEL(dac), max_channels)
 
 /* Conversion Speed of 100kSPS */
@@ -59,6 +60,9 @@ LOG_MODULE_REGISTER(dac_mchp_g1, CONFIG_DAC_LOG_LEVEL);
 
 #define DAC_CHANNELS_ALL 0xFF
 
+/******************************************************************************
+ * @brief Data type definitions
+ *****************************************************************************/
 /**
  * @brief DAC channel configuration.
  *
@@ -144,6 +148,9 @@ typedef struct dac_mchp_dev_data {
 
 } dac_mchp_dev_data_t;
 
+/******************************************************************************
+ * @brief Helper functions
+ *****************************************************************************/
 /* Waits for the DAC synchronization process to complete. */
 static inline void dac_wait_sync(dac_registers_t *dac_reg, uint32_t sync_flag)
 {
@@ -165,6 +172,7 @@ static void dac_wait_ready(dac_registers_t *dac_reg, uint8_t channel_id)
 			       DAC_STATUS_READY0_Msk) {
 				/* Do nothing */
 			}
+
 			/* Wait for synchronization channel 1*/
 			while ((dac_reg->DAC_STATUS & DAC_STATUS_READY1_Msk) !=
 			       DAC_STATUS_READY1_Msk) {
@@ -174,6 +182,7 @@ static void dac_wait_ready(dac_registers_t *dac_reg, uint8_t channel_id)
 			if (channel_id == 1) {
 				mask = DAC_STATUS_READY1_Msk;
 			}
+
 			/* Wait for synchronization */
 			while ((dac_reg->DAC_STATUS & mask) != mask) {
 				/* Do nothing */
@@ -320,6 +329,7 @@ static void dac_write_data(const struct device *dev, uint8_t channel_id, uint32_
 		} else {
 			dev_cfg->regs->DAC_DATA[0] = DAC_DATA_MSB_MASK & DAC_DATA_DATA(value);
 		}
+
 		/* Wait for synchronization */
 		dac_wait_sync(dev_cfg->regs, DAC_SYNCBUSY_DATA0_Msk);
 		if ((dev_cfg->channels[1].data_adj) == DAC_DATA_LEFT_ADJ) {
@@ -327,6 +337,7 @@ static void dac_write_data(const struct device *dev, uint8_t channel_id, uint32_
 		} else {
 			dev_cfg->regs->DAC_DATA[1] = DAC_DATA_MSB_MASK & DAC_DATA_DATA(value);
 		}
+
 		/* Wait for synchronization */
 		dac_wait_sync(dev_cfg->regs, DAC_SYNCBUSY_DATA1_Msk);
 	} else {
@@ -337,6 +348,7 @@ static void dac_write_data(const struct device *dev, uint8_t channel_id, uint32_
 			dev_cfg->regs->DAC_DATA[channel_id] =
 				DAC_DATA_MSB_MASK & DAC_DATA_DATA(value);
 		}
+
 		/* Wait for synchronization */
 		if (channel_id == 0) {
 			dac_wait_sync(dev_cfg->regs, DAC_SYNCBUSY_DATA0_Msk);
@@ -410,6 +422,7 @@ static inline int dac_set_resolution(dac_registers_t *dac_reg, uint8_t resolutio
 	if (resolution != DAC_RESOLUTION) {
 		err = -ENOTSUP;
 	}
+
 	return err;
 }
 
@@ -422,6 +435,7 @@ static inline int dac_set_internal(dac_registers_t *dac_reg, uint8_t internal)
 	if (internal == 1) {
 		err = -ENOTSUP;
 	}
+
 	return err;
 }
 
@@ -434,9 +448,13 @@ static inline int dac_set_buffered(dac_registers_t *dac_reg, uint8_t buffered)
 	if (buffered == 1) {
 		err = -ENOTSUP;
 	}
+
 	return err;
 }
 
+/******************************************************************************
+ * @brief API functions
+ *****************************************************************************/
 /**
  * @brief Set up a DAC channel with the given configuration.
  *
@@ -469,6 +487,7 @@ static int dac_mchp_channel_setup(const struct device *dev,
 		if (ret != 0) {
 			break;
 		}
+
 		/* Check if internal is valid */
 		ret = dac_set_internal(dev_cfg->regs, channel_cfg->internal);
 		if (ret != 0) {
@@ -495,8 +514,10 @@ static int dac_mchp_channel_setup(const struct device *dev,
 		if (ret != 0) {
 			break;
 		}
+
 		/* Enable the DAC */
 		dac_enable_controller(dev_cfg->regs);
+
 		/* Wait till the DAC is ready for conversion after enabling the DAC */
 		dac_wait_ready(dev_cfg->regs, channel_cfg->channel_id);
 		if (channel_cfg->channel_id == DAC_CHANNELS_ALL) {
@@ -549,6 +570,7 @@ static int dac_mchp_write_value(const struct device *dev, uint8_t channel, uint3
 		/* Write data into DAC */
 		dac_write_data(dev, channel, value);
 	}
+
 	return ret;
 }
 
@@ -611,9 +633,12 @@ static int dac_mchp_init(const struct device *dev)
  * implementation. It is used by the Zephyr device driver model to call the
  * appropriate driver-specific functions for DAC operations.
  */
-static const struct dac_driver_api dac_mchp_driver_api = {.channel_setup = dac_mchp_channel_setup,
-							  .write_value = dac_mchp_write_value};
+static DEVICE_API(dac, dac_mchp_api) = {.channel_setup = dac_mchp_channel_setup,
+					.write_value = dac_mchp_write_value};
 
+/******************************************************************************
+ * @brief Zephyr driver instance creation
+ *****************************************************************************/
 /**
  * @brief Macro to define individual DAC channel configuration from Device Tree.
  *
