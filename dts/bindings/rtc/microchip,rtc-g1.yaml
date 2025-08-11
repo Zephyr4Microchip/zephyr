@@ -2,12 +2,27 @@
 # SPDX-License-Identifier: Apache-2.0
 
 description: |
-  Microchip RSTC Reset driver bindings.
-  This driver configures the RTC peripheral in Microchip 
+  Microchip RTC driver.
+
+  This driver configures the RTC peripheral in Microchip
   microcontrollers for clock and interrupts.
 
-  Group g1 RSTC Reset driver supports following hardware peripherals:
-    - module name="RSTC" id="U2239" version="4.0.0"
+  Group g1 RTC driver supports following hardware peripherals:
+    - module name="RTC" id="U2250" version="2.1.0"
+
+  The node has the 'rtc' node label set in your SoC's devicetree, so you can
+  modify it like this:
+
+    &rtc {
+        /* your modifications go here */
+    };
+
+    Example:
+    Correction in ppm = (FREQCORR.VALUE * 1e6 ppm) / (8192 * 128)
+
+    &rtc {
+     cal-constant = <1048576>; /* 8192 * 128 */
+    };
 
 compatible: "microchip,rtc-g1"
 
@@ -18,19 +33,23 @@ include:
 properties:
   reg:
     required: true
-    description: Register base address and size for the RTC peripheral.
+    description: |
+      Register base address and size for the RTC peripheral.
 
   clocks:
     required: true
-    description: Clock phandles used to drive the RTC.
+    description: |
+      Clock phandles used to drive the RTC.
 
   clock-names:
     required: true
-    description: Clock name corresponding to the `clocks` entry.
+    description: |
+      Clock name corresponding to the `clocks` entry.
 
   interrupts:
     required: true
-    description: Interrupt specifier for the RTC peripheral.
+    description: |
+      Interrupt specifier for the RTC peripheral.
 
   prescaler:
     type: int
@@ -63,10 +82,3 @@ properties:
       Define the constant used to calculate the calibration. More
       information can be found in the datasheet of each SoC series
       at RTC Frequency Correction topic.
-
-# Example:
-# Correction in ppm = (FREQCORR.VALUE * 1e6 ppm) / (8192 * 128)
-#
-# &rtc {
-#     cal-constant = <1048576>; /* 8192 * 128 */
-# };
