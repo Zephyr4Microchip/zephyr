@@ -195,7 +195,7 @@
 		rtc: rtc@40002400 {
 			compatible = "microchip,rtc-g1";
 			status = "disabled";
-			reg = <0x40002400 0x1C>;
+			reg = <0x40002400 0x1c>;
 			interrupts = <11 0>;
 			clocks = <&mclkperiph CLOCK_MCHP_MCLKPERIPH_ID_APBA_RTC>,
 				 <&rtcclock CLOCK_MCHP_RTC_ID>;
