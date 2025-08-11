@@ -22,10 +22,6 @@
 #include <zephyr/drivers/pinctrl.h>
 #include <zephyr/drivers/clock_control/mchp_clock_control.h>
 
-LOG_MODULE_REGISTER(i2c_mchp_sercom_g1);
-
-#include "i2c-priv.h"
-
 /*******************************************
  * @brief Devicetree definitions
  ********************************************/
@@ -34,6 +30,17 @@ LOG_MODULE_REGISTER(i2c_mchp_sercom_g1);
 /*******************************************
  * Const and Macro Defines
  *******************************************/
+/**
+ * @brief Register I2C MCHP G1 driver with logging subsystem.
+ */
+LOG_MODULE_REGISTER(i2c_mchp_sercom_g1, CONFIG_I2C_LOG_LEVEL);
+
+/**
+ * @brief Including header here to avoid compilation error
+ *
+ * As i2c-priv.h header file usage Log messages, LOG_LEVEL has to be defined before.
+ */
+#include "i2c-priv.h"
 
 /* Macro to check message direction in read mode */
 #define I2C_MCHP_MESSAGE_DIR_READ_MASK 1
@@ -296,22 +303,23 @@ typedef enum {
  * This enumeration defines the interrupt flag bits for the MCHP I2C target mode.
  */
 typedef enum {
-	/** Indicates that no interrupt has occurred. */
+
+	/* Indicates that no interrupt has occurred. */
 	I2C_MCHP_TARGET_INTFLAG_NONE = 0,
 
-	/** Indicates that a STOP condition has been detected. */
+	/* Indicates that a STOP condition has been detected. */
 	I2C_MCHP_TARGET_INTFLAG_STOP = 1,
 
-	/** Indicates that an address match has occurred. */
+	/* Indicates that an address match has occurred. */
 	I2C_MCHP_TARGET_INTFLAG_ADDR_MATCH = 2,
 
-	/** Indicates that data is ready for transmission or reception. */
+	/* Indicates that data is ready for transmission or reception. */
 	I2C_MCHP_TARGET_INTFLAG_DATA_READY = 4,
 
-	/** Indicates an error condition in the I2C operation. */
+	/*  Indicates an error condition in the I2C operation. */
 	I2C_MCHP_TARGET_INTFLAG_ERROR = 8,
 
-	/** Indicates all the interrupt flags. */
+	/*  Indicates all the interrupt flags. */
 	I2C_MCHP_TARGET_INTFLAG_ALL = I2C_MCHP_TARGET_INTFLAG_ALL_MASK
 
 } i2c_mchp_target_intflag_t;
@@ -331,31 +339,32 @@ typedef enum {
  * This enumeration defines the status flag bits for the MCHP I2C controller mode.
  */
 typedef enum {
-	/** Indicates that there is no status. */
+
+	/* Indicates that there is no status. */
 	I2C_MCHP_CONTROLLER_STATUS_FLAG_NONE = 0,
 
-	/** Indicates that errors on bus have occurred. */
+	/* Indicates that errors on bus have occurred. */
 	I2C_MCHP_CONTROLLER_STATUS_FLAG_BUS_ERROR = 1,
 
-	/** Indicates that an arbitration lost condition has been detected. */
+	/* Indicates that an arbitration lost condition has been detected. */
 	I2C_MCHP_CONTROLLER_STATUS_FLAG_ARBITRATION_LOST = 2,
 
-	/** Indicates that a bus busy condition was detected. */
+	/* Indicates that a bus busy condition was detected. */
 	I2C_MCHP_CONTROLLER_STATUS_FLAG_BUS_STATE_BUSY = 4,
 
-	/** Indicates that a Master SCL Low Extend Time-Out was detected. */
+	/* Indicates that a Master SCL Low Extend Time-Out was detected. */
 	I2C_MCHP_CONTROLLER_STATUS_FLAG_MEXTTOUT = 8,
 
-	/** Indicates that a Slave SCL Low Extend Time-Out was detected. */
+	/* Indicates that a Slave SCL Low Extend Time-Out was detected. */
 	I2C_MCHP_CONTROLLER_STATUS_FLAG_SEXTTOUT = 16,
 
-	/** Indicates that a SCL Low Time-Out was detected. */
+	/* Indicates that a SCL Low Time-Out was detected. */
 	I2C_MCHP_CONTROLLER_STATUS_FLAG_LOWTOUT = 32,
 
-	/** Indicates that a Transaction Length Error was detected. */
+	/* Indicates that a Transaction Length Error was detected. */
 	I2C_MCHP_CONTROLLER_STATUS_FLAG_LENERR = 64,
 
-	/** Indicates all controller status flag bits. */
+	/* Indicates all controller status flag bits. */
 	I2C_MCHP_CONTROLLER_STATUS_FLAG_ALL = I2C_MCHP_CONTROLLER_STATUS_FLAG_ALL_MASK
 
 } i2c_mchp_controller_status_flag_t;
@@ -373,25 +382,26 @@ typedef enum {
  * This enumeration defines the status flag bits for the MCHP I2C target mode.
  */
 typedef enum {
-	/** Indicates that there is no status. */
+
+	/* Indicates that there is no status. */
 	I2C_MCHP_TARGET_STATUS_FLAG_NONE = 0,
 
-	/** Indicates that errors on bus have occurred. */
+	/* Indicates that errors on bus have occurred. */
 	I2C_MCHP_TARGET_STATUS_FLAG_BUS_ERROR = 1,
 
-	/** Indicates that a Transmit Collision has been detected. */
+	/* Indicates that a Transmit Collision has been detected. */
 	I2C_MCHP_TARGET_STATUS_FLAG_COLL = 2,
 
-	/** Indicates that data direction is in read mode. */
+	/* Indicates that data direction is in read mode. */
 	I2C_MCHP_TARGET_STATUS_FLAG_DATA_DIR_READ = 4,
 
-	/** Indicates that a SCL Low Time-Out was detected. */
+	/* Indicates that a SCL Low Time-Out was detected. */
 	I2C_MCHP_TARGET_STATUS_FLAG_LOWTOUT = 16,
 
-	/** Indicates that a Slave SCL Low Extend Time-Out was detected. */
+	/* Indicates that a Slave SCL Low Extend Time-Out was detected. */
 	I2C_MCHP_TARGET_STATUS_FLAG_SEXTTOUT = 32,
 
-	/** Indicates all target status flag bits. */
+	/* Indicates all target status flag bits. */
 	I2C_MCHP_TARGET_STATUS_FLAG_ALL = I2C_MCHP_TARGET_STATUS_FLAG_ALL_MASK
 
 } i2c_mchp_target_status_flag_t;
@@ -426,12 +436,16 @@ typedef enum {
  * @brief Structure to hold device clock configuration.
  */
 typedef struct i2c_mchp_clock {
+
 	/* Clock driver */
 	const struct device *clock_dev;
+
 	/* Main clock subsystem. */
 	clock_control_subsys_t mclk_sys;
+
 	/* Generic clock subsystem. */
 	clock_control_subsys_t gclk_sys;
+
 } i2c_mchp_clock_t;
 
 /**
@@ -443,16 +457,22 @@ typedef struct i2c_mchp_clock {
  * request lines, and channel numbers for both TX and RX directions.
  */
 typedef struct i2c_mchp_dma {
+
 	/* DMA device used for asynchronous operations. */
 	const struct device *dma_dev;
+
 	/* DMA request line for TX (transmit) operations. */
 	uint8_t tx_dma_request;
+
 	/* DMA channel number for TX (transmit) operations. */
 	uint8_t tx_dma_channel;
+
 	/* DMA request line for RX (receive) operations. */
 	uint8_t rx_dma_request;
+
 	/* DMA channel number for RX (receive) operations. */
 	uint8_t rx_dma_channel;
+
 } i2c_mchp_dma_t;
 
 /**
@@ -465,6 +485,7 @@ typedef struct i2c_mchp_dma {
  * optional DMA support.
  */
 typedef struct i2c_mchp_dev_config {
+
 	/* Hardware Abstraction Layer for the I2C peripheral. */
 	sercom_registers_t *regs;
 
@@ -495,6 +516,7 @@ typedef struct i2c_mchp_dev_config {
  * for an I2C message transaction using the MCHP I2C peripheral.
  */
 typedef struct i2c_mchp_msg {
+
 	/* Pointer to the data buffer for the I2C message. */
 	uint8_t *buffer;
 
@@ -503,6 +525,7 @@ typedef struct i2c_mchp_msg {
 
 	/* Status of the I2C message, indicating success or error conditions. */
 	i2c_mchp_controller_status_flag_t status;
+
 } i2c_mchp_msg_t;
 
 /**
@@ -564,6 +587,7 @@ typedef struct i2c_mchp_dev_data {
 	/* Data buffer for RX/TX operations in target mode. */
 	uint8_t rx_tx_data;
 #endif
+
 } i2c_mchp_dev_data_t;
 
 /*******************************************
@@ -622,6 +646,7 @@ static inline void i2c_swrst(const struct device *dev)
 	/* Wait for synchronization */
 	while ((i2c_regs->I2CM.SERCOM_SYNCBUSY & SERCOM_I2CM_SYNCBUSY_SWRST_Msk) ==
 	       SERCOM_I2CM_SYNCBUSY_SWRST_Msk) {
+
 		/* Do nothing */
 	};
 }
@@ -670,6 +695,7 @@ static void i2c_byte_write(const struct device *dev, uint8_t data)
 		/* Wait for synchronization */
 		while ((i2c_regs->I2CM.SERCOM_SYNCBUSY & SERCOM_I2CM_SYNCBUSY_SYSOP_Msk) ==
 		       SERCOM_I2CM_SYNCBUSY_SYSOP_Msk) {
+
 			/* Do nothing */
 		};
 	} else {
@@ -700,6 +726,7 @@ static void i2c_controller_enable(const struct device *dev, bool enable)
 	/* Wait for synchronization */
 	while ((i2c_regs->I2CM.SERCOM_SYNCBUSY & SERCOM_I2CM_SYNCBUSY_ENABLE_Msk) ==
 	       SERCOM_I2CM_SYNCBUSY_ENABLE_Msk) {
+
 		/* Do nothing */
 	};
 }
@@ -767,6 +794,7 @@ static inline void i2c_controller_transfer_stop(const struct device *dev)
 	/* Wait for synchronization */
 	while ((i2c_regs->I2CM.SERCOM_SYNCBUSY & SERCOM_I2CM_SYNCBUSY_SYSOP_Msk) ==
 	       SERCOM_I2CM_SYNCBUSY_SYSOP_Msk) {
+
 		/* Do nothing */
 	};
 }
@@ -788,6 +816,7 @@ static inline void i2c_set_controller_bus_state_idle(const struct device *dev)
 	/* Wait for synchronization */
 	while ((i2c_regs->I2CM.SERCOM_SYNCBUSY & SERCOM_I2CM_SYNCBUSY_SYSOP_Msk) ==
 	       SERCOM_I2CM_SYNCBUSY_SYSOP_Msk) {
+
 		/* Do nothing */
 	};
 }
@@ -1032,6 +1061,7 @@ static void i2c_controller_addr_write(const struct device *dev, uint32_t addr)
 	/* Wait for synchronization */
 	while ((i2c_regs->I2CM.SERCOM_SYNCBUSY & SERCOM_I2CM_SYNCBUSY_SYSOP_Msk) ==
 	       SERCOM_I2CM_SYNCBUSY_SYSOP_Msk) {
+
 		/* Do nothing */
 	};
 }
@@ -1231,6 +1261,7 @@ static bool i2c_is_terminate_on_error(const struct device *dev)
 		k_sem_give(&data->i2c_sync_sem);
 #endif
 	}
+
 	/* Return true to indicate successful termination of the operation. */
 	return retval;
 }
@@ -1515,6 +1546,7 @@ void i2c_target_set_command(const struct device *dev, i2c_mchp_target_cmd_t cmd)
 static void i2c_target_handler(const struct device *dev)
 {
 	i2c_mchp_dev_data_t *data = dev->data;
+
 	/* Get the target configuration and callbacks */
 	const struct i2c_target_callbacks *target_cb = &data->target_callbacks;
 	int retval = 0;
@@ -1686,6 +1718,7 @@ static void i2c_mchp_isr(const struct device *dev)
 				k_sem_give(&data->i2c_sync_sem);
 #endif
 			}
+
 			return;
 		}
 
@@ -1730,6 +1763,7 @@ static void i2c_mchp_isr(const struct device *dev)
 				i2c_restart(dev);
 			} else {
 #ifdef CONFIG_I2C_CALLBACK
+
 				/* Callback to the application for async */
 				data->i2c_async_callback(dev, (int)data->current_msg.status,
 							 data->user_data);
@@ -1737,6 +1771,7 @@ static void i2c_mchp_isr(const struct device *dev)
 				k_sem_give(&data->i2c_sync_sem);
 #endif
 			}
+
 			return;
 		}
 	}
@@ -1776,6 +1811,7 @@ static void i2c_target_enable(const struct device *dev, bool enable)
 	/* Wait for synchronization */
 	while ((i2c_regs->I2CS.SERCOM_SYNCBUSY & SERCOM_I2CS_SYNCBUSY_ENABLE_Msk) ==
 	       SERCOM_I2CS_SYNCBUSY_ENABLE_Msk) {
+
 		/* Do nothing */
 	};
 }
@@ -2464,6 +2500,7 @@ static bool i2c_is_nack(const struct device *dev)
 			retval = false;
 		}
 	}
+
 	return retval;
 }
 
@@ -2534,6 +2571,7 @@ static int i2c_poll_out(const struct device *dev)
 		while ((i2c_controller_int_flag_get(dev) &
 			I2C_MCHP_CONTROLLER_INTFLAG_CONTROLLER_ON_BUS) !=
 		       I2C_MCHP_CONTROLLER_INTFLAG_CONTROLLER_ON_BUS) {
+
 			/* Do nothing */
 		}
 
@@ -2549,6 +2587,7 @@ static int i2c_poll_out(const struct device *dev)
 
 	/* Stop the I2C transfer after all bytes have been written. */
 	i2c_controller_transfer_stop(dev);
+
 	return 0;
 }
 #endif
@@ -2654,7 +2693,6 @@ static int i2c_mchp_transfer(const struct device *dev, struct i2c_msg *msgs, uin
 
 			/* Unlock the mutex before returning. */
 			k_mutex_unlock(&data->i2c_bus_mutex);
-
 			return retval;
 		}
 
@@ -2667,7 +2705,6 @@ static int i2c_mchp_transfer(const struct device *dev, struct i2c_msg *msgs, uin
 
 				/* Unlock the mutex before returning. */
 				k_mutex_unlock(&data->i2c_bus_mutex);
-
 				return -EAGAIN;
 			}
 
@@ -2676,7 +2713,6 @@ static int i2c_mchp_transfer(const struct device *dev, struct i2c_msg *msgs, uin
 
 			/* Unlock the mutex before returning. */
 			k_mutex_unlock(&data->i2c_bus_mutex);
-
 			return -EIO;
 		}
 #endif
@@ -2822,6 +2858,7 @@ static int i2c_set_apply_bitrate(const struct device *dev, uint32_t config)
 			}
 		}
 	}
+
 	return retval;
 }
 
@@ -2950,6 +2987,9 @@ static int i2c_mchp_init(const struct device *dev)
 	return 0;
 }
 
+/******************************************************************************
+ * @brief Zephyr driver instance creation
+ *****************************************************************************/
 static DEVICE_API(i2c, i2c_mchp_api) = {
 	.configure = i2c_mchp_configure,
 	.get_config = i2c_mchp_get_config,

@@ -94,6 +94,12 @@ config RTC_MCHP_U2250_2_1_0
 	help
 	  Enable RTC peripheral IP version 2.1.0 (U2250).
 
+config I2C_MCHP_SERCOM_U2201_5_0_0
+	bool
+	default y
+	help
+	  Enable SERCOM I2C peripheral IP version 5.0.0 (U2201).
+
 endif # SOC_FAMILY_MICROCHIP_SAM_D5X_E5X
 
 rsource "*/Kconfig.soc"
