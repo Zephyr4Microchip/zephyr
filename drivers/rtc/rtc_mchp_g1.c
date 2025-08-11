@@ -770,11 +770,12 @@ static int rtc_mchp_alarm_is_pending(const struct device *dev, uint16_t alarm_id
 		unsigned int key = irq_lock();
 
 		if (data->alarms[alarm_id].is_alarm_pending == true) {
-
 			retval = data->alarms[alarm_id].is_alarm_pending;
+
 			/* Clear the pending status of the alarm. */
 			data->alarms[alarm_id].is_alarm_pending = false;
 		}
+
 		/* Lock interrupts after alarm pending check */
 		irq_unlock(key);
 	}
@@ -888,12 +889,14 @@ static int rtc_mchp_set_alarm_time(const struct device *dev, uint16_t alarm_id, 
 			retval = -EINVAL;
 			break;
 		}
+
 		/* Check if the alarm ID is within the valid range */
 		if (alarm_id >= cfg->alarms_count) {
 			LOG_ERR("RTC Alarm id is out of range");
 			retval = -EINVAL;
 			break;
 		}
+
 		/* Check if the time pointer is provided when the alarm mask is not zero */
 		if ((timeptr == NULL) && (alarm_mask != 0)) {
 			LOG_ERR("No pointer is provided to set RTC alarm");
@@ -1266,6 +1269,7 @@ static int rtc_mchp_get_calibration(const struct device *dev, int32_t *calibrati
 			*calibration = ((int64_t)correction * RTC_CALIB_PARTS_PER_BILLION) /
 				       cfg->cal_constant;
 		}
+
 		/* Adjust the calibration value based on the sign bit */
 		if (correction_sign == 1) {
 			*calibration *= -1;
@@ -1309,6 +1313,7 @@ static int rtc_mchp_init(const struct device *dev)
 			LOG_ERR("Failed to enable the MCLK for RTC: %d", ret);
 			break;
 		}
+
 		/* Initialize mutex for RTC data structure */
 		RTC_DATA_LOCK_INIT(&data->lock);
 
@@ -1374,7 +1379,7 @@ static DEVICE_API(rtc, rtc_mchp_api) = {
 #endif
 
 /**
- * @brief Defines the RTC driver cclock onfiguration @p n.
+ * @brief Defines the RTC driver clock configuration @p n.
  *
  * Sets the clock configuration clock dev, main clock and oscillator clock systems for the RTC
  * instance.
