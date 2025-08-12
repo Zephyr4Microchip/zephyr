@@ -15,11 +15,11 @@ config DAC_MCHP_G1
 	help
 	  Enable support for the Microchip DAC driver on G1 DAC peripherals.
 
-if CLOCK_CONTROL_MCHP_COMMON
+if DAC_MCHP_COMMON
 
 config DAC_MCHP_DIFFERENTIAL
 	bool "Differential Mode Enable"
 	help
 	  Enable Differential Mode support
 
-endif # CLOCK_CONTROL_MCHP_COMMON
+endif # DAC_MCHP_COMMON
