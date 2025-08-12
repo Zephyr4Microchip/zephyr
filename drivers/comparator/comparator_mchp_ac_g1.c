@@ -15,16 +15,18 @@
 #include <zephyr/drivers/comparator.h>
 #include <zephyr/drivers/pinctrl.h>
 #include <zephyr/drivers/clock_control.h>
-#include <zephyr/drivers/clock_control/mchp_clock_control.h>
 #include <zephyr/logging/log.h>
 #include <zephyr/kernel.h>
 #include <zephyr/irq.h>
 
-/*******************************************
- * Constants and Macro Definitions
- *******************************************/
+/******************************************************************************
+ * @brief Devicetree definitions
+ *****************************************************************************/
 #define DT_DRV_COMPAT microchip_ac_g1_comparator
 
+/******************************************************************************
+ * @brief Macro definitions
+ *****************************************************************************/
 LOG_MODULE_REGISTER(comparator_mchp_ac_g1, CONFIG_COMPARATOR_LOG_LEVEL);
 
 /* Get device configuration structure from device pointer */
@@ -105,49 +107,50 @@ typedef enum {
  * for an individual comparator channel inside the AC peripheral.
  */
 typedef struct comparator_mchp_channel_cfg {
-	/** Comparator channel index (0 or 1) */
+
+	/* Comparator channel index (0 or 1) */
 	uint8_t channel_id;
 
-	/** Positive input mux selection */
+	/* Positive input mux selection */
 	mchp_comp_pos_input_t pos_input;
 
-	/** Negative input mux selection */
+	/* Negative input mux selection */
 	mchp_comp_neg_input_t neg_input;
 
-	/** Output routing mode (off, async, sync) */
+	/* Output routing mode (off, async, sync) */
 	mchp_comp_output_mode_t output_mode;
 
-	/** Interrupt condition (toggle, rising, falling, eoc) */
+	/* Interrupt condition (toggle, rising, falling, eoc) */
 	mchp_comp_interrupt_selection_t interrupt_selection;
 
-	/** Output filter mode (off, maj3, maj5) */
+	/* Output filter mode (off, maj3, maj5) */
 	mchp_comp_filter_t filter_length;
 
-	/** Hysteresis voltage level */
+	/* Hysteresis voltage level */
 	mchp_comp_hysteresis_t hysteresis_level;
 
-	/** vddana-scale-value */
+	/* vddana-scale-value */
 	uint8_t vddana_scale_value;
 
-	/** Enable interrupt generation */
+	/* Enable interrupt generation */
 	bool interrupt_enable;
 
-	/** Enable single-shot mode */
+	/* Enable single-shot mode */
 	bool single_shot_mode;
 
-	/** Enable hysteresis */
+	/* Enable hysteresis */
 	bool hysteresis_enable;
 
-	/** Keep comparator running in standby mode */
+	/* Keep comparator running in standby mode */
 	bool run_standby;
 
-	/** Enable event input */
+	/* Enable event input */
 	bool event_input_enable;
 
-	/** Enable event output */
+	/* Enable event output */
 	bool event_output_enable;
 
-	/** Swap and invert comparator inputs */
+	/* Swap and invert comparator inputs */
 	bool swap_inputs;
 } comparator_mchp_channel_cfg_t;
 
@@ -155,16 +158,17 @@ typedef struct comparator_mchp_channel_cfg {
  * @brief Runtime data for the Microchip comparator driver.
  */
 typedef struct comparator_mchp_dev_data {
-	/** Configured interrupt trigger type */
+
+	/* Configured interrupt trigger type */
 	uint32_t interrupt_mask;
 
-	/** Last interrupt status or edge detected */
+	/* Last interrupt status or edge detected */
 	uint32_t interrupt_status;
 
-	/** Application-provided callback function */
+	/* Application-provided callback function */
 	comparator_callback_t callback;
 
-	/** Context data passed to the callback */
+	/* Context data passed to the callback */
 	void *user_data;
 } comparator_mchp_dev_data_t;
 
@@ -172,13 +176,14 @@ typedef struct comparator_mchp_dev_data {
  * @brief Comparator clock configuration.
  */
 typedef struct comparator_mchp_clock {
-	/** Clock controller device */
+
+	/* Clock controller device */
 	const struct device *clock_dev;
 
-	/** Main clock subsystem */
+	/* Main clock subsystem */
 	clock_control_subsys_t mclk_sys;
 
-	/** Generic clock subsystem */
+	/* Generic clock subsystem */
 	clock_control_subsys_t gclk_sys;
 } comparator_mchp_clock_t;
 
@@ -186,19 +191,20 @@ typedef struct comparator_mchp_clock {
  * @brief Comparator device configuration structure.
  */
 typedef struct comparator_mchp_dev_config {
-	/** Base address of AC peripheral registers */
+
+	/* Base address of AC peripheral registers */
 	ac_registers_t *regs;
 
-	/** Pin control configuration */
+	/* Pin control configuration */
 	const struct pinctrl_dev_config *pcfg;
 
-	/** Comparator clock configuration */
+	/* Comparator clock configuration */
 	comparator_mchp_clock_t comparator_clock;
 
-	/** Pointer to device-specific config/init function */
+	/* Pointer to device-specific config/init function */
 	void (*config_func)(const struct device *dev);
 
-	/** Static configuration for the comparator channel */
+	/* Static configuration for the comparator channel */
 	comparator_mchp_channel_cfg_t channel_config;
 } comparator_mchp_dev_config_t;
 
@@ -494,6 +500,7 @@ static int comparator_mchp_get_output(const struct device *dev)
 	/* Wait for result to become ready */
 	ret = ac_wait_for_conversion(AC_REGS, channel_id);
 	if (ret == 0) {
+
 		/* Optional debug */
 		comparator_print_reg(dev);
 
@@ -610,6 +617,7 @@ static int comparator_mchp_set_trigger_callback(const struct device *dev,
 static int comparator_mchp_trigger_is_pending(const struct device *dev)
 {
 	const comparator_mchp_dev_config_t *const dev_cfg = DEV_CFG(dev);
+
 	/* Retrieve device runtime data */
 	comparator_mchp_dev_data_t *const dev_data =
 		((comparator_mchp_dev_data_t *const)(dev)->data);
@@ -717,7 +725,7 @@ static int comparator_mchp_init(const struct device *dev)
 /*******************************************
  * Zephyr Driver API Structure
  *******************************************/
-static const struct comparator_driver_api comparator_mchp_api = {
+static DEVICE_API(comparator, comparator_mchp_api) = {
 	.get_output = comparator_mchp_get_output,
 	.set_trigger = comparator_mchp_set_trigger,
 	.set_trigger_callback = comparator_mchp_set_trigger_callback,

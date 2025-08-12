@@ -9,6 +9,3 @@ config COMPARATOR_MCHP_AC_G1
 	help
 	  Enable support for the Microchip Comparator driver
 	  on G1 AC peripherals.
-
-	  This driver supports Microchip device families:
-	  - SOC_FAMILY_MICROCHIP_SAM_D5X_E5X
