@@ -428,7 +428,7 @@ typedef enum {
 	I2C_MCHP_TARGET_COMMAND_SEND_ACK = 0,
 	I2C_MCHP_TARGET_COMMAND_SEND_NACK,
 	I2C_MCHP_TARGET_COMMAND_RECEIVE_ACK_NAK,
-	I2C_MCHP_TARGET_COMMAND_STOP
+	I2C_MCHP_TARGET_COMMAND_WAIT_FOR_START
 } i2c_mchp_target_cmd_t;
 
 /**
@@ -587,6 +587,9 @@ typedef struct i2c_mchp_dev_data {
 	/* Data buffer for RX/TX operations in target mode. */
 	uint8_t rx_tx_data;
 #endif
+
+	/* First byte read after an address match. */
+	bool firstReadAfterAddrMatch;
 
 } i2c_mchp_dev_data_t;
 
@@ -1524,7 +1527,7 @@ void i2c_target_set_command(const struct device *dev, i2c_mchp_target_cmd_t cmd)
 	case I2C_MCHP_TARGET_COMMAND_RECEIVE_ACK_NAK:
 		i2c_regs->I2CS.SERCOM_CTRLB |= SERCOM_I2CS_CTRLB_CMD(0x03UL);
 		break;
-	case I2C_MCHP_TARGET_COMMAND_STOP:
+	case I2C_MCHP_TARGET_COMMAND_WAIT_FOR_START:
 		i2c_regs->I2CS.SERCOM_CTRLB =
 			(i2c_regs->I2CS.SERCOM_CTRLB | SERCOM_I2CS_CTRLB_ACKACT_Msk) |
 			SERCOM_I2CS_CTRLB_CMD(0x02UL);
@@ -1573,15 +1576,16 @@ static void i2c_target_handler(const struct device *dev)
 
 			i2c_target_set_command(dev, I2C_MCHP_TARGET_COMMAND_SEND_ACK);
 
+			data->firstReadAfterAddrMatch = true;
+
 			if ((target_status & I2C_MCHP_TARGET_STATUS_FLAG_DATA_DIR_READ) ==
 			    I2C_MCHP_TARGET_STATUS_FLAG_DATA_DIR_READ) {
 
-				/* Master is reading */
+				/* Load the first byte for host read */
 				target_cb->read_requested(&data->target_config, &data->rx_tx_data);
-				i2c_byte_write(dev, data->rx_tx_data);
 			} else {
 
-				/* Master is writing */
+				/* Host is writing */
 				target_cb->write_requested(&data->target_config);
 			}
 		}
@@ -1593,22 +1597,31 @@ static void i2c_target_handler(const struct device *dev)
 			if (((target_status & I2C_MCHP_TARGET_STATUS_FLAG_DATA_DIR_READ) ==
 			     I2C_MCHP_TARGET_STATUS_FLAG_DATA_DIR_READ)) {
 
-				if ((i2c_target_get_lastbyte_ack_status(dev) ==
+				if ((data->firstReadAfterAddrMatch == true) ||
+				    (i2c_target_get_lastbyte_ack_status(dev) ==
 				     I2C_MCHP_TARGET_ACK_STATUS_RECEIVED_ACK)) {
 
-					/* Master is reading */
-					target_cb->read_processed(&data->target_config,
-								  &data->rx_tx_data);
+					/* Host is reading */
 					i2c_byte_write(dev, data->rx_tx_data);
+
+					/* first byte read after address match done*/
+					data->firstReadAfterAddrMatch = false;
+
 					i2c_target_set_command(
 						dev, I2C_MCHP_TARGET_COMMAND_RECEIVE_ACK_NAK);
+
+					/* Load the next byte for host read*/
+					target_cb->read_processed(&data->target_config,
+								  &data->rx_tx_data);
+
 				} else {
-					i2c_target_set_command(dev, I2C_MCHP_TARGET_COMMAND_STOP);
+					i2c_target_set_command(
+						dev, I2C_MCHP_TARGET_COMMAND_WAIT_FOR_START);
 				}
 
 			} else {
 
-				/* Master is writing */
+				/* Host is writing */
 				i2c_target_set_command(dev, I2C_MCHP_TARGET_COMMAND_SEND_ACK);
 				data->rx_tx_data = i2c_byte_read(dev);
 				retval = target_cb->write_received(&data->target_config,
@@ -1632,8 +1645,7 @@ static void i2c_target_handler(const struct device *dev)
 
 	i2c_target_status_clear(dev, target_status);
 }
-
-#endif
+#endif /* CONFIG_I2C_TARGET */
 
 static void i2c_mchp_isr(const struct device *dev)
 {
