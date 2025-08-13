@@ -1272,6 +1272,8 @@ static int flash_mchp_init(const struct device *dev)
 		flash_controller_init(dev);
 	} while (0);
 
+	ret = (ret == -EALREADY) ? 0 : ret;
+
 	return ret;
 }
 
