@@ -21,6 +21,7 @@
 #include <zephyr/drivers/pinctrl.h>
 #include <zephyr/drivers/clock_control.h>
 #include <zephyr/drivers/clock_control/mchp_clock_control.h>
+#include <mchp_dt_helper.h>
 
 /******************************************************************************
  * @brief Devicetree definitions
@@ -418,16 +419,26 @@ static inline void spi_8bit_ch_size(const mchp_spi_reg_config_t *spi_reg_cfg, sp
 static inline void spi_set_baudrate(const mchp_spi_reg_config_t *spi_reg_cfg,
 				    const struct spi_config *config, uint32_t clk_freq_hz)
 {
-	int baudvalue;
+	if (config->frequency != 0) {
+		uint32_t divisor = 2U * config->frequency;
 
-	/* Use the requested or next highest possible frequency */
-	baudvalue = (clk_freq_hz / (2U * (config->frequency))) - 1U;
-	baudvalue = CLAMP(baudvalue, 0, UINT8_MAX);
+		/* Use the requested or next highest possible frequency */
+		uint32_t baud_value = (clk_freq_hz / divisor) - 1;
 
-	if (SPI_OP_MODE_GET(config->operation) == SPI_OP_MODE_MASTER) {
-		spi_reg_cfg->regs->SPIM.SERCOM_BAUD = baudvalue;
-	} else {
-		spi_reg_cfg->regs->SPIS.SERCOM_BAUD = baudvalue;
+		if ((clk_freq_hz % divisor) >= (divisor / 2U)) {
+			/* Round up the baud_value to ensures SPI clock is as close as possible to
+			 * the requested frequency
+			 */
+			baud_value += 1U;
+		}
+
+		baud_value = CLAMP(baud_value, 0, UINT8_MAX);
+
+		if (SPI_OP_MODE_GET(config->operation) == SPI_OP_MODE_MASTER) {
+			spi_reg_cfg->regs->SPIM.SERCOM_BAUD = baud_value;
+		} else {
+			spi_reg_cfg->regs->SPIS.SERCOM_BAUD = baud_value;
+		}
 	}
 }
 
