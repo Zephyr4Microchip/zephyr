@@ -692,7 +692,7 @@ static DEVICE_API(dac, dac_mchp_api) = {.channel_setup = dac_mchp_channel_setup,
 	DAC_MCHP_CONFIG_DEFN(n);                                                                   \
 	static dac_mchp_dev_data_t dac_mchp_data_##n = {};                                         \
 	DEVICE_DT_INST_DEFINE(n, dac_mchp_init, NULL, &dac_mchp_data_##n, &dac_mchp_config_##n,    \
-			      POST_KERNEL, CONFIG_DAC_INIT_PRIORITY, &dac_mchp_driver_api);
+			      POST_KERNEL, CONFIG_DAC_INIT_PRIORITY, &dac_mchp_api);
 
 /**
  * @brief Initialize DAC devices for all compatible instances
