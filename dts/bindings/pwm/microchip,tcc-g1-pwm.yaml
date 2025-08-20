@@ -12,10 +12,7 @@ description: >
   as follows:
     - tcc-u2213
 
-# Compatible strings for the device
 compatible: "microchip,tcc-g1-pwm"
-
-# Include base properties from the common TCC binding file
 
 include:
   - base.yaml
@@ -29,19 +26,13 @@ pwm-cells:
   - polarity
 
 properties:
-  # Maximum bit width supported by the counter
   max-bit-width:
     type: int
     required: true
     description: >
-      Maximum bit width supported by the counter. This property indicates the
-      resolution of the counter, which can be 8, 16, 24, or 32 bits.
+      Maximum bit width supported by the counter.
+
+      This property indicates the resolution of the counter.
     enum:
       - 16
       - 24
-
-  channels:
-    type: int
-    required: true
-    description: >
-      This property indicates the maximum available channels in a peripheral instance

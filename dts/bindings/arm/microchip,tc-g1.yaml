@@ -9,7 +9,6 @@ description: |
 
 compatible: "microchip,tc-g1"
 
-# Include common properties from base.yaml and pinctrl-device.yaml
 include:
   - name: base.yaml
   - name: pinctrl-device.yaml
@@ -22,27 +21,35 @@ properties:
 
   interrupts:
     description: |
-      Defines the interrupt lines used by the timer counter peripheral. This property
-      specifies the interrupt number and priority.
+      Defines the interrupt lines used by the timer counter peripheral.
+
+      This property specifies the interrupt number and priority.
     required: true
 
   clocks:
     description: |
       Specifies the clock sources and their configurations for the timer counter peripheral.
+
       This property ensures the peripheral is provided with the necessary clock signals.
       The following are the clock names applicable to this property.
        - mclk
        - gclk
        - client_mclk : This is the clock subsystem of the client with
-         which the instance can be paired
+         which the instance can be paired. This is an optional clock name.
+         It is only applicable to those peripherals which can be paired with another
+         instance for achieving a higher max bit width. In this particular case, 32-bit max-bit-width
+         is attained by pairing two such instances. The ability for an instance to pair with another instance
+         attain higher max-bit-width will be specified in their respective datasheets.
+         It is not available for all the instances.
     required: true
 
   prescaler:
     type: int
     description: |
-      Timer prescaler values. The prescaler divides the input clock frequency to
-      achieve the desired timer frequency. Common prescaler values include 1, 2,
-      4, 8, 16, 64, 256, and 1024.
+      Timer prescaler values.
+
+      The prescaler divides the input clock frequency to
+      achieve the desired timer frequency.
     enum:
       - 1
       - 2
@@ -52,3 +59,9 @@ properties:
       - 64
       - 256
       - 1024
+
+  channels:
+    type: int
+    required: true
+    description: |
+      This property indicates the maximum available channels in a peripheral instance

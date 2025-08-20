@@ -9,7 +9,6 @@ description: >
 
 compatible: "microchip,tcc-g1"
 
-# Include common properties from base.yaml and pinctrl-device.yaml
 include:
   - name: base.yaml
   - name: pinctrl-device.yaml
@@ -22,22 +21,25 @@ properties:
 
   interrupts:
     description: >
-      Defines the interrupt lines used by the timer counter peripheral. This property
-      specifies the interrupt number and priority.
+      Defines the interrupt lines used by the timer counter peripheral.
+
+      This property specifies the interrupt number and priority.
     required: true
 
   clocks:
     description: >
       Specifies the clock sources and their configurations for the timer counter peripheral.
+
       This property ensures the peripheral is provided with the necessary clock signals.
     required: true
 
   prescaler:
     type: int
     description: >
-      Timer prescaler values. The prescaler divides the input clock frequency to
-      achieve the desired timer frequency. Common prescaler values include 1, 2,
-      4, 8, 16, 64, 256, and 1024.
+      Timer prescaler values.
+
+      The prescaler divides the input clock frequency to
+      achieve the desired timer frequency.
     enum:
       - 1
       - 2
@@ -47,3 +49,9 @@ properties:
       - 64
       - 256
       - 1024
+
+  channels:
+    type: int
+    required: true
+    description: |
+      This specifies the maximum number of channels available for the peripheral instance.
