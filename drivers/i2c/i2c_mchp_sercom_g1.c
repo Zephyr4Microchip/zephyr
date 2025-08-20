@@ -506,6 +506,9 @@ typedef struct i2c_mchp_dev_config {
 	i2c_mchp_dma_t i2c_dma;
 #endif
 
+	/* Enable peripheral operation in standby sleep mode. */
+	bool enable_runstandby;
+
 } i2c_mchp_dev_config_t;
 
 /**
@@ -732,6 +735,26 @@ static void i2c_controller_enable(const struct device *dev, bool enable)
 
 		/* Do nothing */
 	};
+}
+
+/**
+ * @brief Enable or disable RUNSTDBY for I2C controller (master) mode.
+ *
+ * This function sets or clears the RUNSTDBY bit in the SERCOM CTRLA register
+ * for the I2C controller, allowing the peripheral to run in standby mode.
+ *
+ * @param dev Pointer to the device structure for the I2C peripheral.
+ */
+static void i2c_controller_runstandby_enable(const struct device *dev)
+{
+	const i2c_mchp_dev_config_t *const i2c_cfg = dev->config;
+	sercom_registers_t *i2c_regs = i2c_cfg->regs;
+
+	if (i2c_cfg->enable_runstandby == true) {
+		i2c_regs->I2CM.SERCOM_CTRLA |= SERCOM_I2CM_CTRLA_RUNSTDBY(1);
+	} else {
+		i2c_regs->I2CM.SERCOM_CTRLA &= ~SERCOM_I2CM_CTRLA_RUNSTDBY(1);
+	}
 }
 
 /**
@@ -1829,6 +1852,26 @@ static void i2c_target_enable(const struct device *dev, bool enable)
 }
 
 /**
+ * @brief Enable or disable RUNSTDBY for I2C target (slave) mode.
+ *
+ * This function sets or clears the RUNSTDBY bit in the SERCOM CTRLA register
+ * for the I2C target, allowing the peripheral to run in standby mode.
+ *
+ * @param dev Pointer to the device structure for the I2C peripheral.
+ */
+static void i2c_target_runstandby_enable(const struct device *dev)
+{
+	const i2c_mchp_dev_config_t *const i2c_cfg = dev->config;
+	sercom_registers_t *i2c_regs = i2c_cfg->regs;
+
+	if (i2c_cfg->enable_runstandby == true) {
+		i2c_regs->I2CS.SERCOM_CTRLA |= SERCOM_I2CS_CTRLA_RUNSTDBY(1);
+	} else {
+		i2c_regs->I2CS.SERCOM_CTRLA &= ~SERCOM_I2CS_CTRLA_RUNSTDBY(1);
+	}
+}
+
+/**
  * @brief Configure the I2C peripheral to operate in target (slave) mode.
  *
  * This API sets the necessary control register bits to enable target (slave) mode
@@ -2009,6 +2052,9 @@ static int i2c_mchp_target_register(const struct device *dev, struct i2c_target_
 
 	/* Mark the device as being in target mode*/
 	data->target_mode = true;
+
+	/* Enable runstandby for I2C target */
+	i2c_target_runstandby_enable(dev);
 
 	/*Re-enable the I2C peripheral*/
 	i2c_target_enable(dev, true);
@@ -2990,6 +3036,10 @@ static int i2c_mchp_init(const struct device *dev)
 		return -ENODEV;
 	}
 #endif
+
+	/* Enable runstandby for I2C controller */
+	i2c_controller_runstandby_enable(dev);
+
 	/*Enable the I2C peripheral*/
 	i2c_controller_enable(dev, true);
 
@@ -3067,6 +3117,7 @@ static DEVICE_API(i2c, i2c_mchp_api) = {
 		.pcfg = PINCTRL_DT_INST_DEV_CONFIG_GET(n),                                         \
 		.bitrate = DT_INST_PROP(n, clock_frequency),                                       \
 		.irq_config_func = &i2c_mchp_irq_config_##n,                                       \
+		.enable_runstandby = DT_INST_PROP(n, runstandby_en),                               \
 		I2C_MCHP_REG_DEFN(n) I2C_MCHP_CLOCK_DEFN(n) I2C_MCHP_DMA_CHANNELS(n)}
 
 #define I2C_MCHP_DEVICE_INIT(n)                                                                    \
