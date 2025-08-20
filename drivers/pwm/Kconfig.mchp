@@ -11,8 +11,6 @@ config PWM_MCHP_G1_TCC
 	select PINCTRL
 	help
 	  Enable the Microchip Pulse Width Modulation(PWM) driver.
-	  This driver supports Microchip device families:
-	  - SOC_FAMILY_MCHP_SAM_D5X_E5X
 
 config PWM_MCHP_G1_TC
 	bool "Microchip TC G1 PWM driver"
@@ -22,6 +20,4 @@ config PWM_MCHP_G1_TC
 	select PINCTRL
 	help
 	  Enable the Microchip Pulse Width Modulation(PWM) driver.
-	  This driver supports Microchip device families:
-	  - SOC_FAMILY_MCHP_SAM_D5X_E5X
 endmenu
