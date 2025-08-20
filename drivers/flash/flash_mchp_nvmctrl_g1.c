@@ -1255,24 +1255,22 @@ static int flash_mchp_init(const struct device *dev)
 {
 	int ret = FLASH_MCHP_SUCCESS;
 
-	do {
-		const flash_mchp_dev_config_t *const mchp_flash_cfg = DEV_CFG(dev);
-		flash_mchp_dev_data_t *mchp_flash_data = dev->data;
+	const flash_mchp_dev_config_t *const mchp_flash_cfg = DEV_CFG(dev);
+	flash_mchp_dev_data_t *mchp_flash_data = dev->data;
+
+	ret = clock_control_on(mchp_flash_cfg->flash_clock.clock_dev,
+			       mchp_flash_cfg->flash_clock.mclk_sys);
+
+	if ((ret == FLASH_MCHP_SUCCESS) || (ret == -EALREADY)) {
 
 		FLASH_MCHP_DATA_MUTEX_INIT(&(mchp_flash_data->flash_data_lock));
-
-		ret = clock_control_on(mchp_flash_cfg->flash_clock.clock_dev,
-				       mchp_flash_cfg->flash_clock.mclk_sys);
-		if ((ret != FLASH_MCHP_SUCCESS) && (ret != -EALREADY)) {
-			break;
-		}
 
 		mchp_flash_cfg->irq_config_func(dev);
 
 		flash_controller_init(dev);
-	} while (0);
 
-	ret = (ret == -EALREADY) ? 0 : ret;
+		ret = FLASH_MCHP_SUCCESS;
+	}
 
 	return ret;
 }
