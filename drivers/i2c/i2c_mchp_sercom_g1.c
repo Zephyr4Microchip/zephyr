@@ -432,6 +432,18 @@ typedef enum {
 } i2c_mchp_target_cmd_t;
 
 /**
+ * @enum i2c_mchp_runstandby_t
+ * @brief Run standby mode configuration for SERCOM I2C.
+ *
+ * This enumeration defines the possible states for enabling or disabling
+ * run standby mode in the SERCOM I2C peripheral.
+ */
+typedef enum {
+	I2C_RUNSTANDBY_DISABLED = 0,
+	I2C_RUNSTANDBY_ENABLED
+} i2c_mchp_runstandby_t;
+
+/**
  * @struct i2c_mchp_clock
  * @brief Structure to hold device clock configuration.
  */
@@ -507,7 +519,7 @@ typedef struct i2c_mchp_dev_config {
 #endif
 
 	/* Enable peripheral operation in standby sleep mode. */
-	bool enable_runstandby;
+	uint8_t enable_runstandby;
 
 } i2c_mchp_dev_config_t;
 
@@ -750,7 +762,7 @@ static void i2c_controller_runstandby_enable(const struct device *dev)
 	const i2c_mchp_dev_config_t *const i2c_cfg = dev->config;
 	sercom_registers_t *i2c_regs = i2c_cfg->regs;
 
-	if (i2c_cfg->enable_runstandby == true) {
+	if (i2c_cfg->enable_runstandby == I2C_RUNSTANDBY_ENABLED) {
 		i2c_regs->I2CM.SERCOM_CTRLA |= SERCOM_I2CM_CTRLA_RUNSTDBY(1);
 	} else {
 		i2c_regs->I2CM.SERCOM_CTRLA &= ~SERCOM_I2CM_CTRLA_RUNSTDBY(1);
@@ -1864,7 +1876,7 @@ static void i2c_target_runstandby_enable(const struct device *dev)
 	const i2c_mchp_dev_config_t *const i2c_cfg = dev->config;
 	sercom_registers_t *i2c_regs = i2c_cfg->regs;
 
-	if (i2c_cfg->enable_runstandby == true) {
+	if (i2c_cfg->enable_runstandby == I2C_RUNSTANDBY_ENABLED) {
 		i2c_regs->I2CS.SERCOM_CTRLA |= SERCOM_I2CS_CTRLA_RUNSTDBY(1);
 	} else {
 		i2c_regs->I2CS.SERCOM_CTRLA &= ~SERCOM_I2CS_CTRLA_RUNSTDBY(1);
