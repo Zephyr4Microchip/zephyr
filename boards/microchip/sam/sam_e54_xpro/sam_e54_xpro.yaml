@@ -13,6 +13,7 @@ supported:
   - adc
   - dac
   - comparator
+  - counter
   - dma
   - entropy
   - eic
