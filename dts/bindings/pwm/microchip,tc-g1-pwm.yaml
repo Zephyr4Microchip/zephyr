@@ -35,24 +35,6 @@ include:
   - microchip,tc-g1.yaml
 
 properties:
-  channels:
-    type: int
-    required: true
-    description: |
-      This specifies the maximum number of channels available for the peripheral.
-
-  max-bit-width:
-    type: int
-    required: true
-    description: |
-      Maximum bit width supported by the PWM counter.
-
-      This property indicates the resolution of the counter.
-    enum:
-      - 8
-      - 16
-      - 32
-
   "#pwm-cells":
     const: 3
 

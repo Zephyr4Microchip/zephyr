@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # Description of the Microchip TCC PWM driver
-description: >
+description: |
   Microchip TCC pwm driver.
 
   This driver is used for configuring
@@ -20,19 +20,11 @@ include:
   - microchip,tcc-g1.yaml
   - pinctrl-device.yaml
 
+properties:
+  "#pwm-cells":
+    const: 3
+
 pwm-cells:
   - channel
   - period
   - polarity
-
-properties:
-  max-bit-width:
-    type: int
-    required: true
-    description: >
-      Maximum bit width supported by the counter.
-
-      This property indicates the resolution of the counter.
-    enum:
-      - 16
-      - 24

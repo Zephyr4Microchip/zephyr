@@ -246,7 +246,8 @@
 			clocks = <&mclkperiph CLOCK_MCHP_MCLKPERIPH_ID_APBA_TC0>,
 				 <&gclkperiph CLOCK_MCHP_GCLKPERIPH_ID_TC0>,
 				 <&mclkperiph CLOCK_MCHP_MCLKPERIPH_ID_APBA_TC1>;
-			clock-names = "mclk", "gclk" ,"client_mclk" ;
+			clock-names = "mclk", "gclk", "client_mclk" ;
+			max-bit-width = <16>;
 			prescaler = <1>;
 			channels = <2>;
 		};
@@ -258,9 +259,11 @@
 			clocks = <&mclkperiph CLOCK_MCHP_MCLKPERIPH_ID_APBA_TC1>,
 				 <&gclkperiph CLOCK_MCHP_GCLKPERIPH_ID_TC1>;
 			clock-names = "mclk", "gclk";
+			max-bit-width = <16>;
 			prescaler = <1>;
 			channels = <2>;
 		};
+
 		nvmctrl: nvmctrl@41004000 {
 			compatible = "microchip,nvmctrl-g1-flash";
 			status = "disabled";
@@ -363,6 +366,7 @@
 			clocks = <&mclkperiph CLOCK_MCHP_MCLKPERIPH_ID_APBB_TCC0>,
 				 <&gclkperiph CLOCK_MCHP_GCLKPERIPH_ID_TCC0>;
 			clock-names = "mclk", "gclk";
+			max-bit-width = <24>;
 			channels = <6>;
 		};
 
@@ -373,6 +377,7 @@
 			clocks = <&mclkperiph CLOCK_MCHP_MCLKPERIPH_ID_APBB_TCC1>,
 				 <&gclkperiph CLOCK_MCHP_GCLKPERIPH_ID_TCC1>;
 			clock-names = "mclk", "gclk";
+			max-bit-width = <24>;
 			channels = <4>;
 		};
 
@@ -383,7 +388,8 @@
 			clocks = <&mclkperiph CLOCK_MCHP_MCLKPERIPH_ID_APBB_TC2>,
 				 <&gclkperiph CLOCK_MCHP_GCLKPERIPH_ID_TC2>,
 				 <&mclkperiph CLOCK_MCHP_MCLKPERIPH_ID_APBB_TC3>;
-			clock-names = "mclk", "gclk","client_mclk" ;
+			clock-names = "mclk", "gclk", "client_mclk" ;
+			max-bit-width = <16>;
 			prescaler = <1>;
 			channels = <2>;
 
@@ -396,6 +402,7 @@
 			clocks = <&mclkperiph CLOCK_MCHP_MCLKPERIPH_ID_APBB_TC3>,
 				 <&gclkperiph CLOCK_MCHP_GCLKPERIPH_ID_TC3>;
 			clock-names = "mclk", "gclk";
+			max-bit-width = <16>;
 			prescaler = <1>;
 			channels = <2>;
 		};
@@ -407,6 +414,7 @@
 			clocks = <&mclkperiph CLOCK_MCHP_MCLKPERIPH_ID_APBC_TCC2>,
 					<&gclkperiph CLOCK_MCHP_GCLKPERIPH_ID_TCC2>;
 			clock-names = "mclk", "gclk";
+			max-bit-width = <16>;
 			channels = <3>;
 		};
 

@@ -13,6 +13,7 @@
 			clocks = <&mclkperiph CLOCK_MCHP_MCLKPERIPH_ID_APBC_TCC3>,
 				 <&gclkperiph CLOCK_MCHP_GCLKPERIPH_ID_TCC3>;
 			clock-names = "mclk", "gclk";
+			max-bit-width = <16>;
 			channels = <2>;
 		};
 
@@ -23,6 +24,7 @@
 			clocks = <&mclkperiph CLOCK_MCHP_MCLKPERIPH_ID_APBC_TC4>,
 				 <&gclkperiph CLOCK_MCHP_GCLKPERIPH_ID_TC4>;
 			clock-names = "mclk", "gclk";
+			max-bit-width = <16>;
 			channels = <2>;
 		};
 
@@ -33,6 +35,7 @@
 			clocks = <&mclkperiph CLOCK_MCHP_MCLKPERIPH_ID_APBC_TC5>,
 				 <&gclkperiph CLOCK_MCHP_GCLKPERIPH_ID_TC5>;
 			clock-names = "mclk", "gclk";
+			max-bit-width = <16>;
 			channels = <2>;
 		};
 
@@ -63,6 +66,7 @@
 			clocks = <&mclkperiph CLOCK_MCHP_MCLKPERIPH_ID_APBD_TCC4>,
 				 <&gclkperiph CLOCK_MCHP_GCLKPERIPH_ID_TCC4>;
 			clock-names = "mclk", "gclk";
+			max-bit-width = <16>;
 			channels = <2>;
 		};
 
@@ -73,6 +77,7 @@
 			clocks = <&mclkperiph CLOCK_MCHP_MCLKPERIPH_ID_APBD_TC6>,
 				 <&gclkperiph CLOCK_MCHP_GCLKPERIPH_ID_TC6>;
 			clock-names = "mclk", "gclk";
+			max-bit-width = <16>;
 			channels = <2>;
 		};
 
@@ -83,6 +88,7 @@
 			clocks = <&mclkperiph CLOCK_MCHP_MCLKPERIPH_ID_APBD_TC7>,
 				 <&gclkperiph CLOCK_MCHP_GCLKPERIPH_ID_TC7>;
 			clock-names = "mclk", "gclk";
+			max-bit-width = <16>;
 			channels = <2>;
 		};
 
