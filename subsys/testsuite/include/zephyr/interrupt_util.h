@@ -224,6 +224,14 @@ static inline void trigger_irq(int irq)
 	z_mips_enter_irq(irq);
 }
 
+#elif defined(CONFIG_DSPIC)
+extern void z_dspic_enter_irq(int);
+
+static inline void trigger_irq(int irq)
+{
+	z_dspic_enter_irq(irq);
+}
+
 #elif defined(CONFIG_CPU_CORTEX_R5) && defined(CONFIG_VIM)
 
 extern void z_vim_arm_enter_irq(int);
