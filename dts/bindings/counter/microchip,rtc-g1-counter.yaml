@@ -2,8 +2,10 @@
 # SPDX-License-Identifier: Apache-2.0
 
 description: |
-  Microchip RTC counter driver. This driver is used for configuring and
-  managing the RTC (Real Time Counter) peripheral in Microchip microcontrollers.
+  Microchip RTC counter driver.
+
+  This driver is used for configuring and  managing the RTC (Real Time Counter)
+  peripheral in Microchip microcontrollers.
   These peripherals support measuring time intervals and generating periodic
   interrupts.
   The supported devices are :

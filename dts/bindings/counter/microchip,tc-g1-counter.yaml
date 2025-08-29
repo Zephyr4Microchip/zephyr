@@ -2,7 +2,9 @@
 # SPDX-License-Identifier: Apache-2.0
 
 description: |
-  Microchip TC (Timer Counter) driver. This driver is responsible for configuring
+  Microchip TC (Timer Counter) driver.
+
+  This driver is responsible for configuring
   and managing the TC peripheral in Microchip microcontrollers. The TC module
   supports event counting, time interval measurement, and periodic interrupt
   generation.
@@ -12,16 +14,3 @@ description: |
 compatible: "microchip,tc-g1-counter"
 
 include: microchip,tc-g1.yaml
-
-properties:
-  max-bit-width:
-    type: int
-    required: true
-    description: |
-      Maximum bit width supported by the counter.
-
-      This property indicates the resolution of the counter.
-    enum:
-      - 8
-      - 16
-      - 32
