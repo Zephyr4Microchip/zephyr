@@ -104,6 +104,18 @@ LOG_MODULE_REGISTER(entropy_mchp_trng_g1, CONFIG_ENTROPY_LOG_LEVEL);
  * @brief Data type definitions
  ******************************************/
 /**
+ * @enum entropy_mchp_runstandby_t
+ * @brief Run standby mode configuration for TRNG peripheral.
+ *
+ * This enumeration defines the possible states for enabling or disabling
+ * run standby mode in the TRNG peripheral.
+ */
+typedef enum {
+	ENTROPY_RUNSTANDBY_DISABLED = 0,
+	ENTROPY_RUNSTANDBY_ENABLED
+} entropy_mchp_runstandby_t;
+
+/**
  * @struct entropy_mchp_clock
  * @brief Clock configuration structure for entropy (TRNG) peripheral.
  *
@@ -132,6 +144,9 @@ typedef struct entropy_mchp_config {
 
 	/**< Function to configure IRQ */
 	void (*irq_config_func)(const struct device *dev);
+
+	/* Enable peripheral operation in standby sleep mode. */
+	uint8_t run_in_standby;
 
 } entropy_mchp_config_t;
 
@@ -191,7 +206,7 @@ static void entropy_trng_interrupt_disable(const struct device *dev)
 static void entropy_trng_enable(const struct device *dev)
 {
 	/* Enable TRNG module */
-	ENTROPY_REGS->TRNG_CTRLA = TRNG_CTRLA_ENABLE(1);
+	ENTROPY_REGS->TRNG_CTRLA |= TRNG_CTRLA_ENABLE(1);
 }
 
 /**
@@ -209,6 +224,25 @@ static inline uint8_t entropy_ready(const struct device *dev)
 	entropy_mchp_dev_data_t *mchp_entropy_data = dev->data;
 
 	return ENTROPY_DATA_RDY_SEM_TAKE(&mchp_entropy_data->entropy_data_rdy_sem);
+}
+
+/**
+ * @brief Enable or disable run in standby mode for the TRNG peripheral.
+ *
+ * This function sets the run in standby mode for the TRNG peripheral based on the device
+ * configuration.
+ *
+ * @param dev Pointer to the device structure.
+ */
+static void entropy_runstandby_enable(const struct device *dev)
+{
+	const entropy_mchp_config_t *const entropy_cfg = dev->config;
+
+	if (entropy_cfg->run_in_standby == ENTROPY_RUNSTANDBY_ENABLED) {
+		ENTROPY_REGS->TRNG_CTRLA |= TRNG_CTRLA_RUNSTDBY(1);
+	} else {
+		ENTROPY_REGS->TRNG_CTRLA &= ~TRNG_CTRLA_RUNSTDBY(1);
+	}
 }
 
 /**
@@ -398,6 +432,8 @@ static int entropy_mchp_init(const struct device *dev)
 
 		entropy_cfg->irq_config_func(dev);
 
+		entropy_runstandby_enable(dev);
+
 		entropy_trng_enable(dev);
 
 		ret = ENTROPY_MCHP_SUCCESS;
@@ -471,7 +507,8 @@ static DEVICE_API(entropy, entropy_mchp_api) = {.get_entropy = entropy_mchp_get_
 		.entropy_clock = {.clock_dev = DEVICE_DT_GET(DT_NODELABEL(clock)),                 \
 				  .mclk_sys = (void *)(DT_INST_CLOCKS_CELL_BY_NAME(n, mclk,        \
 										   subsystem))},   \
-		.irq_config_func = entropy_mchp_irq_config_##n}
+		.irq_config_func = entropy_mchp_irq_config_##n,                                    \
+		.run_in_standby = DT_INST_PROP(n, run_in_standby_en)}
 
 /**
  * @brief Macro to define the entropy data structure for a specific instance.
