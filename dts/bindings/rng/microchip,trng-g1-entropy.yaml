@@ -17,3 +17,12 @@ properties:
 
   interrupts:
     required: true
+
+  run-in-standby-en:
+    type: int
+    enum:
+      - 0
+      - 1
+    default: 1
+    description: |
+      Enable (1) or disable (0) runstandby mode for TRNG.
