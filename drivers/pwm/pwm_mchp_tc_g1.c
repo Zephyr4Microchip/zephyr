@@ -12,6 +12,7 @@
  * for Microchip TC G1 peripheral
  */
 
+#include <stdio.h>
 #include <zephyr/kernel.h>
 #include <zephyr/drivers/pwm.h>
 #include <zephyr/logging/log.h>
@@ -352,6 +353,7 @@ static int32_t tc_enable(const void *pwm_reg, const uint32_t max_bit_width, bool
 static int32_t tc_set_mode(const void *pwm_reg, const uint32_t max_bit_width)
 {
 	int32_t ret_val = MCHP_PWM_SUCCESS;
+	uint32_t reg_val = 0;
 
 	do {
 		ret_val = check_slave_status(pwm_reg);
@@ -362,20 +364,25 @@ static int32_t tc_set_mode(const void *pwm_reg, const uint32_t max_bit_width)
 		}
 		switch (max_bit_width) {
 		case BIT_MODE_8:
-			PWM_MODE8(pwm_reg)->TC_CTRLA &= (~TC_CTRLA_MODE_Msk);
-			LOG_DBG("CTRLA = 0x%x\n", PWM_MODE8(pwm_reg)->TC_CTRLA);
-			PWM_MODE8(pwm_reg)->TC_CTRLA |= TC_CTRLA_MODE(TC_CTRLA_MODE_COUNT8_Val);
+			reg_val = PWM_MODE8(pwm_reg)->TC_CTRLA;
+			reg_val &= (~TC_CTRLA_MODE_Msk);
+			reg_val |= TC_CTRLA_MODE(TC_CTRLA_MODE_COUNT8_Val);
+			PWM_MODE8(pwm_reg)->TC_CTRLA = (uint8_t)reg_val;
 			LOG_DBG("CTRLA = 0x%x\n", PWM_MODE8(pwm_reg)->TC_CTRLA);
 			break;
 
 		case BIT_MODE_16:
-			PWM_MODE16(pwm_reg)->TC_CTRLA &= (~TC_CTRLA_MODE_Msk);
-			PWM_MODE16(pwm_reg)->TC_CTRLA |= TC_CTRLA_MODE(TC_CTRLA_MODE_COUNT16_Val);
+			reg_val = PWM_MODE16(pwm_reg)->TC_CTRLA;
+			reg_val &= (~TC_CTRLA_MODE_Msk);
+			reg_val |= TC_CTRLA_MODE(TC_CTRLA_MODE_COUNT16_Val);
+			PWM_MODE16(pwm_reg)->TC_CTRLA = (uint16_t)reg_val;
 			break;
 
 		case BIT_MODE_32:
-			PWM_MODE32(pwm_reg)->TC_CTRLA &= (~TC_CTRLA_MODE_Msk);
-			PWM_MODE32(pwm_reg)->TC_CTRLA |= TC_CTRLA_MODE(TC_CTRLA_MODE_COUNT32_Val);
+			reg_val = PWM_MODE32(pwm_reg)->TC_CTRLA;
+			reg_val &= (~TC_CTRLA_MODE_Msk);
+			reg_val |= TC_CTRLA_MODE(TC_CTRLA_MODE_COUNT32_Val);
+			PWM_MODE32(pwm_reg)->TC_CTRLA = reg_val;
 			break;
 
 		default:
@@ -392,15 +399,16 @@ static int32_t tc_set_mode(const void *pwm_reg, const uint32_t max_bit_width)
 
 /*
  * This function sets the pulse width for the specified channel based on the
- * max_bit_width. It writes the pulse value to the appropriate TC_CC register.
+ * max_bit_width. It writes the pulse value to the appropriate TC_CCBUF register.
  * Logs the pulse value for debugging purposes.
  *
- * In 16-bit/32-bit mode, the pulse value is written to CC[1]. This is because they are in MPWM
+ * In 16-bit/32-bit mode, the pulse value is written to CCBUF[1]. This is because they are in MPWM
  * mode. In MPWM mode, the wave output will can be observed in WO[1] and a negative spike can  be
- * observed in each overflow of the counter(at the beginning of each period).
+ * observed in each overflow of the counter(at the beginning of each period). By default double
+ * buffering is enabled to prevent wraparound issues.
  */
-static int32_t tc_set_pulse(const void *pwm_reg, uint32_t max_bit_width, uint32_t channel,
-			    uint32_t pulse)
+static int32_t tc_set_pulse_buf(const void *pwm_reg, uint32_t max_bit_width, uint32_t channel,
+				uint32_t pulse)
 {
 	int32_t ret_val = 0;
 
@@ -412,18 +420,18 @@ static int32_t tc_set_pulse(const void *pwm_reg, uint32_t max_bit_width, uint32_
 		}
 		switch (max_bit_width) {
 		case BIT_MODE_8:
-			PWM_MODE8(pwm_reg)->TC_CC[channel] = TC_COUNT8_COUNT_COUNT(pulse);
-			LOG_DBG("m_tc_set_pulse invoked 8: 0x%x", TC_COUNT8_COUNT_COUNT(pulse));
+			PWM_MODE8(pwm_reg)->TC_CCBUF[channel] = TC_COUNT8_CCBUF_CCBUF(pulse);
+			LOG_DBG("m_tc_set_pulse invoked 8: 0x%x", TC_COUNT8_CCBUF_CCBUF(pulse));
 			break;
 
 		case BIT_MODE_16:
-			PWM_MODE16(pwm_reg)->TC_CC[1] = TC_COUNT16_COUNT_COUNT(pulse);
-			LOG_DBG("m_tc_set_pulse invoked 16: 0x%x", TC_COUNT16_COUNT_COUNT(pulse));
+			PWM_MODE16(pwm_reg)->TC_CCBUF[1] = TC_COUNT16_CCBUF_CCBUF(pulse);
+			LOG_DBG("m_tc_set_pulse invoked 16: 0x%x", TC_COUNT16_CCBUF_CCBUF(pulse));
 			break;
 
 		case BIT_MODE_32:
-			PWM_MODE32(pwm_reg)->TC_CC[1] = TC_COUNT32_COUNT_COUNT(pulse);
-			LOG_DBG("m_tc_set_pulse invoked 32 : 0x%x", TC_COUNT32_COUNT_COUNT(pulse));
+			PWM_MODE32(pwm_reg)->TC_CCBUF[1] = TC_COUNT32_CCBUF_CCBUF(pulse);
+			LOG_DBG("m_tc_set_pulse invoked 32 : 0x%x", TC_COUNT32_CCBUF_CCBUF(pulse));
 			break;
 
 		default:
@@ -457,17 +465,17 @@ static int32_t tc_set_period(const void *pwm_reg, const uint32_t max_bit_width,
 		switch (max_bit_width) {
 		case BIT_MODE_8:
 			/** Set the period value */
-			PWM_MODE8(pwm_reg)->TC_PER = (uint8_t)period;
+			PWM_MODE8(pwm_reg)->TC_PER = TC_COUNT8_PER_PER(period);
 			break;
 
 		case BIT_MODE_16:
 			/** Set the period value */
-			PWM_MODE16(pwm_reg)->TC_CC[0u] = (uint16_t)period;
+			PWM_MODE16(pwm_reg)->TC_CC[0u] = TC_COUNT16_CC_CC(period);
 			break;
 
 		case BIT_MODE_32:
 			/** Set the period value */
-			PWM_MODE32(pwm_reg)->TC_CC[0u] = period;
+			PWM_MODE32(pwm_reg)->TC_CC[0] = TC_COUNT32_CC_CC(period);
 			break;
 
 		default:
@@ -475,7 +483,52 @@ static int32_t tc_set_period(const void *pwm_reg, const uint32_t max_bit_width,
 			ret_val = -ENOTSUP;
 			break;
 		}
-		LOG_DBG("period %d set to %x", max_bit_width, period);
+		tc_sync_wait(pwm_reg, max_bit_width);
+	} while (0);
+
+	return ret_val;
+}
+
+/*
+ * This function sets the period value for the TC based on the max_bit_width.
+ * It writes the period value to the appropriate register (TC_PERBUF or TC_CCBUF[0]).
+ * Logs the period value and max_bit_width for debugging purposes.
+ * After setting the period, it waits for synchronization to complete.
+ */
+static int32_t tc_set_period_buf(const void *pwm_reg, const uint32_t max_bit_width,
+				 const uint32_t period)
+{
+	int32_t ret_val = MCHP_PWM_SUCCESS;
+
+	do {
+		ret_val = check_slave_status(pwm_reg);
+		if (ret_val != 0) {
+			LOG_ERR("tc is in slave mode");
+			ret_val = -EBUSY;
+			break;
+		}
+		switch (max_bit_width) {
+		case BIT_MODE_8:
+			/** Set the period value */
+			PWM_MODE8(pwm_reg)->TC_PERBUF = TC_COUNT8_CCBUF_CCBUF(period);
+			break;
+
+		case BIT_MODE_16:
+			/** Set the period value */
+			PWM_MODE16(pwm_reg)->TC_CCBUF[0u] = TC_COUNT16_CCBUF_CCBUF(period);
+			break;
+
+		case BIT_MODE_32:
+			/** Set the period value */
+			PWM_MODE32(pwm_reg)->TC_CCBUF[0] = TC_COUNT32_CCBUF_CCBUF(period);
+			break;
+
+		default:
+			LOG_ERR("%s : Unsupported PWM mode %d", __func__, max_bit_width);
+			ret_val = -ENOTSUP;
+			break;
+		}
+		LOG_DBG("period %d bit:  set to %x", max_bit_width, period);
 		tc_sync_wait(pwm_reg, max_bit_width);
 	} while (0);
 
@@ -491,6 +544,7 @@ static int32_t tc_set_period(const void *pwm_reg, const uint32_t max_bit_width,
 static int32_t tc_set_invert(const void *pwm_reg, const uint32_t max_bit_width, uint32_t channel)
 {
 	int32_t ret_val = MCHP_PWM_SUCCESS;
+	uint8_t reg_val = 0;
 
 	do {
 		ret_val = check_slave_status(pwm_reg);
@@ -505,19 +559,25 @@ static int32_t tc_set_invert(const void *pwm_reg, const uint32_t max_bit_width, 
 
 		switch (max_bit_width) {
 		case BIT_MODE_8:
-
-			PWM_MODE8(pwm_reg)->TC_DRVCTRL |= invert_mask;
+			reg_val = PWM_MODE8(pwm_reg)->TC_DRVCTRL;
+			reg_val &= (~TC_DRVCTRL_INVEN_Msk);
+			reg_val |= invert_mask;
+			PWM_MODE8(pwm_reg)->TC_DRVCTRL = reg_val;
 			LOG_DBG("tc set invert 0x%x invoked", invert_mask);
 			break;
 
 		case BIT_MODE_16:
-
-			PWM_MODE16(pwm_reg)->TC_DRVCTRL |= invert_mask;
+			reg_val = PWM_MODE16(pwm_reg)->TC_DRVCTRL;
+			reg_val &= (~TC_DRVCTRL_INVEN_Msk);
+			reg_val |= invert_mask;
+			PWM_MODE16(pwm_reg)->TC_DRVCTRL = reg_val;
 			break;
 
 		case BIT_MODE_32:
-
-			PWM_MODE32(pwm_reg)->TC_DRVCTRL |= invert_mask;
+			reg_val = PWM_MODE32(pwm_reg)->TC_DRVCTRL;
+			reg_val &= (~TC_DRVCTRL_INVEN_Msk);
+			reg_val |= invert_mask;
+			PWM_MODE32(pwm_reg)->TC_DRVCTRL = reg_val;
 			break;
 
 		default:
@@ -568,13 +628,15 @@ static bool tc_get_invert_status(const void *pwm_reg, const uint32_t max_bit_wid
 
 /**
  * This function sets the prescaler value for the TC based on the max_bit_width.
- * It writes the prescaler value to the TC_CTRLA register.
+ * It writes the prescaler value to the TC_CTRLA register and also sets the configuration
+ * for reloading/resetting the counter on next prescaler clock Position.
  * After setting the prescaler, it waits for synchronization to complete.
  */
 static int32_t tc_set_prescaler(const void *pwm_reg, const uint32_t max_bit_width,
 				uint32_t prescaler)
 {
 	int32_t ret_val = MCHP_PWM_SUCCESS;
+	uint32_t reg_val = 0;
 
 	do {
 		ret_val = check_slave_status(pwm_reg);
@@ -586,15 +648,24 @@ static int32_t tc_set_prescaler(const void *pwm_reg, const uint32_t max_bit_widt
 		prescaler = tc_get_prescale_val(prescaler);
 		switch (max_bit_width) {
 		case BIT_MODE_8:
-			PWM_MODE8(pwm_reg)->TC_CTRLA |= prescaler;
+			reg_val = PWM_MODE8(pwm_reg)->TC_CTRLA;
+			reg_val &= ~(TC_CTRLA_PRESCSYNC_Msk | TC_CTRLA_PRESCALER_Msk);
+			reg_val |= (prescaler | TC_CTRLA_PRESCSYNC_PRESC);
+			PWM_MODE8(pwm_reg)->TC_CTRLA = reg_val;
 			break;
 
 		case BIT_MODE_16:
-			PWM_MODE16(pwm_reg)->TC_CTRLA |= prescaler;
+			reg_val = PWM_MODE16(pwm_reg)->TC_CTRLA;
+			reg_val &= ~(TC_CTRLA_PRESCSYNC_Msk | TC_CTRLA_PRESCALER_Msk);
+			reg_val |= (prescaler | TC_CTRLA_PRESCSYNC_PRESC);
+			PWM_MODE16(pwm_reg)->TC_CTRLA = reg_val;
 			break;
 
 		case BIT_MODE_32:
-			PWM_MODE32(pwm_reg)->TC_CTRLA |= prescaler;
+			reg_val = PWM_MODE32(pwm_reg)->TC_CTRLA;
+			reg_val &= ~(TC_CTRLA_PRESCSYNC_Msk | TC_CTRLA_PRESCALER_Msk);
+			reg_val |= (prescaler | TC_CTRLA_PRESCSYNC_PRESC);
+			PWM_MODE32(pwm_reg)->TC_CTRLA = reg_val;
 			break;
 
 		default:
@@ -759,13 +830,13 @@ static int pwm_mchp_set_cycles(const struct device *pwm_dev, uint32_t channel, u
 			ret_val = -EINVAL;
 			break;
 		}
-		ret_val = tc_set_pulse(pwm_reg, max_bit_width, channel, pulse);
+		ret_val = tc_set_pulse_buf(pwm_reg, max_bit_width, channel, pulse);
 		if (ret_val < 0) {
 			LOG_ERR("PWM peripheral busy");
 			ret_val = -EBUSY;
 			break;
 		}
-		ret_val = tc_set_period(pwm_reg, max_bit_width, period);
+		ret_val = tc_set_period_buf(pwm_reg, max_bit_width, period);
 		if (ret_val < 0) {
 			LOG_ERR("PWM peripheral busy");
 			ret_val = -EBUSY;
