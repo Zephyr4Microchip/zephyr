@@ -119,7 +119,7 @@ typedef enum {
  * @brief Structure to hold PWM data specific to Microchip hardware.
  */
 typedef struct {
-	MCHP_PWM_LOCK_TYPE lock; /**< Lock type for PWM configuration */
+	MCHP_PWM_LOCK_TYPE lock; /* Lock type for PWM configuration */
 } pwm_mchp_data_t;
 
 typedef struct mchp_counter_clock {
@@ -136,13 +136,13 @@ typedef struct mchp_counter_clock {
  * @brief Structure to hold the configuration for Microchip PWM.
  */
 typedef struct {
-	pwm_mchp_clock_t pwm_clock;                      /**< PWM clock configuration */
-	const struct pinctrl_dev_config *pinctrl_config; /**< Pin control configuration */
-	void *regs;                                      /**< Pointer to PWM peripheral registers */
-	uint32_t max_bit_width;
-	uint16_t prescaler; /**< Prescaler value for PWM */
-	uint8_t channels;   /**< Number of PWM channels */
-	uint32_t freq;      /**< Frequency of the PWM signal */
+	pwm_mchp_clock_t pwm_clock;                      /* PWM clock configuration */
+	const struct pinctrl_dev_config *pinctrl_config; /* Pin control configuration */
+	void *regs;                                      /* Pointer to PWM peripheral registers */
+	uint32_t max_bit_width; /* Used for finding out the resolution of the pwm peripheral */
+	uint16_t prescaler;     /* Prescaler value for PWM */
+	uint8_t channels;       /* Number of PWM channels */
+	uint32_t freq;          /* Frequency of the PWM signal */
 } pwm_mchp_config_t;
 
 /***********************************
@@ -329,7 +329,6 @@ static int pwm_mchp_set_cycles(const struct device *pwm_dev, uint32_t channel, u
  *
  * @return 0 on success, -EINVAL if the channel is invalid.
  */
-
 static int pwm_mchp_get_cycles_per_sec(const struct device *pwm_dev, uint32_t channel,
 				       uint64_t *cycles)
 {
@@ -388,7 +387,6 @@ static DEVICE_API(pwm, pwm_mchp_api) = {
  *
  * @return 0 on success, negative error code on failure.
  */
-
 static int pwm_mchp_init(const struct device *pwm_dev)
 {
 	int ret_val;

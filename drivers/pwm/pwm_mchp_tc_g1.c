@@ -140,12 +140,9 @@ typedef struct mchp_counter_clock {
  * @brief Structure to hold the configuration for Microchip PWM.
  */
 typedef struct {
-	void *regs; /*Pointer to PWM peripheral registers */
-	/* Used for finding out the mode
-	 * at which tc peripheral is configured
-	 */
-	uint32_t max_bit_width;
-	pwm_mchp_clock_t pwm_clock;                      /* PWM clock configuration */
+	void *regs;                 /*Pointer to PWM peripheral registers */
+	uint32_t max_bit_width;     /* Used for finding the mode of tc peripheral */
+	pwm_mchp_clock_t pwm_clock; /* PWM clock configuration */
 	const struct pinctrl_dev_config *pinctrl_config; /* Pin control configuration */
 	uint16_t prescaler;                              /* Prescaler value for PWM */
 	uint8_t channels;                                /* Number of PWM channels */
@@ -203,7 +200,6 @@ static uint32_t tc_get_prescale_val(uint32_t prescaler)
  * This is for ensuring that the tc peripheral will not be configured if it is chained to a host tc
  * peripheral to achieve 32 bit mode.
  */
-
 static bool check_slave_status(const void *pwm_reg)
 {
 	bool ret = false;
@@ -213,6 +209,7 @@ static bool check_slave_status(const void *pwm_reg)
 
 	return ret;
 }
+
 /*
  * This function waits for the synchronization of the TC (Timer/Counter)
  * registers to complete. It takes a pointer to a the pwm peripheral base address and max bit width
@@ -793,7 +790,6 @@ static int pwm_mchp_set_cycles(const struct device *pwm_dev, uint32_t channel, u
  *
  * @return 0 on success, -EINVAL if the channel is invalid.
  */
-
 static int pwm_mchp_get_cycles_per_sec(const struct device *pwm_dev, uint32_t channel,
 				       uint64_t *cycles)
 {
@@ -853,7 +849,6 @@ static DEVICE_API(pwm, pwm_mchp_api) = {
  *
  * @return 0 on success, negative error code on failure.
  */
-
 static int pwm_mchp_init(const struct device *pwm_dev)
 {
 	int ret_val;
