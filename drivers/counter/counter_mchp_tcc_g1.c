@@ -9,6 +9,7 @@
  * @brief Counter driver implementation for Microchip devices.
  */
 
+#include <stdint.h>
 #include <soc.h>
 #include <zephyr/device.h>
 #include <zephyr/irq.h>
@@ -22,10 +23,9 @@
  *****************************************************************************/
 #define DT_DRV_COMPAT microchip_tcc_g1_counter
 
-/*
- * @section Macros
- * User-specific macros for the Microchip counter driver.
- */
+/*****************************************************************************
+ * Const and Macro Defines
+ *****************************************************************************/
 LOG_MODULE_REGISTER(counter_mchp_tcc_g1, CONFIG_COUNTER_LOG_LEVEL);
 
 /* All timer/counter synchronization bits set. */
@@ -38,10 +38,17 @@ LOG_MODULE_REGISTER(counter_mchp_tcc_g1, CONFIG_COUNTER_LOG_LEVEL);
 #define COUNTER_RET_PASSED (0)
 
 /* @brief Synchronization time-out in us */
-#define TCC_SYNCHRONIZATION_TIMEOUT_IN_US (5)
+#define TCC_SYNCHRONIZATION_TIMEOUT_IN_US (5U)
+
+/* @brief Synchronization time-out in us */
+#define TCC_CTRLB_TIMEOUT_IN_US (5U)
 
 /* Delay time in us */
-#define DELAY_US (1)
+#define DELAY_US (1U)
+
+/*****************************************************************************
+ * Typedefs and Enum Declarations
+ *****************************************************************************/
 
 /*
  * @brief Clock configuration structure for the Counter.
@@ -60,13 +67,6 @@ typedef struct mchp_counter_clock {
 	clock_control_subsys_t periph_async_clk;
 
 } counter_mchp_clock_t;
-
-/*
- * @section:  Datatypes
- *
- * This section includes necessary user defined data-types used to implement
- * the counter driver for microchip devices
- */
 
 typedef struct tcc_counter_irq_map {
 	/* Overflow interrupt number */
@@ -178,8 +178,12 @@ typedef enum {
 /* Maximum number of supported TCC channels */
 #define TCC_CHANNEL_COUNT 6
 
+/*****************************************************************************
+ * Internal functions
+ *****************************************************************************/
+
 /* find the prescale index based on the value present in the device tree */
-uint8_t get_tcc_prescale_index(uint16_t prescaler)
+static uint8_t get_tcc_prescale_index(uint16_t prescaler)
 {
 	uint8_t prescale_index = 0u;
 
@@ -201,6 +205,7 @@ uint8_t get_tcc_prescale_index(uint16_t prescaler)
 	}
 	return prescale_index;
 }
+
 /*
  * @brief Waits for synchronization of a register.
  *
@@ -212,7 +217,7 @@ uint8_t get_tcc_prescale_index(uint16_t prescaler)
  */
 static void tcc_counter_wait_sync(const volatile uint32_t *sync_reg_addr, uint32_t bit_mask)
 {
-	bool success = WAIT_FOR(((*sync_reg_addr) & bit_mask) == 0u,
+	bool success = WAIT_FOR((((*sync_reg_addr) & bit_mask) == 0u),
 				TCC_SYNCHRONIZATION_TIMEOUT_IN_US, k_busy_wait(DELAY_US));
 
 	if (!success) {
@@ -227,7 +232,7 @@ static void tcc_counter_wait_sync(const volatile uint32_t *sync_reg_addr, uint32
  * Disables capture, on-demand, standby, one-shot, and output events/interrupts.
  * Sets 32-bit mode, counting up, and waveform generation to MFRQ.
  *
- * @param[in] regs Pointer to the counter peripheral registers.
+ * @param[in] p_regs Pointer to the counter peripheral registers.
  * @param[in] prescaler Prescaler value to set.
  * @param[in] max_bit_width Maximum bit width for the counter.
  *
@@ -288,7 +293,7 @@ static int32_t tcc_counter_init(tcc_registers_t *const p_regs, uint32_t prescale
  *
  * Enables the counter and ensures synchronization.
  *
- * @param[in] regs Pointer to the counter peripheral registers.
+ * @param[in] p_regs Pointer to the counter peripheral registers.
  *
  * @retval COUNTER_RET_PASSED Counter started successfully.
  */
@@ -309,8 +314,8 @@ static int32_t tcc_counter_start(tcc_registers_t *const p_regs)
 	tcc_counter_wait_sync(&p_regs->TCC_SYNCBUSY, TCC_SYNCBUSY_CTRLB_Msk);
 
 	/* Wait for CMD to become zero */
-	while ((p_regs->TCC_CTRLBSET & TCC_CTRLBSET_CMD_Msk) != 0U) {
-	}
+	WAIT_FOR(((p_regs->TCC_CTRLBSET & TCC_CTRLBSET_CMD_Msk) != 0u), TCC_CTRLB_TIMEOUT_IN_US,
+		 k_busy_wait(DELAY_US));
 
 	return return_value;
 }
@@ -320,7 +325,7 @@ static int32_t tcc_counter_start(tcc_registers_t *const p_regs)
  *
  * Issues a stop command and waits for synchronization.
  *
- * @param[in] regs Pointer to the counter peripheral registers.
+ * @param[in] p_regs Pointer to the counter peripheral registers.
  *
  * @retval COUNTER_RET_PASSED Counter stopped successfully.
  */
@@ -335,8 +340,8 @@ static int32_t tcc_counter_stop(tcc_registers_t *const p_regs)
 	tcc_counter_wait_sync(&p_regs->TCC_SYNCBUSY, TCC_SYNCBUSY_CTRLB_Msk);
 
 	/* Wait for CMD to become zero */
-	while ((p_regs->TCC_CTRLBSET & TCC_CTRLBSET_CMD_Msk) != 0U) {
-	}
+	WAIT_FOR(((p_regs->TCC_CTRLBSET & TCC_CTRLBSET_CMD_Msk) != 0u), TCC_CTRLB_TIMEOUT_IN_US,
+		 k_busy_wait(DELAY_US));
 
 	return return_value;
 }
@@ -346,7 +351,7 @@ static int32_t tcc_counter_stop(tcc_registers_t *const p_regs)
  *
  * Issues a retrigger command and waits for synchronization.
  *
- * @param[in] regs Pointer to the counter peripheral registers.
+ * @param[in] p_regs Pointer to the counter peripheral registers.
  *
  * @retval COUNTER_RET_PASSED Counter retriggered successfully.
  */
@@ -360,9 +365,8 @@ static int32_t tcc_counter_retrigger(tcc_registers_t *const p_regs)
 	/* Wait for synchronization */
 	tcc_counter_wait_sync(&p_regs->TCC_SYNCBUSY, TCC_SYNCBUSY_CTRLB_Msk);
 
-	/* Wait for CMD to become zero */
-	while ((p_regs->TCC_CTRLBSET & TCC_CTRLBSET_CMD_Msk) != 0U) {
-	}
+	WAIT_FOR(((p_regs->TCC_CTRLBSET & TCC_CTRLBSET_CMD_Msk) != 0u), TCC_CTRLB_TIMEOUT_IN_US,
+		 k_busy_wait(DELAY_US));
 
 	return return_value;
 }
@@ -372,7 +376,7 @@ static int32_t tcc_counter_retrigger(tcc_registers_t *const p_regs)
  *
  * Reads the current value of the counter register.
  *
- * @param[in] regs Pointer to the counter peripheral registers.
+ * @param[in] p_regs Pointer to the counter peripheral registers.
  * @param[out] counter_value Pointer to store the current count value.
  *
  * @retval 0 Success.
@@ -388,8 +392,8 @@ static int32_t tcc_counter_get_count(tcc_registers_t *const p_regs, uint32_t *co
 	tcc_counter_wait_sync(&p_regs->TCC_SYNCBUSY, TCC_SYNCBUSY_CTRLB_Msk);
 
 	/* Wait for CMD to become zero */
-	while ((p_regs->TCC_CTRLBSET & TCC_CTRLBSET_CMD_Msk) != 0U) {
-	}
+	WAIT_FOR(((p_regs->TCC_CTRLBSET & TCC_CTRLBSET_CMD_Msk) != 0u), TCC_CTRLB_TIMEOUT_IN_US,
+		 k_busy_wait(DELAY_US));
 
 	/* Read current count value */
 	*counter_value = p_regs->TCC_COUNT;
@@ -402,7 +406,7 @@ static int32_t tcc_counter_get_count(tcc_registers_t *const p_regs, uint32_t *co
  *
  * Updates the period register and waits for synchronization.
  *
- * @param[in] regs Pointer to the counter peripheral registers.
+ * @param[in] p_regs Pointer to the counter peripheral registers.
  * @param[in] period Period value to set.
  *
  * @retval COUNTER_RET_PASSED Period set successfully.
@@ -423,7 +427,7 @@ static int32_t tcc_counter_set_period(tcc_registers_t *const p_regs, const uint3
 /*
  * @brief Gets the current period value of the counter.
  *
- * @param[in] regs Pointer to the counter peripheral registers.
+ * @param[in] p_regs Pointer to the counter peripheral registers.
  *
  * @return Current period value.
  */
@@ -435,7 +439,7 @@ static uint32_t tcc_counter_get_period(tcc_registers_t *const p_regs)
 /*
  * @brief Sets the compare value for a specific channel.
  *
- * @param[in] regs Pointer to the counter peripheral registers.
+ * @param[in] p_regs Pointer to the counter peripheral registers.
  * @param[in] chan_id Channel ID to set the compare value for.
  * @param[in] compare_value Compare value to set.
  *
@@ -458,7 +462,7 @@ static int32_t tcc_counter_set_compare(tcc_registers_t *const p_regs, const uint
 /*
  * @brief Gets the pending interrupt flags.
  *
- * @param[in] regs Pointer to the counter peripheral registers.
+ * @param[in] p_regs Pointer to the counter peripheral registers.
  *
  * @return Pending interrupt flags.
  */
@@ -471,7 +475,7 @@ static int32_t tcc_counter_get_pending_irqs(tcc_registers_t *const p_regs)
 /*
  * @brief Enables the alarm interrupt for a specific channel.
  *
- * @param[in] regs Pointer to the counter peripheral registers.
+ * @param[in] p_regs Pointer to the counter peripheral registers.
  * @param[in] channel_id Channel ID to enable the alarm interrupt for.
  *
  * @retval COUNTER_RET_PASSED Success.
@@ -480,18 +484,20 @@ static int32_t tcc_counter_get_pending_irqs(tcc_registers_t *const p_regs)
 static int32_t tcc_counter_alarm_irq_enable(tcc_registers_t *const p_regs,
 					    const uint32_t channel_id)
 {
-	if (channel_id >= TCC_CHANNEL_COUNT) {
-		return COUNTER_RET_FAILED;
-	}
-	p_regs->TCC_INTENSET = TCC_INTFLAG_MC0_Msk << channel_id;
+	int32_t ret_status = COUNTER_RET_FAILED;
 
-	return COUNTER_RET_PASSED;
+	if (channel_id < TCC_CHANNEL_COUNT) {
+		p_regs->TCC_INTENSET = TCC_INTFLAG_MC0_Msk << channel_id;
+		ret_status = COUNTER_RET_PASSED;
+	}
+
+	return ret_status;
 }
 
 /*
  * @brief Disables the alarm interrupt for a specific channel.
  *
- * @param[in] regs Pointer to the counter peripheral registers.
+ * @param[in] p_regs Pointer to the counter peripheral registers.
  * @param[in] channel_id Channel ID to disable the alarm interrupt for.
  *
  * @retval COUNTER_RET_PASSED Success.
@@ -511,7 +517,7 @@ static int32_t tcc_counter_alarm_irq_disable(tcc_registers_t *const p_regs,
 /*
  * @brief Clears the alarm interrupt for a specific channel.
  *
- * @param[in] regs Pointer to the counter peripheral registers.
+ * @param[in] p_regs Pointer to the counter peripheral registers.
  * @param[in] channel_id Channel ID to clear the alarm interrupt for.
  *
  * @retval COUNTER_RET_PASSED Success.
@@ -530,7 +536,7 @@ static int32_t tcc_counter_alarm_irq_clear(tcc_registers_t *const p_regs, const 
 /*
  * @brief Enables the overflow interrupt.
  *
- * @param[in] regs Pointer to the counter peripheral registers.
+ * @param[in] p_regs Pointer to the counter peripheral registers.
  *
  * @retval COUNTER_RET_PASSED Success.
  */
@@ -547,7 +553,7 @@ static int32_t tcc_counter_top_irq_enable(tcc_registers_t *const p_regs)
 /*
  * @brief Disables the overflow interrupt.
  *
- * @param[in] regs Pointer to the counter peripheral registers.
+ * @param[in] p_regs Pointer to the counter peripheral registers.
  *
  * @retval COUNTER_RET_PASSED Success.
  */
@@ -564,7 +570,7 @@ static int32_t tcc_counter_top_irq_disable(tcc_registers_t *const p_regs)
 /*
  * @brief Clears the overflow interrupt.
  *
- * @param[in] regs Pointer to the counter peripheral registers.
+ * @param[in] p_regs Pointer to the counter peripheral registers.
  *
  * @retval COUNTER_RET_PASSED Success.
  */
@@ -587,12 +593,16 @@ static int32_t tcc_counter_top_irq_clear(tcc_registers_t *const p_regs)
  */
 static uint32_t tcc_counter_ticks_sub(uint32_t val, uint32_t old, uint32_t top)
 {
+	uint32_t ret_status = 0;
+
 	if (true == likely(IS_BIT_MASK(top))) {
-		return (val - old) & top;
+		ret_status = (val - old) & top;
+	} else {
+		/* If top is not 2^n - 1, handle general wraparound case */
+		ret_status = (val >= old) ? (val - old) : (val + top + 1U - old);
 	}
 
-	/* If top is not 2^n - 1, handle general wraparound case */
-	return (val >= old) ? (val - old) : val + top + 1U - old;
+	return ret_status;
 }
 
 /*
@@ -606,33 +616,39 @@ static uint32_t tcc_counter_ticks_sub(uint32_t val, uint32_t old, uint32_t top)
  */
 static uint32_t tcc_counter_ticks_add(uint32_t val1, uint32_t val2, uint32_t top)
 {
-	uint32_t to_top;
+	uint32_t to_top = 0;
+	uint32_t ret_val = 0;
 
 	if (true == likely(IS_BIT_MASK(top))) {
-		return (val1 + val2) & top;
+		ret_val = (val1 + val2) & top;
+	} else {
+		to_top = top - val1;
+		ret_val = (val2 <= to_top) ? val1 + val2 : val2 - to_top - 1U;
 	}
 
-	to_top = top - val1;
-
-	return (val2 <= to_top) ? val1 + val2 : val2 - to_top - 1U;
+	return ret_val;
 }
 
 /*
  * @brief Computes the absolute difference between two counter values with wraparound.
  *
- * @param[in] a First counter value.
- * @param[in] b Second counter value.
+ * @param[in] cnt_val_1 First counter value.
+ * @param[in] cnt_val_2 Second counter value.
  * @param[in] top Maximum counter value before wraparound.
  *
  * @return Absolute difference in ticks.
  */
-static uint32_t tcc_counter_ticks_diff(uint32_t a, uint32_t b, uint32_t top)
+static uint32_t tcc_counter_ticks_diff(uint32_t cnt_val_1, uint32_t cnt_val_2, uint32_t top)
 {
-	uint32_t diff = (a > b) ? (a - b) : (b - a);
+	uint32_t diff = (cnt_val_1 > cnt_val_2) ? (cnt_val_1 - cnt_val_2) : (cnt_val_2 - cnt_val_1);
 	uint32_t wrap_diff = top - diff;
 
 	return (diff < wrap_diff) ? diff : wrap_diff;
 }
+
+/*****************************************************************************
+ * Zephyr APIS
+ *****************************************************************************/
 
 /*
  * @brief Starts the counter device.
@@ -715,56 +731,71 @@ static int32_t counter_mchp_set_alarm(const struct device *const dev, const uint
 	__ASSERT(chan_id < counter_get_num_of_channels(dev), "Invalid channel ID: %u (max %u)",
 		 chan_id, counter_get_num_of_channels(dev));
 
-	/* Get top value */
-	top_value = tcc_counter_get_period(cfg->regs);
-	__ASSERT_NO_MSG(data->guard_period < top_value);
+	do {
+		/* Get top value */
+		top_value = tcc_counter_get_period(cfg->regs);
+		__ASSERT_NO_MSG(data->guard_period < top_value);
 
-	/* Check if the requested tick value is less than top (period) value */
-	if (ticks > top_value) {
-		return -EINVAL;
-	}
+		/* Check if the requested tick value is less than top (period) value */
+		if (ticks > top_value) {
+			ret_status = -EINVAL;
+			break;
+		}
 
-	if (NULL != data->channel_data[chan_id].callback) {
-		return -EBUSY;
-	}
+		if (NULL != data->channel_data[chan_id].callback) {
+			ret_status = -EBUSY;
+			break;
+		}
 
-	/* First take care of a risk of an event coming from CC being set to
-	 * next tick. Reconfigure CC to future ( current counter value minus guard period
-	 * is the furthestfuture).
-	 */
-	(void)tcc_counter_get_count(cfg->regs, &count_value);
-	furthest_count_value = tcc_counter_ticks_sub(count_value, data->guard_period, top_value);
+		/* First take care of a risk of an event coming from CC being set to
+		 * next tick. Reconfigure CC to future ( current counter value minus guard period
+		 * is the furthestfuture).
+		 */
+		(void)tcc_counter_get_count(cfg->regs, &count_value);
+		furthest_count_value =
+			tcc_counter_ticks_sub(count_value, data->guard_period, top_value);
 
-	tcc_counter_set_compare(cfg->regs, chan_id, furthest_count_value);
-	tcc_counter_alarm_irq_clear(cfg->regs, chan_id);
+		tcc_counter_set_compare(cfg->regs, chan_id, furthest_count_value);
+		tcc_counter_alarm_irq_clear(cfg->regs, chan_id);
 
-	/* Update new callback functions */
-	data->channel_data[chan_id].callback = alarm_cfg->callback;
-	data->channel_data[chan_id].user_data = alarm_cfg->user_data;
+		/* Update new callback functions */
+		data->channel_data[chan_id].callback = alarm_cfg->callback;
+		data->channel_data[chan_id].user_data = alarm_cfg->user_data;
 
-	/* Check if "Absolute Alarm" flag is set */
-	absolute = alarm_cfg->flags & COUNTER_ALARM_CFG_ABSOLUTE;
+		/* Check if "Absolute Alarm" flag is set */
+		absolute = alarm_cfg->flags & COUNTER_ALARM_CFG_ABSOLUTE;
 
-	/* Check if counter has exceeded the alarm count in absolute alarm configuration */
-	if (absolute != 0) {
-		count_diff = tcc_counter_ticks_diff(count_value, ticks, top_value);
-		if (count_diff <= data->guard_period) {
-			ret_status = -ETIME;
-			irq_on_late = alarm_cfg->flags & COUNTER_ALARM_CFG_EXPIRE_WHEN_LATE;
-			if (irq_on_late != 0) {
-				data->late_alarm_flag = true;
-				data->late_alarm_channel = chan_id;
+		/* Check if counter has exceeded the alarm count in absolute alarm configuration */
+		if (absolute != 0) {
+			count_diff = tcc_counter_ticks_diff(count_value, ticks, top_value);
+			if (count_diff <= data->guard_period) {
+				ret_status = -ETIME;
+				irq_on_late = alarm_cfg->flags & COUNTER_ALARM_CFG_EXPIRE_WHEN_LATE;
+				if (irq_on_late != 0) {
+					data->late_alarm_flag = true;
+					data->late_alarm_channel = chan_id;
 
+					/* Update compare value*/
+					data->channel_data[chan_id].compare_value = ticks;
+
+					/* Enable interrupt and trigger immediately */
+					NVIC_SetPendingIRQ(
+						cfg->channel_irq_map->comp_irq_line[chan_id]);
+				} else {
+					data->channel_data[chan_id].callback = NULL;
+					data->channel_data[chan_id].user_data = NULL;
+				}
+			} else {
 				/* Update compare value*/
 				data->channel_data[chan_id].compare_value = ticks;
+				tcc_counter_set_compare(cfg->regs, chan_id, ticks);
 
-				/* Enable interrupt and trigger immediately */
-				NVIC_SetPendingIRQ(cfg->channel_irq_map->comp_irq_line[chan_id]);
-			} else {
-				data->channel_data[chan_id].callback = NULL;
-				data->channel_data[chan_id].user_data = NULL;
+				/* Enable interrupt at compare match */
+				tcc_counter_alarm_irq_enable(cfg->regs, chan_id);
 			}
 		} else {
+			ticks = tcc_counter_ticks_add(count_value, ticks, top_value);
+
 			/* Update compare value*/
 			data->channel_data[chan_id].compare_value = ticks;
 			tcc_counter_set_compare(cfg->regs, chan_id, ticks);
@@ -772,16 +803,7 @@ static int32_t counter_mchp_set_alarm(const struct device *const dev, const uint
 			/* Enable interrupt at compare match */
 			tcc_counter_alarm_irq_enable(cfg->regs, chan_id);
 		}
-	} else {
-		ticks = tcc_counter_ticks_add(count_value, ticks, top_value);
-
-		/* Update compare value*/
-		data->channel_data[chan_id].compare_value = ticks;
-		tcc_counter_set_compare(cfg->regs, chan_id, ticks);
-
-		/* Enable interrupt at compare match */
-		tcc_counter_alarm_irq_enable(cfg->regs, chan_id);
-	}
+	} while (0);
 
 	return ret_status;
 }
@@ -1343,11 +1365,9 @@ static DEVICE_API(counter, counter_mchp_api) = {
  * - Register assignments.
  * - Clock assignments.
  * - Register interfaces.
- * - IRQ mapping.
  * - Maximum bit width.
  * - Prescaler value.
  * - IRQ configuration function.
- * - Pin control configuration.
  *
  * @param n Instance number of the device.
  *
@@ -1356,19 +1376,19 @@ static DEVICE_API(counter, counter_mchp_api) = {
  *		 and `COUNTER_MCHP_MAX_BIT_WIDTH`.
  */
 /* clang-format off */
-#define COUNTER_MCHP_CONFIG_VAR(n)	\
-	static const counter_mchp_dev_cfg_t counter_mchp_dev_config_##n = {	\
-		.info = {.max_top_value =	\
+#define COUNTER_MCHP_CONFIG_VAR(n)								\
+	static const counter_mchp_dev_cfg_t counter_mchp_dev_config_##n = {			\
+		.info = {.max_top_value =							\
 				 ((uint32_t)((1ULL << COUNTER_MCHP_MAX_BIT_WIDTH(n)) - 1)),	\
-			 .freq = 0u,	\
-			 .flags = COUNTER_CONFIG_INFO_COUNT_UP,	\
-			 .channels = COUNTER_MCHP_CC_NUMS(n)},	\
-		.regs = (tcc_registers_t *)DT_INST_REG_ADDR(n),	\
-		COUNTER_MCHP_CLOCK_ASSIGN(n)	\
-		.channel_irq_map = &counter_mchp_irq_map_##n,	\
-		.max_bit_width = COUNTER_MCHP_MAX_BIT_WIDTH(n),	\
-		.prescaler = COUNTER_MCHP_PRESCALER(n),	\
-		.irq_config_func = &counter_mchp_config_##n,	\
+			 .freq = 0u,								\
+			 .flags = COUNTER_CONFIG_INFO_COUNT_UP,					\
+			 .channels = COUNTER_MCHP_CC_NUMS(n)},					\
+		.regs = (tcc_registers_t *)DT_INST_REG_ADDR(n),					\
+		COUNTER_MCHP_CLOCK_ASSIGN(n)							\
+		.channel_irq_map = &counter_mchp_irq_map_##n,					\
+		.max_bit_width = COUNTER_MCHP_MAX_BIT_WIDTH(n),					\
+		.prescaler = COUNTER_MCHP_PRESCALER(n),						\
+		.irq_config_func = &counter_mchp_config_##n,					\
 	};
 /* clang-format on */
 
