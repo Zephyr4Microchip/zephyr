@@ -102,10 +102,10 @@ typedef struct counter_mchp_dev_data {
 	/* User data to be passed to the top callback function */
 	void *top_user_data;
 
-	/* Late alarm flag	  */
+	/* Late alarm flag */
 	bool late_alarm_flag;
 
-	/* Late alarm channel	 */
+	/* Late alarm channel */
 	uint8_t late_alarm_channel;
 
 	/* Guard period */
@@ -1584,10 +1584,7 @@ static DEVICE_API(counter, counter_mchp_api) = {
  *
  * @param n Instance number (not used in this macro).
  */
-/* clang-format off */
-#define COUNTER_MCHP_CC_NUMS(n) \
-	((DT_INST_PROP(n, max_bit_width) == 32) ? 1 : 4)
-/* clang-format on */
+#define COUNTER_MCHP_CC_NUMS(n) ((DT_INST_PROP(n, max_bit_width) == 32) ? 1 : 4)
 
 /*
  * @brief Retrieve the maximum bit width for the RTC counter.
@@ -1596,16 +1593,14 @@ static DEVICE_API(counter, counter_mchp_api) = {
  * from the device tree. The value is determined by the `max_bit_width` property of the
  * corresponding device tree node.
  *
- * @param n	 Counter instance number (not used in this macro).
+ * @param n Counter instance number (not used in this macro).
  *
  * @return The maximum bit width as specified in the device tree.
  *
  * @note This macro directly uses the `DT_INST_PROP` macro to fetch the `max_bit_width`
  *		 property for the given instance.
  */
-/* clang-format off */
 #define COUNTER_MCHP_MAX_BIT_WIDTH(n) (DT_INST_PROP(n, max_bit_width))
-/* clang-format on */
 
 /*
  * @brief Retrieve the prescaler value for a Microchip counter device.
@@ -1622,10 +1617,9 @@ static DEVICE_API(counter, counter_mchp_api) = {
  *		 to check for and retrieve the `prescaler` property from the device tree.
  */
 /* clang-format off */
-#define COUNTER_MCHP_PRESCALER(n)	 \
+#define COUNTER_MCHP_PRESCALER(n)				\
 	COND_CODE_1(DT_INST_NODE_HAS_PROP(n, prescaler),	\
-				(DT_INST_PROP(n, prescaler)), (1))
-/* clang-format on */
+		(DT_INST_PROP(n, prescaler)), (1))
 
 /*
  * @brief Assign clock configurations for the Counter peripheral.
@@ -1641,7 +1635,6 @@ static DEVICE_API(counter, counter_mchp_api) = {
  *		 and peripheral asynchronous clock configurations based on the presence
  *		 of relevant device tree properties.
  */
-/* clang-format off */
 #define COUNTER_MCHP_CLOCK_ASSIGN(n)							\
 	.counter_clock.clock_dev = DEVICE_DT_GET(DT_NODELABEL(clock)),			\
 	.counter_clock.host_core_sync_clk =						\
@@ -1652,7 +1645,6 @@ static DEVICE_API(counter, counter_mchp_api) = {
 			(void *)DT_INST_CLOCKS_CELL_BY_NAME(n, rtcclk, subsystem),),	\
 		()									\
 	)
-/* clang-format on */
 
 /*
  * @brief Define the configuration structure for a Microchip counter device.
@@ -1672,7 +1664,6 @@ static DEVICE_API(counter, counter_mchp_api) = {
  *		 properties and configurations, including,
  *		 `COUNTER_MCHP_CLOCK_ASSIGN`, and `COUNTER_MCHP_MAX_BIT_WIDTH`.
  */
-/* clang-format off */
 #define COUNTER_MCHP_CONFIG_VAR(n)								\
 	static const counter_mchp_dev_cfg_t counter_mchp_dev_config_##n = {			\
 		.info = {									\
@@ -1688,26 +1679,23 @@ static DEVICE_API(counter, counter_mchp_api) = {
 		.prescaler = COUNTER_MCHP_PRESCALER(n),						\
 		.irq_config_func = &counter_mchp_config_##n,					\
 	};
-/* clang-format on */
 
 /*
- * @brief Configure the IRQ handler for the Microchip TC U2249 counter.
+ * @brief Configure the IRQ handler for the Microchip RTC counter.
  *
  * This macro sets up the IRQ handler for the specified instance of the
- * Microchip TC U2249 counter. It connects the first IRQ line (index 0)
+ * Microchip RTC counter. It connects the first IRQ line (index 0)
  * for the counter peripheral.
  *
  * @param n Instance number of the counter.
  *
- * @note This macro assumes that the TC U2249 counter has a single IRQ line.
+ * @note This macro assumes that the RTC counter has a single IRQ line.
  */
-/* clang-format off */
-#define COUNTER_MCHP_IRQ_HANDLER(n)	\
-	static void counter_mchp_config_##n(const struct device *dev)	 \
-	{	 \
-		MCHP_COUNTER_IRQ_CONNECT(n, 0);	\
+#define COUNTER_MCHP_IRQ_HANDLER(n)					\
+	static void counter_mchp_config_##n(const struct device *dev)	\
+	{								\
+		MCHP_COUNTER_IRQ_CONNECT(n, 0);				\
 	}
-/* clang-format on */
 
 /*
  * @brief Define the channel data structure for a Microchip counter device.
@@ -1718,11 +1706,8 @@ static DEVICE_API(counter, counter_mchp_api) = {
  *
  * @param n Instance number of the device.
  */
-/* clang-format off */
-#define COUNTER_MCHP_CHANNEL_DATA_VAR(n)	\
-	static counter_mchp_ch_data_t	 \
-		counter_mchp_channel_data_##n[COUNTER_MCHP_CC_NUMS(n)];
-/* clang-format on */
+#define COUNTER_MCHP_CHANNEL_DATA_VAR(n)							\
+	static counter_mchp_ch_data_t counter_mchp_channel_data_##n[COUNTER_MCHP_CC_NUMS(n)];
 
 /*
  * @brief Define the device data structure for a Microchip counter device.
@@ -1738,11 +1723,9 @@ static DEVICE_API(counter, counter_mchp_api) = {
  *		 using the `COUNTER_MCHP_CHANNEL_DATA_VAR` macro, which defines the
  *		 channel data array for the device instance.
  */
-/* clang-format off */
-#define COUNTER_MCHP_TOP_DATA_VAR(n)	\
+#define COUNTER_MCHP_TOP_DATA_VAR(n)					\
 	static counter_mchp_dev_data_t counter_mchp_dev_data_##n = {	\
 		.channel_data = counter_mchp_channel_data_##n};
-/* clang-format on */
 
 /*
  * @brief Connect and enable an IRQ for a Microchip counter device.
@@ -1754,20 +1737,18 @@ static DEVICE_API(counter, counter_mchp_api) = {
  * @param n Instance number of the device.
  * @param m Index of the IRQ line in the device tree.
  */
-/* clang-format off */
-#define MCHP_COUNTER_IRQ_CONNECT(n, m)	\
-	COND_CODE_1(DT_IRQ_HAS_IDX(DT_DRV_INST(n), m),	\
-	(	\
-		do {	\
-			IRQ_CONNECT(DT_INST_IRQ_BY_IDX(n, m, irq),	\
-				DT_INST_IRQ_BY_IDX(n, m, priority),	\
+#define MCHP_COUNTER_IRQ_CONNECT(n, m)								\
+	COND_CODE_1(DT_IRQ_HAS_IDX(DT_DRV_INST(n), m),						\
+	(											\
+		do {										\
+			IRQ_CONNECT(DT_INST_IRQ_BY_IDX(n, m, irq),				\
+				DT_INST_IRQ_BY_IDX(n, m, priority),				\
 				counter_mchp_interrupt_handler, DEVICE_DT_INST_GET(n), 0);	\
-			irq_enable(DT_INST_IRQ_BY_IDX(n, m, irq));	\
-		} while (false);	\
-	),	\
-	()	\
+			irq_enable(DT_INST_IRQ_BY_IDX(n, m, irq));				\
+		} while (false);								\
+	),											\
+	()											\
 	)
-/* clang-format on */
 
 /*
  * @brief Define the initialization function for a Microchip counter device.
@@ -1780,13 +1761,11 @@ static DEVICE_API(counter, counter_mchp_api) = {
  *
  * @param n Instance number of the device.
  */
-/* clang-format off */
 #define COUNTER_MCHP_DEVICE_INIT_FUNC(n)	\
-	COUNTER_MCHP_IRQ_HANDLER(n)	\
-	COUNTER_MCHP_CONFIG_VAR(n);	   \
+	COUNTER_MCHP_IRQ_HANDLER(n)		\
+	COUNTER_MCHP_CONFIG_VAR(n);		\
 	COUNTER_MCHP_CHANNEL_DATA_VAR(n)	\
 	COUNTER_MCHP_TOP_DATA_VAR(n)
-/* clang-format on */
 
 /*
  * @brief Initialize a Microchip counter device.
@@ -1804,6 +1783,7 @@ static DEVICE_API(counter, counter_mchp_api) = {
 	DEVICE_DT_INST_DEFINE(n, counter_mchp_init, NULL, &counter_mchp_dev_data_##n,              \
 			      &counter_mchp_dev_config_##n, POST_KERNEL,                           \
 			      CONFIG_COUNTER_INIT_PRIORITY, &counter_mchp_api);
+/* clang-format on */
 
 /*
  * @brief Initialize Microchip RTC g1 counter devices.
