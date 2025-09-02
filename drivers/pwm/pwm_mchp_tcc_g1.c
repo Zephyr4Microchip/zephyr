@@ -32,7 +32,6 @@ LOG_MODULE_REGISTER(pwm_mchp_tcc_g1, CONFIG_PWM_LOG_LEVEL);
 
 #define PWM_REG(addr) ((tcc_registers_t *)addr)
 
-#define MCHP_PWM_FAIL    -1
 #define MCHP_PWM_SUCCESS 0
 
 /**

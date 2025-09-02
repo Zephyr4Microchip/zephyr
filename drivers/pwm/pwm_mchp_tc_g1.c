@@ -34,7 +34,6 @@ LOG_MODULE_REGISTER(pwm_mchp_tc_g1, CONFIG_PWM_LOG_LEVEL);
 #define PWM_MODE16(pwm_reg) ((tc_count16_registers_t *)&(((tc_registers_t *)(pwm_reg))->COUNT16))
 #define PWM_MODE32(pwm_reg) ((tc_count32_registers_t *)&(((tc_registers_t *)(pwm_reg))->COUNT32))
 
-#define MCHP_PWM_FAIL    -1
 #define MCHP_PWM_SUCCESS 0
 
 /**
@@ -196,7 +195,7 @@ static uint32_t tc_get_prescale_val(uint32_t prescaler)
 }
 
 /**
- * This function will check whether the tc periferal is in slave mode or not.
+ * This function will check whether the tc peripheral is in slave mode or not.
  * This is for ensuring that the tc peripheral will not be configured if it is chained to a host tc
  * peripheral to achieve 32 bit mode.
  */
@@ -259,7 +258,7 @@ static int tc_reset_regs(const void *pwm_reg, const uint32_t max_bit_width)
 	do {
 		ret_val = check_slave_status(pwm_reg);
 		if (ret_val != 0) {
-			ret_val = MCHP_PWM_FAIL;
+			ret_val = -EBUSY;
 			break;
 		}
 
@@ -278,7 +277,7 @@ static int tc_reset_regs(const void *pwm_reg, const uint32_t max_bit_width)
 
 		default:
 			LOG_ERR("%s : Unsupported PWM mode %d", __func__, max_bit_width);
-			ret_val = MCHP_PWM_FAIL;
+			ret_val = -ENOTSUP;
 			break;
 		}
 		LOG_DBG("%s invoked %d", __func__, max_bit_width);
@@ -302,7 +301,7 @@ static int32_t tc_enable(const void *pwm_reg, const uint32_t max_bit_width, bool
 		ret_val = check_slave_status(pwm_reg);
 		if (ret_val != 0) {
 			LOG_ERR("tc is in slave mode");
-			ret_val = MCHP_PWM_FAIL;
+			ret_val = -EBUSY;
 			break;
 		}
 		switch (max_bit_width) {
@@ -334,7 +333,7 @@ static int32_t tc_enable(const void *pwm_reg, const uint32_t max_bit_width, bool
 
 		default:
 			LOG_ERR("%s : Unsupported PWM mode %d", __func__, max_bit_width);
-			ret_val = MCHP_PWM_FAIL;
+			ret_val = -ENOTSUP;
 			break;
 		}
 
@@ -358,7 +357,7 @@ static int32_t tc_set_mode(const void *pwm_reg, const uint32_t max_bit_width)
 		ret_val = check_slave_status(pwm_reg);
 		if (ret_val != 0) {
 			LOG_ERR("tc is in slave mode");
-			ret_val = MCHP_PWM_FAIL;
+			ret_val = -EBUSY;
 			break;
 		}
 		switch (max_bit_width) {
@@ -381,7 +380,7 @@ static int32_t tc_set_mode(const void *pwm_reg, const uint32_t max_bit_width)
 
 		default:
 			LOG_ERR("%s : Unsupported PWM mode %d", __func__, max_bit_width);
-			ret_val = MCHP_PWM_FAIL;
+			ret_val = -ENOTSUP;
 			break;
 		}
 		tc_sync_wait(pwm_reg, max_bit_width);
@@ -408,7 +407,7 @@ static int32_t tc_set_pulse(const void *pwm_reg, uint32_t max_bit_width, uint32_
 	do {
 		ret_val = check_slave_status(pwm_reg);
 		if (ret_val != 0) {
-			ret_val = MCHP_PWM_FAIL;
+			ret_val = -EBUSY;
 			break;
 		}
 		switch (max_bit_width) {
@@ -429,7 +428,7 @@ static int32_t tc_set_pulse(const void *pwm_reg, uint32_t max_bit_width, uint32_
 
 		default:
 			LOG_ERR("%s : Unsupported PWM mode %d", __func__, max_bit_width);
-			ret_val = MCHP_PWM_FAIL;
+			ret_val = -ENOTSUP;
 			break;
 		}
 	} while (0);
@@ -452,7 +451,7 @@ static int32_t tc_set_period(const void *pwm_reg, const uint32_t max_bit_width,
 		ret_val = check_slave_status(pwm_reg);
 		if (ret_val != 0) {
 			LOG_ERR("tc is in slave mode");
-			ret_val = MCHP_PWM_FAIL;
+			ret_val = -EBUSY;
 			break;
 		}
 		switch (max_bit_width) {
@@ -473,7 +472,7 @@ static int32_t tc_set_period(const void *pwm_reg, const uint32_t max_bit_width,
 
 		default:
 			LOG_ERR("%s : Unsupported PWM mode %d", __func__, max_bit_width);
-			ret_val = MCHP_PWM_FAIL;
+			ret_val = -ENOTSUP;
 			break;
 		}
 		LOG_DBG("period %d set to %x", max_bit_width, period);
@@ -496,7 +495,7 @@ static int32_t tc_set_invert(const void *pwm_reg, const uint32_t max_bit_width, 
 	do {
 		ret_val = check_slave_status(pwm_reg);
 		if (ret_val != 0) {
-			ret_val = MCHP_PWM_FAIL;
+			ret_val = -EBUSY;
 			break;
 		}
 		uint32_t invert_mask = 1 << (channel + TC_DRVCTRL_INVEN0_Pos);
@@ -523,7 +522,7 @@ static int32_t tc_set_invert(const void *pwm_reg, const uint32_t max_bit_width, 
 
 		default:
 			LOG_ERR("%s : Unsupported PWM mode %d", __func__, max_bit_width);
-			ret_val = MCHP_PWM_FAIL;
+			ret_val = -ENOTSUP;
 			break;
 		}
 		tc_enable(pwm_reg, max_bit_width, true);
@@ -581,7 +580,7 @@ static int32_t tc_set_prescaler(const void *pwm_reg, const uint32_t max_bit_widt
 		ret_val = check_slave_status(pwm_reg);
 		if (ret_val != 0) {
 			LOG_ERR("tc is in slave mode");
-			ret_val = MCHP_PWM_FAIL;
+			ret_val = -EBUSY;
 			break;
 		}
 		prescaler = tc_get_prescale_val(prescaler);
@@ -600,7 +599,7 @@ static int32_t tc_set_prescaler(const void *pwm_reg, const uint32_t max_bit_widt
 
 		default:
 			LOG_ERR("%s : Unsupported PWM mode %d", __func__, max_bit_width);
-			ret_val = MCHP_PWM_FAIL;
+			ret_val = -ENOTSUP;
 			break;
 		}
 		tc_sync_wait(pwm_reg, max_bit_width);
@@ -627,7 +626,7 @@ static int32_t tc_set_wave_type(const void *pwm_reg, const uint32_t max_bit_widt
 		ret_val = check_slave_status(pwm_reg);
 		if (ret_val != 0) {
 			LOG_ERR("tc is in slave mode");
-			ret_val = MCHP_PWM_FAIL;
+			ret_val = -EBUSY;
 			break;
 		}
 		switch (max_bit_width) {
@@ -645,7 +644,7 @@ static int32_t tc_set_wave_type(const void *pwm_reg, const uint32_t max_bit_widt
 
 		default:
 			LOG_ERR("%s : Unsupported PWM mode %d", __func__, max_bit_width);
-			ret_val = MCHP_PWM_FAIL;
+			ret_val = -ENOTSUP;
 			break;
 		}
 		tc_sync_wait(pwm_reg, max_bit_width);
