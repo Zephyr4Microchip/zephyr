@@ -88,7 +88,6 @@
 	} GROUP_ROM_LINK_IN(RAMABLE_REGION, ROMABLE_REGION)
 
 	ITERABLE_SECTION_ROM(k_p4wq_initparam, Z_LINK_ITERABLE_SUBALIGN)
-
 	ITERABLE_SECTION_ROM(_static_thread_data, Z_LINK_ITERABLE_SUBALIGN)
 
 #if defined(CONFIG_PCIE)
@@ -101,5 +100,4 @@
 #include <zephyr/linker/device-deps.ld>
 	} GROUP_ROM_LINK_IN(RAMABLE_REGION, ROMABLE_REGION)
 #endif /* !CONFIG_DEVICE_DEPS_DYNAMIC */
-
 #include <device-api-sections.ld>
