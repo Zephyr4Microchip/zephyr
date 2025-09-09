@@ -432,18 +432,6 @@ typedef enum {
 } i2c_mchp_target_cmd_t;
 
 /**
- * @enum i2c_mchp_runstandby_t
- * @brief Run standby mode configuration for SERCOM I2C.
- *
- * This enumeration defines the possible states for enabling or disabling
- * run standby mode in the SERCOM I2C peripheral.
- */
-typedef enum {
-	I2C_RUNSTANDBY_DISABLED = 0,
-	I2C_RUNSTANDBY_ENABLED
-} i2c_mchp_runstandby_t;
-
-/**
  * @struct i2c_mchp_clock
  * @brief Structure to hold device clock configuration.
  */
@@ -519,7 +507,7 @@ typedef struct i2c_mchp_dev_config {
 #endif
 
 	/* Enable peripheral operation in standby sleep mode. */
-	uint8_t enable_runstandby;
+	uint8_t run_in_standby;
 
 } i2c_mchp_dev_config_t;
 
@@ -761,12 +749,11 @@ static void i2c_controller_runstandby_enable(const struct device *dev)
 {
 	const i2c_mchp_dev_config_t *const i2c_cfg = dev->config;
 	sercom_registers_t *i2c_regs = i2c_cfg->regs;
+	uint32_t reg32_val = i2c_regs->I2CM.SERCOM_CTRLA;
 
-	if (i2c_cfg->enable_runstandby == I2C_RUNSTANDBY_ENABLED) {
-		i2c_regs->I2CM.SERCOM_CTRLA |= SERCOM_I2CM_CTRLA_RUNSTDBY(1);
-	} else {
-		i2c_regs->I2CM.SERCOM_CTRLA &= ~SERCOM_I2CM_CTRLA_RUNSTDBY(1);
-	}
+	reg32_val &= ~SERCOM_I2CM_CTRLA_RUNSTDBY_Msk;
+	reg32_val |= SERCOM_I2CM_CTRLA_RUNSTDBY(i2c_cfg->run_in_standby);
+	i2c_regs->I2CM.SERCOM_CTRLA = reg32_val;
 }
 
 /**
@@ -1875,12 +1862,11 @@ static void i2c_target_runstandby_enable(const struct device *dev)
 {
 	const i2c_mchp_dev_config_t *const i2c_cfg = dev->config;
 	sercom_registers_t *i2c_regs = i2c_cfg->regs;
+	uint32_t reg32_val = i2c_regs->I2CS.SERCOM_CTRLA;
 
-	if (i2c_cfg->enable_runstandby == I2C_RUNSTANDBY_ENABLED) {
-		i2c_regs->I2CS.SERCOM_CTRLA |= SERCOM_I2CS_CTRLA_RUNSTDBY(1);
-	} else {
-		i2c_regs->I2CS.SERCOM_CTRLA &= ~SERCOM_I2CS_CTRLA_RUNSTDBY(1);
-	}
+	reg32_val &= ~SERCOM_I2CS_CTRLA_RUNSTDBY_Msk;
+	reg32_val |= SERCOM_I2CS_CTRLA_RUNSTDBY(i2c_cfg->run_in_standby);
+	i2c_regs->I2CS.SERCOM_CTRLA = reg32_val;
 }
 
 /**
@@ -3129,7 +3115,7 @@ static DEVICE_API(i2c, i2c_mchp_api) = {
 		.pcfg = PINCTRL_DT_INST_DEV_CONFIG_GET(n),                                         \
 		.bitrate = DT_INST_PROP(n, clock_frequency),                                       \
 		.irq_config_func = &i2c_mchp_irq_config_##n,                                       \
-		.enable_runstandby = DT_INST_PROP(n, runstandby_en),                               \
+		.run_in_standby = DT_INST_PROP(n, run_in_standby_en),                              \
 		I2C_MCHP_REG_DEFN(n) I2C_MCHP_CLOCK_DEFN(n) I2C_MCHP_DMA_CHANNELS(n)}
 
 #define I2C_MCHP_DEVICE_INIT(n)                                                                    \
