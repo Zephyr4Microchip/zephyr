@@ -43,13 +43,6 @@ LOG_MODULE_REGISTER(entropy_mchp_trng_g1, CONFIG_ENTROPY_LOG_LEVEL);
 #define ENTROPY_REGS ((const entropy_mchp_config_t *)(dev)->config)->regs
 
 /**
- * @brief Type for the entropy data ready semaphore.
- *
- * Defines the semaphore type used for synchronizing entropy operations.
- */
-#define ENTROPY_DATA_RDY_LOCK_TYPE struct k_sem
-
-/**
  * @brief Timeout for acquiring the entropy data ready semaphore.
  *
  * Specifies the timeout (in milliseconds) to wait for the semaphore.
@@ -89,32 +82,12 @@ LOG_MODULE_REGISTER(entropy_mchp_trng_g1, CONFIG_ENTROPY_LOG_LEVEL);
  * @return 0 on success, negative error code on failure or timeout.
  */
 #define ENTROPY_DATA_RDY_SEM_TAKE(p_sem)                                                           \
-	k_sem_take((p_sem), k_is_in_isr() ? K_NO_WAIT : ENTROPY_DATA_RDY_SEM_TIMEOUT)
-
-/**
- * @brief Give the entropy data ready semaphore.
- *
- * Releases the semaphore to signal that entropy data is ready.
- *
- * @param p_sem Pointer to the semaphore to give.
- */
-#define ENTROPY_DATA_RDY_SEM_GIVE(p_sem) k_sem_give(p_sem)
+	k_sem_take((p_sem),                                                                        \
+		   ((k_is_in_isr() == true) ? (K_NO_WAIT) : (ENTROPY_DATA_RDY_SEM_TIMEOUT)))
 
 /*******************************************
  * @brief Data type definitions
  ******************************************/
-/**
- * @enum entropy_mchp_runstandby_t
- * @brief Run standby mode configuration for TRNG peripheral.
- *
- * This enumeration defines the possible states for enabling or disabling
- * run standby mode in the TRNG peripheral.
- */
-typedef enum {
-	ENTROPY_RUNSTANDBY_DISABLED = 0,
-	ENTROPY_RUNSTANDBY_ENABLED
-} entropy_mchp_runstandby_t;
-
 /**
  * @struct entropy_mchp_clock
  * @brief Clock configuration structure for entropy (TRNG) peripheral.
@@ -160,9 +133,9 @@ typedef struct entropy_mchp_dev_data {
 	const struct device *dev;
 
 	/**< Semaphore lock for entropy interrupt operations */
-	ENTROPY_DATA_RDY_LOCK_TYPE entropy_data_rdy_sem;
+	struct k_sem entropy_data_rdy_sem;
 
-	/**< Array of pointers to NVM data registers */
+	/**< Random generated data */
 	volatile uint32_t trng_data;
 
 } entropy_mchp_dev_data_t;
@@ -171,29 +144,27 @@ typedef struct entropy_mchp_dev_data {
  * @brief Helper functions
  ******************************************/
 /**
- * @brief Enable the TRNG Data Ready interrupt.
+ * @brief Enable or disable the TRNG Data Ready interrupt.
  *
- * This function enables the Data Ready interrupt for the TRNG peripheral.
+ * This function sets or clears the Data Ready interrupt for the TRNG peripheral.
  *
- * @param dev Pointer to the device structure.
+ * @param dev    Pointer to the device structure.
+ * @param enable If true, enable the interrupt; if false, disable it.
  */
-static void entropy_trng_interrupt_enable(const struct device *dev)
+static void entropy_trng_interrupt_enable(const struct device *dev, bool enable)
 {
-	/* Enable the Data Ready interrupt */
-	ENTROPY_REGS->TRNG_INTENSET = TRNG_INTENSET_DATARDY(1);
-}
+	const entropy_mchp_config_t *const entropy_cfg = dev->config;
+	trng_registers_t *trng_regs = entropy_cfg->regs;
 
-/**
- * @brief Disable the TRNG Data Ready interrupt.
- *
- * This function disables the Data Ready interrupt for the TRNG peripheral.
- *
- * @param dev Pointer to the device structure.
- */
-static void entropy_trng_interrupt_disable(const struct device *dev)
-{
-	/* Disable the Data Ready interrupt */
-	ENTROPY_REGS->TRNG_INTENCLR = TRNG_INTENCLR_DATARDY(1);
+	if (enable == true) {
+
+		/* Enable the Data Ready interrupt */
+		trng_regs->TRNG_INTENSET = TRNG_INTENSET_DATARDY(1);
+	} else {
+
+		/* Disable the Data Ready interrupt */
+		trng_regs->TRNG_INTENCLR = TRNG_INTENCLR_DATARDY(1);
+	}
 }
 
 /**
@@ -203,7 +174,7 @@ static void entropy_trng_interrupt_disable(const struct device *dev)
  *
  * @param dev Pointer to the device structure.
  */
-static void entropy_trng_enable(const struct device *dev)
+static inline void entropy_trng_enable(const struct device *dev)
 {
 	/* Enable TRNG module */
 	ENTROPY_REGS->TRNG_CTRLA |= TRNG_CTRLA_ENABLE(1);
@@ -237,12 +208,12 @@ static inline uint8_t entropy_ready(const struct device *dev)
 static void entropy_runstandby_enable(const struct device *dev)
 {
 	const entropy_mchp_config_t *const entropy_cfg = dev->config;
+	trng_registers_t *trng_regs = entropy_cfg->regs;
+	uint32_t reg32_val = trng_regs->TRNG_CTRLA;
 
-	if (entropy_cfg->run_in_standby == ENTROPY_RUNSTANDBY_ENABLED) {
-		ENTROPY_REGS->TRNG_CTRLA |= TRNG_CTRLA_RUNSTDBY(1);
-	} else {
-		ENTROPY_REGS->TRNG_CTRLA &= ~TRNG_CTRLA_RUNSTDBY(1);
-	}
+	reg32_val &= ~TRNG_CTRLA_RUNSTDBY_Msk;
+	reg32_val |= TRNG_CTRLA_RUNSTDBY(entropy_cfg->run_in_standby);
+	trng_regs->TRNG_CTRLA = reg32_val;
 }
 
 /**
@@ -301,7 +272,7 @@ static int entropy_read(const struct device *dev, uint8_t *buffer, uint16_t leng
 		size_t to_copy = 0;
 
 		/* Enable DATARDY interrupt */
-		entropy_trng_interrupt_enable(dev);
+		entropy_trng_interrupt_enable(dev, true);
 
 		if ((flags & ENTROPY_BUSYWAIT) != 0U) {
 			int wait = entropy_wait_ready(dev);
@@ -324,7 +295,9 @@ static int entropy_read(const struct device *dev, uint8_t *buffer, uint16_t leng
 		uint8_t *dst = buffer;
 
 		for (size_t i = 0; i < to_copy; i++) {
-			*dst++ = *src++;
+			*dst = *src;
+			dst++;
+			src++;
 		}
 
 		buffer += to_copy;
@@ -452,14 +425,14 @@ static int entropy_mchp_init(const struct device *dev)
 static void entropy_mchp_isr(const struct device *dev)
 {
 	/* Disable DATARDY interrupt */
-	entropy_trng_interrupt_disable(dev);
+	entropy_trng_interrupt_enable(dev, false);
 
 	entropy_mchp_dev_data_t *mchp_entropy_data = dev->data;
 
 	/* Read random generated data */
 	mchp_entropy_data->trng_data = ENTROPY_REGS->TRNG_DATA;
 
-	ENTROPY_DATA_RDY_SEM_GIVE(&mchp_entropy_data->entropy_data_rdy_sem);
+	k_sem_give(&mchp_entropy_data->entropy_data_rdy_sem);
 }
 
 /******************************************************************************
