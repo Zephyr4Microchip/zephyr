@@ -257,6 +257,58 @@ static inline void gpio_disconnect(port_group_registers_t *regs, const uint32_t 
 	regs->PORT_DIRCLR = BIT(pin);
 }
 
+/**
+ * Configure GPIO pin as input
+ */
+static int gpio_configure_input(port_group_registers_t *gpio_reg, gpio_pin_t pin,
+				gpio_flags_t flags)
+{
+	/* Configure the pin as input if requested */
+	gpio_set_dir_input(gpio_reg, pin);
+
+	/* Configure pull-up or pull-down if requested */
+	if ((flags & (GPIO_PULL_UP | GPIO_PULL_DOWN)) != 0) {
+		gpio_enable_pullup(gpio_reg, pin);
+
+		if (flags & GPIO_PULL_UP) {
+			gpio_outset(gpio_reg, pin);
+		} else {
+			gpio_outclr(gpio_reg, pin);
+		}
+	}
+
+	return 0;
+}
+
+/**
+ * Configure GPIO pin as output
+ */
+static int gpio_configure_output(port_group_registers_t *gpio_reg, gpio_pin_t pin,
+				 gpio_flags_t flags)
+{
+	int retval = 0;
+
+	/* Output is incompatible with pull-up or pull-down */
+	if ((flags & (GPIO_PULL_UP | GPIO_PULL_DOWN)) != 0) {
+		retval = -ENOTSUP;
+	} else {
+		/* Set initial output state if specified */
+		if ((flags & GPIO_OUTPUT_INIT_LOW) != 0) {
+			gpio_outclr(gpio_reg, pin);
+		} else if ((flags & GPIO_OUTPUT_INIT_HIGH) != 0) {
+			gpio_outset(gpio_reg, pin);
+		} else {
+			/* No init value requested */
+			retval = 0;
+		}
+	}
+
+	/* Set the pin as output */
+	gpio_set_dir_output(gpio_reg, pin);
+
+	return retval;
+}
+
 /******************************************************************************
  * @brief API functions
  *****************************************************************************/
@@ -272,73 +324,46 @@ static inline void gpio_disconnect(port_group_registers_t *regs, const uint32_t 
 static int gpio_mchp_configure(const struct device *dev, gpio_pin_t pin, gpio_flags_t flags)
 {
 	const struct gpio_mchp_config *config = dev->config;
-	struct gpio_mchp_data *gpio_data = dev->data;
 	port_group_registers_t *gpio_reg = config->gpio_regs;
-
+	gpio_flags_t io_flags = flags & (GPIO_INPUT | GPIO_OUTPUT);
 	int retval = 0;
-	gpio_flags_t io_flags = 0;
 
 	/* Disable the pinmux functionality as its gpio */
 	gpio_reg->PORT_PINCFG[pin] &= (uint8_t)~PORT_PINCFG_PMUXEN_Msk;
 
-	do {
-		io_flags = flags & (GPIO_INPUT | GPIO_OUTPUT);
-		if (io_flags == GPIO_DISCONNECTED) {
-			/* Disconnect the gpio */
-			gpio_disconnect(gpio_reg, pin);
+	if (io_flags == GPIO_DISCONNECTED) {
+
+		/* Disconnect the gpio */
+		gpio_disconnect(gpio_reg, pin);
+	}
+
+	/* Check for single-ended mode configuration */
+	else if (flags & GPIO_SINGLE_ENDED) {
+		retval = -ENOTSUP;
+	}
+
+	/* Configure the pin as input and output if requested */
+	else if (io_flags == (GPIO_INPUT | GPIO_OUTPUT)) {
+		gpio_set_dir_input_output(gpio_reg, pin);
+
+		/* Set initial output state if specified */
+		if (flags & GPIO_OUTPUT_INIT_LOW) {
+			gpio_outclr(gpio_reg, pin);
+		} else if (flags & GPIO_OUTPUT_INIT_HIGH) {
+			gpio_outset(gpio_reg, pin);
+		} else {
+			/* No init value requested */
+			retval = 0;
 		}
+	} else if (flags & GPIO_INPUT) {
+		retval = gpio_configure_input(gpio_reg, pin, flags);
+	} else if (flags & GPIO_OUTPUT) {
+		retval = gpio_configure_output(gpio_reg, pin, flags);
+	} else {
+		/* Catch-all for unexpected flag combinations */
+		retval = -ENOTSUP;
+	}
 
-		/* Check for single-ended mode configuration */
-		if (flags & GPIO_SINGLE_ENDED) {
-			retval = -ENOTSUP;
-			break;
-		}
-
-		/* Configure the pin as input and output if requested */
-		if (io_flags == (GPIO_INPUT | GPIO_OUTPUT)) {
-			gpio_set_dir_input_output(gpio_reg, pin);
-
-			/* Set initial output state if specified */
-			if (flags & GPIO_OUTPUT_INIT_LOW) {
-				gpio_outclr(gpio_reg, pin);
-			} else if (flags & GPIO_OUTPUT_INIT_HIGH) {
-				gpio_outset(gpio_reg, pin);
-			}
-		} else if ((flags & GPIO_INPUT) != 0) {
-			/* Configure the pin as input if requested */
-			gpio_set_dir_input(gpio_reg, pin);
-
-			/* Configure pull-up or pull-down if requested */
-			if ((flags & (GPIO_PULL_UP | GPIO_PULL_DOWN)) != 0) {
-				gpio_enable_pullup(gpio_reg, pin);
-
-				if ((flags & GPIO_PULL_UP) != 0) {
-					gpio_outset(gpio_reg, pin);
-				} else {
-					gpio_outclr(gpio_reg, pin);
-				}
-			}
-		} else if ((flags & GPIO_OUTPUT) != 0) {
-			/* Output is incompatible with pull-up or pull-down */
-			if ((flags & (GPIO_PULL_UP | GPIO_PULL_DOWN)) != 0) {
-				retval = -ENOTSUP;
-				break;
-			}
-
-			/* Set initial output state if specified */
-			if ((flags & GPIO_OUTPUT_INIT_LOW) != 0) {
-				gpio_outclr(gpio_reg, pin);
-			} else if ((flags & GPIO_OUTPUT_INIT_HIGH) != 0) {
-				gpio_outset(gpio_reg, pin);
-			}
-
-			/* Set the pin as output */
-			gpio_set_dir_output(gpio_reg, pin);
-		}
-
-	} while (0);
-	/* Preserve debounce flag for interrupt configuration. */
-	WRITE_BIT(gpio_data->debounce, pin, ((flags & MCHP_GPIO_DEBOUNCE) != 0));
 	return retval;
 }
 
@@ -744,18 +769,20 @@ static int gpio_mchp_init(const struct device *dev)
 }
 
 /* Define GPIO port configuration macro */
+/* clang-format off */
 #define GPIO_PORT_CONFIG(idx)                                                                      \
 	static const struct gpio_mchp_config gpio_mchp_config_##idx = {                            \
-		.common =                                                                          \
-			{                                                                          \
+		.common = {                                                                        \
 				.port_pin_mask = GPIO_PORT_PIN_MASK_FROM_DT_INST(idx),             \
-			},                                                                         \
+		},                                                                                 \
 		.gpio_regs = (port_group_registers_t *)DT_INST_REG_ADDR(idx),                      \
-		.gpio_port_id = MCHP_PORT_ID##idx};                                                \
+		.gpio_port_id = MCHP_PORT_ID##idx,                                                 \
+	};                                                                                         \
 	static struct gpio_mchp_data gpio_mchp_data_##idx;                                         \
 	DEVICE_DT_DEFINE(DT_INST(idx, DT_DRV_COMPAT), gpio_mchp_init, NULL, &gpio_mchp_data_##idx, \
 			 &gpio_mchp_config_##idx, PRE_KERNEL_1, CONFIG_GPIO_INIT_PRIORITY,         \
 			 &gpio_mchp_api);
+/* clang-format on */
 
 /* Use DT_INST_FOREACH_STATUS_OKAY to iterate over GPIO instances */
 DT_INST_FOREACH_STATUS_OKAY(GPIO_PORT_CONFIG)

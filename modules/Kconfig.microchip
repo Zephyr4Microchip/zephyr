@@ -12,5 +12,4 @@ config HAS_MEC5_HAL
 	bool "Microchip MEC5 HAL drivers support"
 
 config PIC32C
-	bool "Microchip PIC32C HAL drivers support"
-
+	bool
