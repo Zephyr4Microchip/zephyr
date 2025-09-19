@@ -31,16 +31,15 @@ LOG_MODULE_REGISTER(intc_mchp_eic_g1, CONFIG_INTC_LOG_LEVEL);
 /* This is used for checking whether the eic line is free or not */
 #define INTC_LINE_FREE 0XFF
 
-/* This is the default value of the pin in the `mchp_eic_line_assignment_t`*/
+/* This is the default value of the pin in the `struct mchp_eic_line_assignment`*/
 #define INTC_PIN_DEFAULT_VAL 0x1f
 
-/* This is the default value of the port in the `mchp_eic_line_assignment_t`*/
+/* This is the default value of the port in the `struct mchp_eic_line_assignment`*/
 #define INTC_PORT_DEFAULT_VAL 0X7
 
-/* Type definition for the EIC lock. */
-#define EIC_LOCK_TYPE uint32_t
+/*This mask is used to for clearing the EIC_CONFIG for each eic line */
+#define EIC_CONFIG_EIC_LINE_MSK 0xf
 
-/* Acquire the EIC lock */
 #define EIC_DATA_LOCK(p_lock) p_lock = irq_lock()
 
 /*Release the EIC lock.*/
@@ -139,7 +138,7 @@ typedef struct eic_mchp_dev_data {
 	 *for keeping its data
 	 */
 	uint16_t port_assigned_line[MCHP_PORT_ID_MAX];
-	EIC_LOCK_TYPE lock;
+	uint32_t lock;
 } eic_mchp_dev_data_t;
 
 /***********************************
@@ -239,7 +238,7 @@ static void enable_interrupt_line(eic_registers_t *regs, uint8_t eic_line, bool 
 		regs->EIC_INTFLAG = pin_mask;
 		regs->EIC_INTENSET |= pin_mask;
 	} else {
-		regs->EIC_INTENCLR |= pin_mask;
+		regs->EIC_INTENCLR = pin_mask;
 	}
 }
 
@@ -271,7 +270,7 @@ int eic_mchp_disable_interrupt(eic_config_params_t *eic_pin_config)
 
 		/*Remove the connection from EIC peripheral*/
 		eic_pin_config->port_addr->PORT_PINCFG[eic_pin_config->pin_num] &=
-			(~PORT_PINCFG_PMUXEN(1));
+			(uint8_t)(~PORT_PINCFG_PMUXEN(1));
 
 		/*Clear the pin number and port number from the structure which holds the status of
 		 * each eic line and make it free
@@ -373,24 +372,28 @@ int eic_mchp_config_interrupt(eic_config_params_t *eic_pin_config)
 		eic_enable(eic_cfg->regs, false);
 
 		/* Configure the pin as input and connect it to eic peripheral */
-		eic_pin_config->port_addr->PORT_PINCFG[pin] =
+		eic_pin_config->port_addr->PORT_PINCFG[pin] |=
 			PORT_PINCFG_PMUXEN(1) | PORT_PINCFG_INEN(1);
-		eic_pin_config->port_addr->PORT_PMUX[pmux_offset] = 0;
+		eic_pin_config->port_addr->PORT_PMUX[pmux_offset] &=
+			((pin & 1) == 0) ? (~PORT_PMUX_PMUXE_Msk) : (~PORT_PMUX_PMUXO_Msk);
 
-		/* - The bit position for respective eic line in the config register is calculated
-		 *   and written into the respective config register
-		 * - The `eic_line>>3` will find out which config register(0 OR 1) to write the
-		 *   trigger type to.
-		 * - `eic_line%8` is required to find the offset of the eic line inside the config
-		 *   register
+		/* - The bit position for respective eic line in the config
+		 * register is calculated and written into the respective config
+		 * register
+		 * - The `eic_line>>3` will find out which config register(0 OR 1)
+		 * to write the trigger type to.
+		 * - `eic_line & 7` is required to find the offset of the eic line
+		 * inside the config register
 		 */
+		eic_cfg->regs->EIC_CONFIG[(eic_line >> 3)] &=
+			~(EIC_CONFIG_EIC_LINE_MSK << (4 * (eic_line & 7)));
 
-		eic_cfg->regs->EIC_CONFIG[(eic_line >> 3)] = (eic_pin_config->trig_type)
-							     << (4 * (eic_line % 8));
+		eic_cfg->regs->EIC_CONFIG[(eic_line >> 3)] |= (eic_pin_config->trig_type)
+							      << (4 * (eic_line & 7));
 
 		/* Set the debouncing feature of the eic line if required */
 		if (eic_pin_config->debounce != 0) {
-			eic_cfg->regs->EIC_DEBOUNCEN = BIT(eic_line);
+			eic_cfg->regs->EIC_DEBOUNCEN |= BIT(eic_line);
 		}
 		LOG_DBG("%s",
 			eic_pin_config->debounce ? "debouncing enabled" : "debouncing disabled");
@@ -450,7 +453,7 @@ static int eic_mchp_init(const struct device *dev)
 		if (eic_cfg->low_power_mode == true) {
 			eic_cfg->regs->EIC_CTRLA = EIC_CTRLA_CKSEL(EIC_CTRLA_CKSEL_CLK_ULP32K);
 		}
-		eic_cfg->regs->EIC_CTRLA = EIC_CTRLA_ENABLE(1);
+		eic_cfg->regs->EIC_CTRLA |= EIC_CTRLA_ENABLE(1);
 		eic_sync_wait(eic_cfg->regs);
 
 		LOG_DBG("EIC initialisation done 0x%p", eic_cfg->regs);
@@ -459,6 +462,8 @@ static int eic_mchp_init(const struct device *dev)
 
 	return ret_val;
 }
+
+/* clang-format off */
 
 /**
  * @brief EIC interrupt service routine for a specific EIC line.
@@ -485,14 +490,14 @@ static int eic_mchp_init(const struct device *dev)
 		}                                                                                  \
 	}
 
-#define EIC_MCHP_IRQ_CONNECT(eic_line, inst)                                                       \
-	IF_ENABLED(DT_INST_IRQ_HAS_IDX(inst, eic_line), (  \
-	do {\
-		IRQ_CONNECT(DT_INST_IRQ_BY_IDX(inst, eic_line, irq),  \
+#define EIC_MCHP_IRQ_CONNECT(eic_line, inst)							\
+	IF_ENABLED(DT_INST_IRQ_HAS_IDX(inst, eic_line), (					\
+	do {											\
+		IRQ_CONNECT(DT_INST_IRQ_BY_IDX(inst, eic_line, irq),				\
 			    DT_INST_IRQ_BY_IDX(inst, eic_line, priority), eic_mchp_isr_##eic_line,\
-			    DEVICE_DT_INST_GET(inst), inst);\
-		irq_enable(DT_INST_IRQ_BY_IDX(inst, eic_line, irq));\
-	} while (false);\
+			    DEVICE_DT_INST_GET(inst), inst);					\
+		irq_enable(DT_INST_IRQ_BY_IDX(inst, eic_line, irq));				\
+	} while (false);									\
 			))
 
 #define EIC_MCHP_DATA_DEFN(n) static eic_mchp_dev_data_t eic_mchp_data_##n
@@ -513,11 +518,11 @@ static int eic_mchp_init(const struct device *dev)
 /*
  * Define the EIC device configuration for instance n.
  */
-#define EIC_MCHP_CFG_DEFN(n)                                                                       \
-	static const eic_mchp_dev_cfg_t eic_mchp_dev_cfg_##n = {                                   \
-		.regs = (eic_registers_t *)DT_INST_REG_ADDR(n),                                    \
-		EIC_MCHP_CLOCK_DEFN(n),                                                            \
-		.irq_config = eic_irq_connect_##n,                                                 \
+#define EIC_MCHP_CFG_DEFN(n)						\
+	static const eic_mchp_dev_cfg_t eic_mchp_dev_cfg_##n = {	\
+		.regs = (eic_registers_t *)DT_INST_REG_ADDR(n),		\
+		EIC_MCHP_CLOCK_DEFN(n),                                 \
+		.irq_config = eic_irq_connect_##n,                      \
 		.low_power_mode = DT_INST_PROP(n, low_power_mode)}
 
 /**
@@ -538,16 +543,16 @@ static int eic_mchp_init(const struct device *dev)
  *
  * @param n The EIC instance number.
  */
-#define EIC_MCHP_IRQ_HANDLER(n)                                                                    \
-	static void eic_irq_connect_##n(void)                                                      \
-	{                                                                                          \
-		/** Connect all IRQs for this instance */                                          \
-		LISTIFY(\
-			DT_NUM_IRQS(DT_DRV_INST(n)), \
-			EIC_MCHP_IRQ_CONNECT, \
-			(), \
-			n\
-		)                                                                          \
+#define EIC_MCHP_IRQ_HANDLER(n)					\
+	static void eic_irq_connect_##n(void)			\
+	{                                                       \
+		/** Connect all IRQs for this instance */	\
+		LISTIFY(					\
+			DT_NUM_IRQS(DT_DRV_INST(n)),		\
+			EIC_MCHP_IRQ_CONNECT,			\
+			(),					\
+			n					\
+		)                                               \
 	}
 
 /*
@@ -566,8 +571,6 @@ static int eic_mchp_init(const struct device *dev)
 	DEVICE_DT_INST_DEFINE(n, eic_mchp_init, NULL, &eic_mchp_data_##n, &eic_mchp_dev_cfg_##n,   \
 			      PRE_KERNEL_1, CONFIG_INTC_INIT_PRIORITY, NULL);                      \
 	EIC_MCHP_IRQ_HANDLER(n)
+/* clang-format on */
 
-/**
- * @brief Initialize all EIC instances.
- */
 DT_INST_FOREACH_STATUS_OKAY(EIC_MCHP_DEVICE_INIT)
