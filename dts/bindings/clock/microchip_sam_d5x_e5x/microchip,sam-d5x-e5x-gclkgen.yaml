@@ -91,7 +91,7 @@ child-binding:
         - "gclk-pin"
         - "gclk1"
         - "osculp32k"
-        - "osc32k"
+        - "xosc32k"
         - "dfll"
         - "fdpll0"
         - "fdpll1"

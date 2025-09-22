@@ -35,7 +35,7 @@ child-binding:
       enum:
         - 0
         - 1
-      default: 0
+      default: 1
       description: |
         0: The DPLLn is not running in standby sleep mode if no peripheral requests the clock.
         1: The DPLLn is running in standby sleep mode.
@@ -117,7 +117,7 @@ child-binding:
         - "gclk9"
         - "gclk10"
         - "gclk11"
-        - "osc32k"
+        - "xosc32k"
         - "xosc0"
         - "xosc1"
       default: "xosc0"

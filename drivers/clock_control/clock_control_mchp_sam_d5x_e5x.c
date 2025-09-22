@@ -5,7 +5,7 @@
  */
 
 /**
- * @file clock_mchp_sam_d5x_e5x.c
+ * @file clock_control_mchp_sam_d5x_e5x.c
  * @brief Clock control driver for sam_d5x_e5x family devices.
  */
 
@@ -63,7 +63,7 @@ LOG_MODULE_REGISTER(clock_mchp_sam_d5x_e5x, CONFIG_CLOCK_CONTROL_LOG_LEVEL);
 #define SUBSYS_TYPE_DFLL       (1)
 #define SUBSYS_TYPE_FDPLL      (2)
 #define SUBSYS_TYPE_RTC        (3)
-#define SUBSYS_TYPE_OSC32K     (4)
+#define SUBSYS_TYPE_XOSC32K    (4)
 #define SUBSYS_TYPE_GCLKGEN    (5)
 #define SUBSYS_TYPE_GCLKPERIPH (6)
 #define SUBSYS_TYPE_MCLKCPU    (7)
@@ -86,11 +86,9 @@ LOG_MODULE_REGISTER(clock_mchp_sam_d5x_e5x, CONFIG_CLOCK_CONTROL_LOG_LEVEL);
 #define INST_FDPLL0 0
 #define INST_FDPLL1 1
 
-/* OSC32K instances */
-#define INST_OSC32K_OSCULP1K  0
-#define INST_OSC32K_OSCULP32K 1
-#define INST_OSC32K_XOSC1K    2
-#define INST_OSC32K_XOSC32K   3
+/* XOSC32K instances */
+#define INST_XOSC32K_XOSC1K  0
+#define INST_XOSC32K_XOSC32K 1
 
 /******************************************************************************
  * @brief Data type definitions
@@ -119,6 +117,7 @@ typedef union {
 } clock_mchp_subsys_t;
 
 #if CONFIG_CLOCK_CONTROL_MCHP_CONFIG_BOOTUP
+
 /** @brief XOSC initialization structure. */
 typedef struct {
 	clock_mchp_subsys_t subsys;
@@ -175,7 +174,7 @@ typedef struct {
 	uint8_t enable;            /* DPLLCTRLA */
 } clock_fdpll_init_t;
 
-/** @brief OSC32K initialization structure. */
+/** @brief XOSC32K initialization structure. */
 typedef struct {
 	uint8_t cf_backup_divideby2_en; /* CFDCTRL */
 	uint8_t switch_back_en;         /* CFDCTRL */
@@ -185,12 +184,12 @@ typedef struct {
 	uint8_t write_lock_en;     /* XOSC32K */
 	uint8_t on_demand_en;      /* XOSC32K */
 	uint8_t run_in_standby_en; /* XOSC32K */
-	uint8_t osc32k_1khz_en;    /* XOSC32K */
-	uint8_t osc32k_32khz_en;   /* XOSC32K */
+	uint8_t xosc32k_1khz_en;   /* XOSC32K */
+	uint8_t xosc32k_32khz_en;  /* XOSC32K */
 	uint8_t xtal_en;           /* XOSC32K */
 	uint16_t startup_time;     /* XOSC32K */
 	uint8_t enable;            /* XOSC32K */
-} clock_osc32k_init_t;
+} clock_xosc32k_init_t;
 
 /** @brief GCLKGEN initialization structure. */
 typedef struct {
@@ -205,6 +204,7 @@ typedef struct {
 	uint8_t enable;
 	uint32_t pin_src_freq;
 } clock_gclkgen_init_t;
+
 #endif /* CONFIG_CLOCK_CONTROL_MCHP_CONFIG_BOOTUP */
 
 /** @brief clock driver configuration structure. */
@@ -217,37 +217,6 @@ typedef struct {
 	/* Timeout in milliseconds to wait for clock to turn on */
 	uint32_t on_timeout_ms;
 } clock_mchp_config_t;
-
-/*
- * - 00..14 (15 bits): clock_mchp_gclkgen_t/clock_mchp_fdpll_src_clock_t
- * - 15..23 (9 bits): CLOCK_MCHP_FDPLL_SRC_MAX+1+clock_mchp_gclk_src_clock_t
- */
-typedef enum {
-	ON_BITPOS_GCLK0 = CLOCK_MCHP_FDPLL_SRC_GCLK0,
-	ON_BITPOS_GCLK1 = CLOCK_MCHP_FDPLL_SRC_GCLK1,
-	ON_BITPOS_GCLK2 = CLOCK_MCHP_FDPLL_SRC_GCLK2,
-	ON_BITPOS_GCLK3 = CLOCK_MCHP_FDPLL_SRC_GCLK3,
-	ON_BITPOS_GCLK4 = CLOCK_MCHP_FDPLL_SRC_GCLK4,
-	ON_BITPOS_GCLK5 = CLOCK_MCHP_FDPLL_SRC_GCLK5,
-	ON_BITPOS_GCLK6 = CLOCK_MCHP_FDPLL_SRC_GCLK6,
-	ON_BITPOS_GCLK7 = CLOCK_MCHP_FDPLL_SRC_GCLK7,
-	ON_BITPOS_GCLK8 = CLOCK_MCHP_FDPLL_SRC_GCLK8,
-	ON_BITPOS_GCLK9 = CLOCK_MCHP_FDPLL_SRC_GCLK9,
-	ON_BITPOS_GCLK10 = CLOCK_MCHP_FDPLL_SRC_GCLK10,
-	ON_BITPOS_GCLK11 = CLOCK_MCHP_FDPLL_SRC_GCLK11,
-	ON_BITPOS_XOSC32K_ = CLOCK_MCHP_FDPLL_SRC_XOSC32K,
-	ON_BITPOS_XOSC0_ = CLOCK_MCHP_FDPLL_SRC_XOSC0,
-	ON_BITPOS_XOSC1_ = CLOCK_MCHP_FDPLL_SRC_XOSC1,
-	ON_BITPOS_XOSC0 = CLOCK_MCHP_FDPLL_SRC_MAX + 1 + CLOCK_MCHP_GCLK_SRC_XOSC0,
-	ON_BITPOS_XOSC1 = CLOCK_MCHP_FDPLL_SRC_MAX + 1 + CLOCK_MCHP_GCLK_SRC_XOSC1,
-	ON_BITPOS_GCLKPIN = CLOCK_MCHP_FDPLL_SRC_MAX + 1 + CLOCK_MCHP_GCLK_SRC_GCLKPIN,
-	ON_BITPOS_GCLKGEN1 = CLOCK_MCHP_FDPLL_SRC_MAX + 1 + CLOCK_MCHP_GCLK_SRC_GCLKGEN1,
-	ON_BITPOS_OSCULP32K = CLOCK_MCHP_FDPLL_SRC_MAX + 1 + CLOCK_MCHP_GCLK_SRC_OSCULP32K,
-	ON_BITPOS_XOSC32K = CLOCK_MCHP_FDPLL_SRC_MAX + 1 + CLOCK_MCHP_GCLK_SRC_XOSC32K,
-	ON_BITPOS_DFLL = CLOCK_MCHP_FDPLL_SRC_MAX + 1 + CLOCK_MCHP_GCLK_SRC_DFLL,
-	ON_BITPOS_FDPLL0 = CLOCK_MCHP_FDPLL_SRC_MAX + 1 + CLOCK_MCHP_GCLK_SRC_FDPLL0,
-	ON_BITPOS_FDPLL1 = CLOCK_MCHP_FDPLL_SRC_MAX + 1 + CLOCK_MCHP_GCLK_SRC_FDPLL1
-} clock_mchp_on_bitpos_t;
 
 /** @brief clock driver data structure. */
 typedef struct {
@@ -267,10 +236,17 @@ typedef struct {
 	uint32_t gclkpin_freq[GCLK_IO_MAX + 1];
 
 	/*
-	 * - 00..14 (15 bits): clock_mchp_gclkgen_t/clock_mchp_fdpll_src_clock_t
-	 * - 15..23 (9 bits): CLOCK_MCHP_FDPLL_SRC_MAX+1+clock_mchp_gclk_src_clock_t
+	 * Use bit position as per enum clock_mchp_fdpll_src_clock_t, to show if the specified
+	 * clock source to FDPLL is on.
 	 */
-	uint32_t src_on_status;
+	uint16_t fdpll_src_on_status;
+
+	/*
+	 * Use bit position as per enum clock_mchp_gclk_src_clock_t, to show if the specified
+	 * clock source to gclk generator is on.
+	 */
+	uint16_t gclkgen_src_on_status;
+
 	clock_mchp_gclk_src_clock_t gclk0_src;
 } clock_mchp_data_t;
 
@@ -327,8 +303,8 @@ static int clock_check_subsys(clock_mchp_subsys_t subsys)
 			inst_max = CLOCK_MCHP_RTC_ID_MAX;
 			break;
 
-		case SUBSYS_TYPE_OSC32K:
-			inst_max = CLOCK_MCHP_OSC32K_ID_MAX;
+		case SUBSYS_TYPE_XOSC32K:
+			inst_max = CLOCK_MCHP_XOSC32K_ID_MAX;
 			break;
 
 		case SUBSYS_TYPE_GCLKGEN:
@@ -423,7 +399,7 @@ void clock_disable_interrupt(const clock_mchp_config_t *config, const clock_mchp
 		oscctrl_regs->OSCCTRL_INTENCLR = OSCCTRL_INTENCLR_DFLLRDY_Msk;
 		break;
 
-	case SUBSYS_TYPE_OSC32K:
+	case SUBSYS_TYPE_XOSC32K:
 		config->osc32kctrl_regs->OSC32KCTRL_INTENCLR |= OSC32KCTRL_INTENCLR_XOSC32KRDY_Msk;
 		break;
 
@@ -456,7 +432,7 @@ void clock_clear_interrupt(const clock_mchp_config_t *config, const clock_mchp_s
 		oscctrl_regs->OSCCTRL_INTFLAG = OSCCTRL_INTFLAG_DFLLRDY_Msk;
 		break;
 
-	case SUBSYS_TYPE_OSC32K:
+	case SUBSYS_TYPE_XOSC32K:
 		config->osc32kctrl_regs->OSC32KCTRL_INTFLAG |= OSC32KCTRL_INTFLAG_XOSC32KRDY_Msk;
 		break;
 
@@ -489,7 +465,7 @@ void clock_enable_interrupt(const clock_mchp_config_t *config, const clock_mchp_
 		oscctrl_regs->OSCCTRL_INTENSET = OSCCTRL_INTENSET_DFLLRDY_Msk;
 		break;
 
-	case SUBSYS_TYPE_OSC32K:
+	case SUBSYS_TYPE_XOSC32K:
 		config->osc32kctrl_regs->OSC32KCTRL_INTENSET |= OSC32KCTRL_INTENSET_XOSC32KRDY_Msk;
 		break;
 
@@ -529,15 +505,10 @@ static int clock_on_off(const clock_mchp_config_t *config, const clock_mchp_subs
 		reg8 = &oscctrl_regs->DPLL[inst].OSCCTRL_DPLLCTRLA;
 		reg8_val = OSCCTRL_DPLLCTRLA_ENABLE_Msk;
 		break;
-	case SUBSYS_TYPE_OSC32K:
-		if ((inst == INST_OSC32K_OSCULP1K) || (inst == INST_OSC32K_OSCULP32K)) {
-			ret_val = -ENOTSUP;
-			break;
-		}
-
+	case SUBSYS_TYPE_XOSC32K:
 		reg16 = &osc32kctrl_regs->OSC32KCTRL_XOSC32K;
-		reg16_val = (inst == INST_OSC32K_XOSC1K) ? OSC32KCTRL_XOSC32K_EN1K_Msk
-							 : OSC32KCTRL_XOSC32K_EN32K_Msk;
+		reg16_val = (inst == INST_XOSC32K_XOSC1K) ? OSC32KCTRL_XOSC32K_EN1K_Msk
+							  : OSC32KCTRL_XOSC32K_EN32K_Msk;
 		if (on == true) {
 			/* turn on XOSC32K if any of EN1K or EN32K is to be on */
 			osc32kctrl_regs->OSC32KCTRL_XOSC32K |= OSC32KCTRL_XOSC32K_ENABLE_Msk;
@@ -666,7 +637,7 @@ static int clock_get_rate_gclkgen(const struct device *dev, clock_mchp_gclkgen_t
 
 		case CLOCK_MCHP_GCLK_SRC_GCLKPIN:
 			if (gclkgen_id <= GCLK_IO_MAX) {
-				gclkgen_src_freq = data->xosc_crystal_freq[gclkgen_id];
+				gclkgen_src_freq = data->gclkpin_freq[gclkgen_id];
 			} else {
 				ret_val = -ENOTSUP;
 			}
@@ -896,10 +867,10 @@ static int clock_mchp_on(const struct device *dev, clock_control_subsys_t sys)
 
 	/* Wait until the clock state becomes ON. */
 	while (is_wait == true) {
-		/* For OSC32K, need to wait for the oscillator to be on. get_status only return if
-		 * EN1K or EN32K is on, which does not indicate the status of OSC32K
+		/* For XOSC32K, need to wait for the oscillator to be on. get_status only return if
+		 * EN1K or EN32K is on, which does not indicate the status of XOSC32K
 		 */
-		if (subsys.bits.type == SUBSYS_TYPE_OSC32K) {
+		if (subsys.bits.type == SUBSYS_TYPE_XOSC32K) {
 			osc32kctrl_registers_t *osc32kctrl_regs = config->osc32kctrl_regs;
 
 			if ((osc32kctrl_regs->OSC32KCTRL_STATUS &
@@ -1067,27 +1038,15 @@ static enum clock_control_status clock_mchp_get_status(const struct device *dev,
 		case SUBSYS_TYPE_RTC:
 			ret_status = CLOCK_CONTROL_STATUS_ON;
 			break;
-		case SUBSYS_TYPE_OSC32K:
+		case SUBSYS_TYPE_XOSC32K:
 			switch (inst) {
-			case INST_OSC32K_OSCULP1K:
-				ret_status = ((osc32kctrl_regs->OSC32KCTRL_OSCULP32K &
-					       OSC32KCTRL_OSCULP32K_EN1K_Msk) != 0)
-						     ? CLOCK_CONTROL_STATUS_ON
-						     : CLOCK_CONTROL_STATUS_OFF;
-				break;
-			case INST_OSC32K_OSCULP32K:
-				ret_status = ((osc32kctrl_regs->OSC32KCTRL_OSCULP32K &
-					       OSC32KCTRL_OSCULP32K_EN32K_Msk) != 0)
-						     ? CLOCK_CONTROL_STATUS_ON
-						     : CLOCK_CONTROL_STATUS_OFF;
-				break;
-			case INST_OSC32K_XOSC1K:
+			case INST_XOSC32K_XOSC1K:
 				ret_status = ((osc32kctrl_regs->OSC32KCTRL_XOSC32K &
 					       OSC32KCTRL_XOSC32K_EN1K_Msk) != 0)
 						     ? CLOCK_CONTROL_STATUS_ON
 						     : CLOCK_CONTROL_STATUS_OFF;
 				break;
-			case INST_OSC32K_XOSC32K:
+			case INST_XOSC32K_XOSC32K:
 				ret_status = ((osc32kctrl_regs->OSC32KCTRL_XOSC32K &
 					       OSC32KCTRL_XOSC32K_EN32K_Msk) != 0)
 						     ? CLOCK_CONTROL_STATUS_ON
@@ -1225,10 +1184,11 @@ static int clock_mchp_get_rate(const struct device *dev, clock_control_subsys_t 
 {
 	int ret_val = CLOCK_SUCCESS;
 	const clock_mchp_config_t *config = dev->config;
+	osc32kctrl_registers_t *osc32kctrl_regs = config->osc32kctrl_regs;
 	clock_mchp_data_t *data = dev->data;
 	clock_mchp_subsys_t subsys = {.val = (uint32_t)sys};
 	uint8_t rtc_src, cpu_div;
-	uint32_t gclkgen_src_freq;
+	uint32_t gclkgen_src_freq, mask;
 	clock_mchp_gclkgen_t gclkperiph_src;
 	uint8_t inst = subsys.bits.inst;
 
@@ -1260,8 +1220,36 @@ static int clock_mchp_get_rate(const struct device *dev, clock_control_subsys_t 
 
 		case SUBSYS_TYPE_RTC:
 			/* get rtc source clock*/
-			rtc_src = config->osc32kctrl_regs->OSC32KCTRL_RTCCTRL &
-				  OSC32KCTRL_RTCCTRL_RTCSEL_Msk;
+			rtc_src = (config->osc32kctrl_regs->OSC32KCTRL_RTCCTRL &
+				   OSC32KCTRL_RTCCTRL_RTCSEL_Msk) >>
+				  OSC32KCTRL_RTCCTRL_RTCSEL_Pos;
+
+			switch (rtc_src) {
+			case OSC32KCTRL_RTCCTRL_RTCSEL_ULP1K_Val:
+				*freq = FREQ_1KHZ;
+				break;
+
+			case OSC32KCTRL_RTCCTRL_RTCSEL_ULP32K_Val:
+				*freq = FREQ_32KHZ;
+				break;
+
+			case OSC32KCTRL_RTCCTRL_RTCSEL_XOSC1K_Val:
+				mask = OSC32KCTRL_XOSC32K_ENABLE_Msk | OSC32KCTRL_XOSC32K_EN1K_Msk;
+				*freq = ((osc32kctrl_regs->OSC32KCTRL_XOSC32K & mask) == mask)
+						? FREQ_1KHZ
+						: 0;
+				break;
+
+			case OSC32KCTRL_RTCCTRL_RTCSEL_XOSC32K_Val:
+				mask = OSC32KCTRL_XOSC32K_ENABLE_Msk | OSC32KCTRL_XOSC32K_EN32K_Msk;
+				*freq = ((osc32kctrl_regs->OSC32KCTRL_XOSC32K & mask) == mask)
+						? FREQ_32KHZ
+						: 0;
+				break;
+
+			default:
+				ret_val = -ENOTSUP;
+			}
 			if ((rtc_src == OSC32KCTRL_RTCCTRL_RTCSEL_ULP1K_Val) ||
 			    (rtc_src == OSC32KCTRL_RTCCTRL_RTCSEL_XOSC1K_Val)) {
 				*freq = FREQ_1KHZ;
@@ -1274,12 +1262,11 @@ static int clock_mchp_get_rate(const struct device *dev, clock_control_subsys_t 
 			}
 			break;
 
-		case SUBSYS_TYPE_OSC32K:
-			if ((inst == INST_OSC32K_OSCULP1K) || (inst == INST_OSC32K_XOSC1K)) {
+		case SUBSYS_TYPE_XOSC32K:
+			if (inst == INST_XOSC32K_XOSC1K) {
 				*freq = FREQ_1KHZ;
 
-			} else if ((inst == INST_OSC32K_OSCULP32K) ||
-				   (inst == INST_OSC32K_XOSC32K)) {
+			} else if (inst == INST_XOSC32K_XOSC32K) {
 				*freq = FREQ_32KHZ;
 			}
 			break;
@@ -1371,7 +1358,7 @@ static int clock_mchp_set_rate(const struct device *dev, clock_control_subsys_t 
 	switch (subsys.bits.type) {
 	case SUBSYS_TYPE_XOSC:
 	case SUBSYS_TYPE_RTC:
-	case SUBSYS_TYPE_OSC32K:
+	case SUBSYS_TYPE_XOSC32K:
 	case SUBSYS_TYPE_MCLKPERIPH:
 	case SUBSYS_TYPE_GCLKPERIPH:
 		break;
@@ -1396,7 +1383,9 @@ static int clock_mchp_set_rate(const struct device *dev, clock_control_subsys_t 
 					ret_val = CLOCK_SUCCESS;
 				}
 			}
-		} /* else in open loop mode & have fixed rate */
+		}
+
+		/* else in open loop mode & have fixed rate */
 		break;
 
 	case SUBSYS_TYPE_FDPLL:
@@ -1433,6 +1422,7 @@ static int clock_mchp_set_rate(const struct device *dev, clock_control_subsys_t 
 		div = 0;
 		do {
 			calc_freq_in = (div_en == true) ? (src_freq / (2 * (div + 1))) : src_freq;
+
 			/* iterate to find correct mult_int and mult_frac */
 			for (mult_int = 0; mult_int <= int_mult_max; mult_int++) {
 				if (((calc_freq_in * (mult_int + 1)) > rate) ||
@@ -1487,8 +1477,8 @@ static int clock_mchp_set_rate(const struct device *dev, clock_control_subsys_t 
 
 		div = src_freq / rate;
 		div_max = GCLK_GENCTRL_DIV_Msk >> GCLK_GENCTRL_DIV_Pos;
-		/*
-		 * For gclk1, 8 division factor bits - DIV[7:0]
+
+		/* For gclk1, 8 division factor bits - DIV[7:0]
 		 * others, 16 division factor bits - DIV[15:0]
 		 */
 		if (inst != CLOCK_MCHP_GCLKGEN_GEN1) {
@@ -1584,6 +1574,7 @@ static int clock_mchp_configure(const struct device *dev, clock_control_subsys_t
 			ret_val = -EINVAL;
 			break;
 		}
+
 		/* Validate subsystem. */
 		if (CLOCK_SUCCESS != clock_check_subsys(subsys)) {
 			ret_val = -ENOTSUP;
@@ -1607,6 +1598,7 @@ static int clock_mchp_configure(const struct device *dev, clock_control_subsys_t
 		case SUBSYS_TYPE_DFLL:
 			clock_mchp_subsys_dfll_config_t *dfll_config =
 				(clock_mchp_subsys_dfll_config_t *)req_config;
+
 			/* GCLK_PCHCTRL[0] is for DFLL48 input clock source */
 			reg_val = gclk_regs->GCLK_PCHCTRL[0];
 			reg_val &= ~GCLK_PCHCTRL_GEN_Msk;
@@ -1656,6 +1648,7 @@ static int clock_mchp_configure(const struct device *dev, clock_control_subsys_t
 
 				default:
 					val |= OSCCTRL_DPLLCTRLB_REFCLK_GCLK;
+
 					/* source is gclk*/
 					gclk_regs->GCLK_PCHCTRL[inst + 1] &= ~GCLK_PCHCTRL_GEN_Msk;
 					gclk_regs->GCLK_PCHCTRL[inst + 1] |=
@@ -1700,18 +1693,18 @@ static int clock_mchp_configure(const struct device *dev, clock_control_subsys_t
 				OSC32KCTRL_RTCCTRL_RTCSEL(rtc_config->src);
 			break;
 
-		case SUBSYS_TYPE_OSC32K:
-			clock_mchp_subsys_osc32k_config_t *osc32k_config =
-				(clock_mchp_subsys_osc32k_config_t *)req_config;
+		case SUBSYS_TYPE_XOSC32K:
+			clock_mchp_subsys_xosc32k_config_t *xosc32k_config =
+				(clock_mchp_subsys_xosc32k_config_t *)req_config;
 
 			reg_val = osc32kctrl_regs->OSC32KCTRL_XOSC32K;
 			reg_val &= ~(OSC32KCTRL_XOSC32K_RUNSTDBY_Msk |
 				     OSC32KCTRL_XOSC32K_ONDEMAND_Msk);
-			val |= ((osc32k_config->run_in_standby_en != 0)
+			val |= ((xosc32k_config->run_in_standby_en != 0)
 					? OSC32KCTRL_XOSC32K_RUNSTDBY(1)
 					: 0);
-			val |= ((osc32k_config->on_demand_en != 0) ? OSC32KCTRL_XOSC32K_ONDEMAND(1)
-								   : 0);
+			val |= ((xosc32k_config->on_demand_en != 0) ? OSC32KCTRL_XOSC32K_ONDEMAND(1)
+								    : 0);
 			reg_val |= val;
 			osc32kctrl_regs->OSC32KCTRL_XOSC32K = reg_val;
 			break;
@@ -1727,6 +1720,7 @@ static int clock_mchp_configure(const struct device *dev, clock_control_subsys_t
 									 : 0);
 
 			val |= GCLK_GENCTRL_SRC(gclkgen_config->src);
+
 			/* check range for div_factor, gclk1: 0 - 65535, others: 0 - 255 */
 			if ((inst == CLOCK_MCHP_GCLKGEN_GEN1) ||
 			    (gclkgen_config->div_factor <= 0xFF)) {
@@ -1782,7 +1776,8 @@ void clock_xosc_init(const struct device *dev, clock_xosc_init_t *xosc_init)
 
 	inst = xosc_init->subsys.bits.inst;
 	do {
-		if ((data->src_on_status & (1 << (CLOCK_MCHP_FDPLL_SRC_MAX + 1 + inst))) != 0) {
+		/* Check if the XOSC is already initialized and on */
+		if ((data->fdpll_src_on_status & (1 << (CLOCK_MCHP_FDPLL_SRC_XOSC0 + inst))) != 0) {
 			break;
 		}
 
@@ -1815,8 +1810,10 @@ void clock_xosc_init(const struct device *dev, clock_xosc_init_t *xosc_init)
 							: OSCCTRL_STATUS_XOSCRDY1_Msk;
 			while ((oscctrl_regs->OSCCTRL_STATUS & rdy_mask) == 0) {
 			}
-			data->src_on_status |=
-				(1 << (ON_BITPOS_XOSC0 + inst)) | (1 << (ON_BITPOS_XOSC0_ + inst));
+
+			/* Set XOSC clock as on */
+			data->fdpll_src_on_status |= 1 << (CLOCK_MCHP_FDPLL_SRC_XOSC0 + inst);
+			data->gclkgen_src_on_status |= 1 << (CLOCK_MCHP_GCLK_SRC_XOSC0 + inst);
 		}
 	} while (0);
 }
@@ -1836,12 +1833,17 @@ void clock_dfll_init(const struct device *dev, clock_dfll_init_t *dfll_init)
 	uint32_t val32;
 
 	do {
-		if ((data->src_on_status & (1 << ON_BITPOS_DFLL)) != 0) {
+		/* Check if DFLL is already initialized and on */
+		if ((data->gclkgen_src_on_status & (1 << CLOCK_MCHP_GCLK_SRC_DFLL)) != 0) {
 			break;
 		}
 
+		/* Check if the source gclkgen clock (driving DFLL) is initialized and on.
+		 * Since the gclkgen from 0 to 11 are in order for fdpll source, we can use the same
+		 * here.
+		 */
 		gclkgen_index = dfll_init->src_gclk;
-		if ((data->src_on_status & (1 << gclkgen_index)) == 0) {
+		if ((data->fdpll_src_on_status & (1 << gclkgen_index)) == 0) {
 			break;
 		}
 
@@ -1906,7 +1908,9 @@ void clock_dfll_init(const struct device *dev, clock_dfll_init_t *dfll_init)
 		if (dfll_init->enable != 0) {
 			while ((oscctrl_regs->OSCCTRL_STATUS & OSCCTRL_STATUS_DFLLRDY_Msk) == 0) {
 			}
-			data->src_on_status |= (1 << ON_BITPOS_DFLL);
+
+			/* Set DFLL clock as on */
+			data->gclkgen_src_on_status |= (1 << CLOCK_MCHP_GCLK_SRC_DFLL);
 		}
 	} while (0);
 }
@@ -1927,12 +1931,14 @@ void clock_fdpll_init(const struct device *dev, clock_fdpll_init_t *fdpll_init)
 
 	inst = fdpll_init->subsys.bits.inst;
 	do {
-		if (data->src_on_status & (1 << (ON_BITPOS_FDPLL0 + inst))) {
+		/* Check if the FDPLL is already initialized and on */
+		if (data->gclkgen_src_on_status & (1 << (CLOCK_MCHP_GCLK_SRC_FDPLL0 + inst))) {
 			break;
 		}
 
+		/* Check if the source clock (driving FDPLL) is initialized and on. */
 		src = fdpll_init->src;
-		if ((data->src_on_status & (1 << src)) == 0) {
+		if ((data->fdpll_src_on_status & (1 << src)) == 0) {
 			break;
 		}
 
@@ -1986,7 +1992,9 @@ void clock_fdpll_init(const struct device *dev, clock_fdpll_init_t *fdpll_init)
 			mask = OSCCTRL_DPLLSTATUS_LOCK_Msk | OSCCTRL_DPLLSTATUS_CLKRDY_Msk;
 			while ((oscctrl_regs->DPLL[inst].OSCCTRL_DPLLSTATUS & mask) != mask) {
 			}
-			data->src_on_status |= (1 << (ON_BITPOS_FDPLL0 + inst));
+
+			/* Set FDPLL clock as on */
+			data->gclkgen_src_on_status |= 1 << (CLOCK_MCHP_GCLK_SRC_FDPLL0 + inst);
 		}
 	} while (0);
 }
@@ -2002,9 +2010,9 @@ void clock_rtc_init(const struct device *dev, uint8_t rtc_src)
 }
 
 /**
- * @brief initialize osc32k clocks from device tree node.
+ * @brief initialize XOSC32K clocks from device tree node.
  */
-void clock_osc32k_init(const struct device *dev, clock_osc32k_init_t *osc32k_init)
+void clock_xosc32k_init(const struct device *dev, clock_xosc32k_init_t *xosc32k_init)
 {
 	const clock_mchp_config_t *config = dev->config;
 	clock_mchp_data_t *data = dev->data;
@@ -2014,53 +2022,58 @@ void clock_osc32k_init(const struct device *dev, clock_osc32k_init_t *osc32k_ini
 	uint16_t val16;
 
 	do {
-		if ((data->src_on_status &
-		     ((1 << ON_BITPOS_XOSC32K) | (1 << ON_BITPOS_OSCULP32K))) != 0) {
+		/* Check if XOSC32K clock is already on */
+		if ((data->gclkgen_src_on_status & (1 << CLOCK_MCHP_GCLK_SRC_XOSC32K)) != 0) {
 			break;
 		}
 
 		/* CFDCTRL */
 		val8 = 0;
-		val8 |= ((osc32k_init->cf_backup_divideby2_en != 0) ? OSC32KCTRL_CFDCTRL_CFDPRESC(1)
-								    : 0);
-		val8 |= ((osc32k_init->switch_back_en != 0) ? OSC32KCTRL_CFDCTRL_SWBACK(1) : 0);
-		val8 |= ((osc32k_init->cfd_en != 0) ? OSC32KCTRL_CFDCTRL_CFDEN(1) : 0);
+		val8 |= ((xosc32k_init->cf_backup_divideby2_en != 0)
+				 ? OSC32KCTRL_CFDCTRL_CFDPRESC(1)
+				 : 0);
+		val8 |= ((xosc32k_init->switch_back_en != 0) ? OSC32KCTRL_CFDCTRL_SWBACK(1) : 0);
+		val8 |= ((xosc32k_init->cfd_en != 0) ? OSC32KCTRL_CFDCTRL_CFDEN(1) : 0);
 
 		osc32kctrl_regs->OSC32KCTRL_CFDCTRL = val8;
 
-		/* OSCULP32K */
-		data->src_on_status |= (1 << ON_BITPOS_OSCULP32K);
-
 		/* XOSC32K */
 		val16 = 0;
-		if (osc32k_init->gain_mode == 0) { /* standard */
+		if (xosc32k_init->gain_mode == 0) {
+			/* standard */
 			val16 |= OSC32KCTRL_XOSC32K_CGM(OSC32KCTRL_XOSC32K_CGM_XT_Val);
-		} else { /* highspeed */
+		} else {
+			/* highspeed */
 			val16 |= OSC32KCTRL_XOSC32K_CGM(OSC32KCTRL_XOSC32K_CGM_HS_Val);
 		}
-		val16 |= ((osc32k_init->write_lock_en != 0) ? OSC32KCTRL_XOSC32K_WRTLOCK(1) : 0);
-		val16 |= ((osc32k_init->run_in_standby_en != 0) ? OSC32KCTRL_XOSC32K_RUNSTDBY(1)
-								: 0);
-		val16 |= ((osc32k_init->osc32k_1khz_en != 0) ? OSC32KCTRL_XOSC32K_EN1K(1) : 0);
-		val16 |= ((osc32k_init->osc32k_32khz_en != 0) ? OSC32KCTRL_XOSC32K_EN32K(1) : 0);
-		val16 |= ((osc32k_init->xtal_en != 0) ? OSC32KCTRL_XOSC32K_XTALEN(1) : 0);
-		val16 |= OSC32KCTRL_XOSC32K_STARTUP(osc32k_init->startup_time);
-		val16 |= ((osc32k_init->enable != 0) ? OSC32KCTRL_XOSC32K_ENABLE(1) : 0);
+		val16 |= ((xosc32k_init->write_lock_en != 0) ? OSC32KCTRL_XOSC32K_WRTLOCK(1) : 0);
+		val16 |= ((xosc32k_init->run_in_standby_en != 0) ? OSC32KCTRL_XOSC32K_RUNSTDBY(1)
+								 : 0);
+		val16 |= ((xosc32k_init->xosc32k_1khz_en != 0) ? OSC32KCTRL_XOSC32K_EN1K(1) : 0);
+		val16 |= ((xosc32k_init->xosc32k_32khz_en != 0) ? OSC32KCTRL_XOSC32K_EN32K(1) : 0);
+		val16 |= ((xosc32k_init->xtal_en != 0) ? OSC32KCTRL_XOSC32K_XTALEN(1) : 0);
+		val16 |= OSC32KCTRL_XOSC32K_STARTUP(xosc32k_init->startup_time);
+		val16 |= ((xosc32k_init->enable != 0) ? OSC32KCTRL_XOSC32K_ENABLE(1) : 0);
 
 		/* Important: Initializing it with 1, along with clock enabled, can lead to
 		 * indefinite wait for the clock to be on, if there is no peripheral request for the
 		 * clock in the sequence of clock Initialization. If required, better to turn on the
 		 * clock using API, instead of enabling both (on_demand_en & enable) during startup.
 		 */
-		val16 |= ((osc32k_init->on_demand_en != 0) ? OSC32KCTRL_XOSC32K_ONDEMAND(1) : 0);
+		val16 |= ((xosc32k_init->on_demand_en != 0) ? OSC32KCTRL_XOSC32K_ONDEMAND(1) : 0);
 
 		osc32kctrl_regs->OSC32KCTRL_XOSC32K = val16;
-		if (osc32k_init->osc32k_32khz_en != 0) {
-			while ((osc32kctrl_regs->OSC32KCTRL_STATUS &
-				OSC32KCTRL_STATUS_XOSC32KRDY_Msk) == 0) {
+		if (xosc32k_init->enable != 0) {
+			if ((xosc32k_init->xosc32k_32khz_en != 0) ||
+			    (xosc32k_init->xosc32k_1khz_en != 0)) {
+				while ((osc32kctrl_regs->OSC32KCTRL_STATUS &
+					OSC32KCTRL_STATUS_XOSC32KRDY_Msk) == 0) {
+				}
+
+				/* Set XOSC32K clock as on */
+				data->fdpll_src_on_status |= (1 << CLOCK_MCHP_FDPLL_SRC_XOSC32K);
+				data->gclkgen_src_on_status |= (1 << CLOCK_MCHP_GCLK_SRC_XOSC32K);
 			}
-			data->src_on_status |= (1 << ON_BITPOS_XOSC32K);
-			data->src_on_status |= (1 << ON_BITPOS_XOSC32K_);
 		}
 	} while (0);
 }
@@ -2078,12 +2091,15 @@ void clock_gclkgen_init(const struct device *dev, clock_gclkgen_init_t *gclkgen_
 
 	inst = gclkgen_init->subsys.bits.inst;
 	do {
-		if ((data->src_on_status & (1 << inst)) != 0) {
+		/* Check if gclkgen clock is already initialized and on */
+		if ((data->fdpll_src_on_status & (1 << inst)) != 0) {
 			/* Already initialized */
 			break;
 		}
-		if ((data->src_on_status & (1 << (ON_BITPOS_XOSC0 + gclkgen_init->src))) == 0) {
-			/* Source is not on */
+
+		/* Check if source of gclk generator is off */
+		if ((data->gclkgen_src_on_status & (1 << gclkgen_init->src)) == 0) {
+			/* Source is off */
 			break;
 		}
 
@@ -2093,9 +2109,11 @@ void clock_gclkgen_init(const struct device *dev, clock_gclkgen_init_t *gclkgen_
 
 		/* GENCTRL */
 		val = 0;
-		if (gclkgen_init->div_select == 0) { /* div-factor */
+		if (gclkgen_init->div_select == 0) {
+			/* div-factor */
 			val |= GCLK_GENCTRL_DIVSEL(GCLK_GENCTRL_DIVSEL_DIV1_Val);
-		} else { /* div-factor-power */
+		} else {
+			/* div-factor-power */
 			val |= GCLK_GENCTRL_DIVSEL(GCLK_GENCTRL_DIVSEL_DIV2_Val);
 		}
 		val |= GCLK_GENCTRL_OOV(gclkgen_init->pin_output_off_val);
@@ -2103,6 +2121,7 @@ void clock_gclkgen_init(const struct device *dev, clock_gclkgen_init_t *gclkgen_
 		val |= ((gclkgen_init->run_in_standby_en != 0) ? GCLK_GENCTRL_RUNSTDBY(1) : 0);
 		val |= ((gclkgen_init->pin_output_en != 0) ? GCLK_GENCTRL_OE(1) : 0);
 		val |= ((gclkgen_init->duty_50_50_en != 0) ? GCLK_GENCTRL_IDC(1) : 0);
+
 		/* check range for div_factor, gclk1: 0 - 65535, others: 0 - 255 */
 		if ((inst == 1) || (gclkgen_init->div_factor <= 0xFF)) {
 			val |= GCLK_GENCTRL_DIV(gclkgen_init->div_factor);
@@ -2118,9 +2137,10 @@ void clock_gclkgen_init(const struct device *dev, clock_gclkgen_init_t *gclkgen_
 			data->gclk0_src = gclkgen_init->src;
 		}
 
-		data->src_on_status |= (1 << inst);
-		if (inst == CLOCK_MCHP_GCLKGEN_GEN0) {
-			data->src_on_status |= (1 << ON_BITPOS_GCLKGEN1);
+		/* Set gclkgen clock as on */
+		data->fdpll_src_on_status |= (1 << inst);
+		if (inst == CLOCK_MCHP_GCLKGEN_GEN1) {
+			data->gclkgen_src_on_status |= (1 << CLOCK_MCHP_GCLKGEN_GEN1);
 		}
 	} while (0);
 }
@@ -2181,20 +2201,26 @@ void clock_mclkperiph_init(const struct device *dev, uint32_t subsys_val, uint8_
 }
 
 #define CLOCK_MCHP_ITERATE_XOSC(child)                                                             \
-	xosc_init.subsys.val = DT_PROP(child, subsystem);                                          \
-	xosc_init.frequency = DT_PROP(child, xosc_frequency);                                      \
-	xosc_init.startup_time = DT_ENUM_IDX(child, xosc_startup_time);                            \
-	xosc_init.clock_switch_en = DT_PROP(child, xosc_clock_switch_en);                          \
-	xosc_init.clock_failure_detection_en = DT_PROP(child, xosc_clock_failure_detection_en);    \
-	xosc_init.automatic_loop_control_en = DT_PROP(child, xosc_automatic_loop_control_en);      \
-	xosc_init.low_buffer_gain_en = DT_PROP(child, xosc_low_buffer_gain_en);                    \
-	xosc_init.on_demand_en = DT_PROP(child, xosc_on_demand_en);                                \
-	xosc_init.run_in_standby_en = DT_PROP(child, xosc_run_in_standby_en);                      \
-	xosc_init.xtal_en = DT_PROP(child, xosc_xtal_en);                                          \
-	xosc_init.enable = DT_PROP(child, xosc_en);                                                \
-	clock_xosc_init(dev, &xosc_init);
+	{                                                                                          \
+		clock_xosc_init_t xosc_init = {0};                                                 \
+		xosc_init.subsys.val = DT_PROP(child, subsystem);                                  \
+		xosc_init.frequency = DT_PROP(child, xosc_frequency);                              \
+		xosc_init.startup_time = DT_ENUM_IDX(child, xosc_startup_time);                    \
+		xosc_init.clock_switch_en = DT_PROP(child, xosc_clock_switch_en);                  \
+		xosc_init.clock_failure_detection_en =                                             \
+			DT_PROP(child, xosc_clock_failure_detection_en);                           \
+		xosc_init.automatic_loop_control_en =                                              \
+			DT_PROP(child, xosc_automatic_loop_control_en);                            \
+		xosc_init.low_buffer_gain_en = DT_PROP(child, xosc_low_buffer_gain_en);            \
+		xosc_init.on_demand_en = DT_PROP(child, xosc_on_demand_en);                        \
+		xosc_init.run_in_standby_en = DT_PROP(child, xosc_run_in_standby_en);              \
+		xosc_init.xtal_en = DT_PROP(child, xosc_xtal_en);                                  \
+		xosc_init.enable = DT_PROP(child, xosc_en);                                        \
+		clock_xosc_init(dev, &xosc_init);                                                  \
+	}
 
 #define CLOCK_MCHP_PROCESS_DFLL(node)                                                              \
+	clock_dfll_init_t dfll_init = {0};                                                         \
 	dfll_init.on_demand_en = DT_PROP(node, dfll_on_demand_en);                                 \
 	dfll_init.run_in_standby_en = DT_PROP(node, dfll_run_in_standby_en);                       \
 	dfll_init.wait_lock_en = DT_PROP(node, dfll_wait_lock_en);                                 \
@@ -2213,59 +2239,71 @@ void clock_mclkperiph_init(const struct device *dev, uint32_t subsys_val, uint8_
 	clock_dfll_init(dev, &dfll_init);
 
 #define CLOCK_MCHP_ITERATE_FDPLL(child)                                                            \
-	fdpll_init.subsys.val = DT_PROP(child, subsystem);                                         \
-	fdpll_init.on_demand_en = DT_PROP(child, fdpll_on_demand_en);                              \
-	fdpll_init.run_in_standby_en = DT_PROP(child, fdpll_run_in_standby_en);                    \
-	fdpll_init.divider_ratio_int = DT_PROP(child, fdpll_divider_ratio_int);                    \
-	fdpll_init.divider_ratio_frac = DT_PROP(child, fdpll_divider_ratio_frac);                  \
-	fdpll_init.xosc_clock_divider = DT_PROP(child, fdpll_xosc_clock_divider);                  \
-	fdpll_init.dco_en = DT_PROP(child, fdpll_dco_en);                                          \
-	fdpll_init.dco_filter_select = DT_ENUM_IDX(child, fdpll_dco_filter_select);                \
-	fdpll_init.lock_bypass_en = DT_PROP(child, fdpll_lock_bypass_en);                          \
-	fdpll_init.src = DT_ENUM_IDX(child, fdpll_src);                                            \
-	fdpll_init.wakeup_fast_en = DT_PROP(child, fdpll_wakeup_fast_en);                          \
-	fdpll_init.pi_filter_type = DT_ENUM_IDX(child, fdpll_pi_filter_type);                      \
-	fdpll_init.enable = DT_PROP(child, fdpll_en);                                              \
-	clock_fdpll_init(dev, &fdpll_init);
+	{                                                                                          \
+		clock_fdpll_init_t fdpll_init = {0};                                               \
+		fdpll_init.subsys.val = DT_PROP(child, subsystem);                                 \
+		fdpll_init.on_demand_en = DT_PROP(child, fdpll_on_demand_en);                      \
+		fdpll_init.run_in_standby_en = DT_PROP(child, fdpll_run_in_standby_en);            \
+		fdpll_init.divider_ratio_int = DT_PROP(child, fdpll_divider_ratio_int);            \
+		fdpll_init.divider_ratio_frac = DT_PROP(child, fdpll_divider_ratio_frac);          \
+		fdpll_init.xosc_clock_divider = DT_PROP(child, fdpll_xosc_clock_divider);          \
+		fdpll_init.dco_en = DT_PROP(child, fdpll_dco_en);                                  \
+		fdpll_init.dco_filter_select = DT_ENUM_IDX(child, fdpll_dco_filter_select);        \
+		fdpll_init.lock_bypass_en = DT_PROP(child, fdpll_lock_bypass_en);                  \
+		fdpll_init.src = DT_ENUM_IDX(child, fdpll_src);                                    \
+		fdpll_init.wakeup_fast_en = DT_PROP(child, fdpll_wakeup_fast_en);                  \
+		fdpll_init.pi_filter_type = DT_ENUM_IDX(child, fdpll_pi_filter_type);              \
+		fdpll_init.enable = DT_PROP(child, fdpll_en);                                      \
+		clock_fdpll_init(dev, &fdpll_init);                                                \
+	}
 
 #define CLOCK_MCHP_PROCESS_RTC(node) clock_rtc_init(dev, DT_PROP(node, rtc_src));
 
-#define CLOCK_MCHP_PROCESS_OSC32K(node)                                                            \
-	osc32k_init.gain_mode = DT_ENUM_IDX(node, osc32k_gain_mode);                               \
-	osc32k_init.write_lock_en = DT_PROP(node, osc32k_write_lock_en);                           \
-	osc32k_init.startup_time = DT_ENUM_IDX(node, osc32k_startup_time);                         \
-	osc32k_init.on_demand_en = DT_PROP(node, osc32k_on_demand_en);                             \
-	osc32k_init.run_in_standby_en = DT_PROP(node, osc32k_run_in_standby_en);                   \
-	osc32k_init.osc32k_1khz_en = DT_PROP(node, osc32k_1khz_en);                                \
-	osc32k_init.osc32k_32khz_en = DT_PROP(node, osc32k_32khz_en);                              \
-	osc32k_init.xtal_en = DT_PROP(node, osc32k_xtal_en);                                       \
-	osc32k_init.cf_backup_divideby2_en = DT_PROP(node, osc32k_cf_backup_divideby2_en);         \
-	osc32k_init.switch_back_en = DT_PROP(node, osc32k_switch_back_en);                         \
-	osc32k_init.cfd_en = DT_PROP(node, osc32k_cfd_en);                                         \
-	osc32k_init.enable = DT_PROP(node, osc32k_en);                                             \
-	clock_osc32k_init(dev, &osc32k_init);
+#define CLOCK_MCHP_PROCESS_XOSC32K(node)                                                           \
+	clock_xosc32k_init_t xosc32k_init = {0};                                                   \
+	xosc32k_init.gain_mode = DT_ENUM_IDX(node, xosc32k_gain_mode);                             \
+	xosc32k_init.write_lock_en = DT_PROP(node, xosc32k_write_lock_en);                         \
+	xosc32k_init.startup_time = DT_ENUM_IDX(node, xosc32k_startup_time);                       \
+	xosc32k_init.on_demand_en = DT_PROP(node, xosc32k_on_demand_en);                           \
+	xosc32k_init.run_in_standby_en = DT_PROP(node, xosc32k_run_in_standby_en);                 \
+	xosc32k_init.xosc32k_1khz_en = DT_PROP(node, xosc32k_1khz_en);                             \
+	xosc32k_init.xosc32k_32khz_en = DT_PROP(node, xosc32k_32khz_en);                           \
+	xosc32k_init.xtal_en = DT_PROP(node, xosc32k_xtal_en);                                     \
+	xosc32k_init.cf_backup_divideby2_en = DT_PROP(node, xosc32k_cf_backup_divideby2_en);       \
+	xosc32k_init.switch_back_en = DT_PROP(node, xosc32k_switch_back_en);                       \
+	xosc32k_init.cfd_en = DT_PROP(node, xosc32k_cfd_en);                                       \
+	xosc32k_init.enable = DT_PROP(node, xosc32k_en);                                           \
+	clock_xosc32k_init(dev, &xosc32k_init);
 
 #define CLOCK_MCHP_ITERATE_GCLKGEN(child)                                                          \
-	gclkgen_init.subsys.val = DT_PROP(child, subsystem);                                       \
-	gclkgen_init.div_factor = DT_PROP(child, gclkgen_div_factor);                              \
-	gclkgen_init.run_in_standby_en = DT_PROP(child, gclkgen_run_in_standby_en);                \
-	gclkgen_init.div_select = DT_ENUM_IDX(child, gclkgen_div_select);                          \
-	gclkgen_init.pin_output_en = DT_PROP(child, gclkgen_pin_output_en);                        \
-	gclkgen_init.pin_output_off_val = DT_ENUM_IDX(child, gclkgen_pin_output_off_val);          \
-	gclkgen_init.duty_50_50_en = DT_PROP(child, gclkgen_duty_50_50_en);                        \
-	gclkgen_init.src = DT_ENUM_IDX(child, gclkgen_src);                                        \
-	gclkgen_init.enable = DT_PROP(child, gclkgen_en);                                          \
-	gclkgen_init.pin_src_freq = DT_PROP(child, gclkgen_pin_src_freq);                          \
-	clock_gclkgen_init(dev, &gclkgen_init);
+	{                                                                                          \
+		clock_gclkgen_init_t gclkgen_init = {0};                                           \
+		gclkgen_init.subsys.val = DT_PROP(child, subsystem);                               \
+		gclkgen_init.div_factor = DT_PROP(child, gclkgen_div_factor);                      \
+		gclkgen_init.run_in_standby_en = DT_PROP(child, gclkgen_run_in_standby_en);        \
+		gclkgen_init.div_select = DT_ENUM_IDX(child, gclkgen_div_select);                  \
+		gclkgen_init.pin_output_en = DT_PROP(child, gclkgen_pin_output_en);                \
+		gclkgen_init.pin_output_off_val = DT_ENUM_IDX(child, gclkgen_pin_output_off_val);  \
+		gclkgen_init.duty_50_50_en = DT_PROP(child, gclkgen_duty_50_50_en);                \
+		gclkgen_init.src = DT_ENUM_IDX(child, gclkgen_src);                                \
+		gclkgen_init.enable = DT_PROP(child, gclkgen_en);                                  \
+		gclkgen_init.pin_src_freq = DT_PROP(child, gclkgen_pin_src_freq);                  \
+		clock_gclkgen_init(dev, &gclkgen_init);                                            \
+	}
 
 #define CLOCK_MCHP_ITERATE_GCLKPERIPH(child)                                                       \
-	clock_gclkperiph_init(dev, DT_PROP(child, subsystem), DT_ENUM_IDX(child, gclkperiph_src),  \
-			      DT_PROP(child, gclkperiph_en));
+	{                                                                                          \
+		clock_gclkperiph_init(dev, DT_PROP(child, subsystem),                              \
+				      DT_ENUM_IDX(child, gclkperiph_src),                          \
+				      DT_PROP(child, gclkperiph_en));                              \
+	}
 
 #define CLOCK_MCHP_PROCESS_MCLKCPU(node) clock_mclkcpu_init(dev, DT_PROP(node, mclk_cpu_div));
 
 #define CLOCK_MCHP_ITERATE_MCLKPERIPH(child)                                                       \
-	clock_mclkperiph_init(dev, DT_PROP(child, subsystem), DT_PROP(child, mclk_en));
+	{                                                                                          \
+		clock_mclkperiph_init(dev, DT_PROP(child, subsystem), DT_PROP(child, mclk_en));    \
+	}
 
 #endif /* CONFIG_CLOCK_CONTROL_MCHP_CONFIG_BOOTUP */
 
@@ -2297,16 +2335,8 @@ static int clock_mchp_init(const struct device *dev)
 	clock_mchp_data_t *data = dev->data;
 
 	/* iteration-1 */
-	{
-		clock_xosc_init_t xosc_init = {0};
-
-		DT_FOREACH_CHILD(DT_NODELABEL(xosc), CLOCK_MCHP_ITERATE_XOSC);
-	}
-	{
-		clock_osc32k_init_t osc32k_init = {0};
-
-		CLOCK_MCHP_PROCESS_OSC32K(DT_NODELABEL(osc32k));
-	}
+	DT_FOREACH_CHILD(DT_NODELABEL(xosc), CLOCK_MCHP_ITERATE_XOSC);
+	CLOCK_MCHP_PROCESS_XOSC32K(DT_NODELABEL(xosc32k));
 
 	config->gclk_regs->GCLK_CTRLA = GCLK_CTRLA_SWRST(1);
 	while (config->gclk_regs->GCLK_SYNCBUSY != 0) {
@@ -2316,21 +2346,9 @@ static int clock_mchp_init(const struct device *dev)
 	data->gclk0_src = CLOCK_MCHP_GCLK_SRC_DFLL;
 
 	for (int i = 0; i < CLOCK_INIT_ITERATION_COUNT; i++) {
-		{
-			clock_gclkgen_init_t gclkgen_init = {0};
-
-			DT_FOREACH_CHILD(DT_NODELABEL(gclkgen), CLOCK_MCHP_ITERATE_GCLKGEN);
-		}
-		{
-			clock_dfll_init_t dfll_init = {0};
-
-			CLOCK_MCHP_PROCESS_DFLL(DT_NODELABEL(dfll));
-		}
-		{
-			clock_fdpll_init_t fdpll_init = {0};
-
-			DT_FOREACH_CHILD(DT_NODELABEL(fdpll), CLOCK_MCHP_ITERATE_FDPLL);
-		}
+		DT_FOREACH_CHILD(DT_NODELABEL(gclkgen), CLOCK_MCHP_ITERATE_GCLKGEN);
+		CLOCK_MCHP_PROCESS_DFLL(DT_NODELABEL(dfll));
+		DT_FOREACH_CHILD(DT_NODELABEL(fdpll), CLOCK_MCHP_ITERATE_FDPLL);
 	}
 
 	CLOCK_MCHP_PROCESS_RTC(DT_NODELABEL(rtcclock));
@@ -2351,15 +2369,20 @@ static DEVICE_API(clock_control, clock_mchp_driver_api) = {
 	.on = clock_mchp_on,
 	.off = clock_mchp_off,
 	.get_status = clock_mchp_get_status,
+
 #if CONFIG_CLOCK_CONTROL_MCHP_ASYNC_ON
 	.async_on = clock_mchp_async_on,
 #endif /* CONFIG_CLOCK_CONTROL_MCHP_ASYNC_ON */
+
 #if CONFIG_CLOCK_CONTROL_MCHP_GET_RATE
 	.get_rate = clock_mchp_get_rate,
+
 #if CONFIG_CLOCK_CONTROL_MCHP_SET_RATE
 	.set_rate = clock_mchp_set_rate,
 #endif /* CONFIG_CLOCK_CONTROL_MCHP_SET_RATE */
+
 #endif /* CONFIG_CLOCK_CONTROL_MCHP_GET_RATE */
+
 #if CONFIG_CLOCK_CONTROL_MCHP_CONFIG_RUNTIME
 	.configure = clock_mchp_configure,
 #endif /* CONFIG_CLOCK_CONTROL_MCHP_CONFIG_RUNTIME */

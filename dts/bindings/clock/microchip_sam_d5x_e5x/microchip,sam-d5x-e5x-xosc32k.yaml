@@ -6,10 +6,10 @@ include: [base.yaml]
 description: |
   32KHz Oscillators Controller configuration.
 
-compatible: "microchip,sam-d5x-e5x-osc32k"
+compatible: "microchip,sam-d5x-e5x-xosc32k"
 
 properties:
-  osc32k-gain-mode:
+  xosc32k-gain-mode:
     type: string
     enum:
       - "standard"
@@ -18,7 +18,7 @@ properties:
     description: |
       control the gain of the external crystal oscillator
 
-  osc32k-write-lock-en:
+  xosc32k-write-lock-en:
     type: int
     enum:
       - 0
@@ -27,7 +27,7 @@ properties:
     description: |
       Locks the XOSC32K register for future writes
 
-  osc32k-startup-time:
+  xosc32k-startup-time:
     type: int
     enum:
       - 62
@@ -41,7 +41,7 @@ properties:
     description: |
       Oscillator Start-Up Time in ms
 
-  osc32k-on-demand-en:
+  xosc32k-on-demand-en:
     type: int
     enum:
       - 0
@@ -56,7 +56,7 @@ properties:
       Initialization. If required, better to turn on the clock using API, instead of enabling both
       during startup.
 
-  osc32k-run-in-standby-en:
+  xosc32k-run-in-standby-en:
     type: int
     enum:
       - 0
@@ -66,7 +66,7 @@ properties:
       0: Run if requested by peripheral
       1: The oscillator is always on, if demand-en is false
 
-  osc32k-1khz-en:
+  xosc32k-1khz-en:
     type: int
     enum:
       - 0
@@ -75,7 +75,7 @@ properties:
     description: |
       1kHz Output Enable
 
-  osc32k-32khz-en:
+  xosc32k-32khz-en:
     type: int
     enum:
       - 0
@@ -84,7 +84,7 @@ properties:
     description: |
       32kHz output is enable
 
-  osc32k-xtal-en:
+  xosc32k-xtal-en:
     type: int
     enum:
       - 0
@@ -95,7 +95,7 @@ properties:
       0 - External clock connected on XIN. XOUT can be used as general-purpose I/O.
       1 - Crystal connected to XIN/XOUT.
 
-  osc32k-en:
+  xosc32k-en:
     type: int
     enum:
       - 0
@@ -104,7 +104,7 @@ properties:
     description: |
       Oscillator Enable
 
-  osc32k-cf-backup-divideby2-en:
+  xosc32k-cf-backup-divideby2-en:
     type: int
     enum:
       - 0
@@ -113,7 +113,7 @@ properties:
     description: |
       The CFD safe clock frequency is the OSCULP32K frequency divided by 2
 
-  osc32k-switch-back-en:
+  xosc32k-switch-back-en:
     type: int
     enum:
       - 0
@@ -123,7 +123,7 @@ properties:
       Controls the XOSC32K output switch back to the external clock or crystal scillator in case of
       clock recovery
 
-  osc32k-cfd-en:
+  xosc32k-cfd-en:
     type: int
     enum:
       - 0
