@@ -1,0 +1,22 @@
+# Copyright (c) 2025 Microchip Technology Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+config SOC_SERIES_PIC32CX_BZ24
+	bool
+	select SOC_FAMILY_MICROCHIP_PIC32CX_BZ2
+	help
+	  Enable support for Microchip PIC32CX_BZ2 Cortex-M4F microcontrollers.
+
+config SOC_SERIES
+	default "bz24" if SOC_SERIES_PIC32CX_BZ24
+
+config SOC_PIC32CX1012BZ24032
+	bool
+	select SOC_SERIES_PIC32CX_BZ24
+
+config SOC
+	default "pic32cx1012bz24032" if SOC_PIC32CX1012BZ24032
+
+
+
+rsource "Kconfig.system_config"

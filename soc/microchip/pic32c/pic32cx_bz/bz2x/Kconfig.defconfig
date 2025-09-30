@@ -1,0 +1,27 @@
+# Copyright (c) 2025 Microchip Technology Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+if SOC_FAMILY_MICROCHIP_PIC32CX_BZ2
+
+config NUM_IRQS
+	default 40
+
+config ROM_START_OFFSET
+	default 0x400 if BOOTLOADER_MCUBOOT
+
+config SYS_CLOCK_HW_CYCLES_PER_SEC
+	default $(dt_node_int_prop_int,/cpus/cpu@0,clock-frequency)
+
+config ROMSTART_RELOCATION_ROM
+	default y
+
+config ROMSTART_REGION_ADDRESS
+	default 0
+
+config BUILD_OUTPUT_HEX
+	default y
+
+config DEVICE_SUPPORT_REQUIRED
+	default y if (BT || HPA_SUPPORTED || ENABLE_PMU_BUCK_MODE)
+
+endif # SOC_FAMILY_MICROCHIP_PIC32CX_BZ2
