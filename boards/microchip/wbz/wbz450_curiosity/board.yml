@@ -1,0 +1,8 @@
+# Copyright (c) 2025 Microchip Technology Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+board:
+  name: wbz450_curiosity
+  vendor: microchip
+  socs:
+    - name: pic32cx1012bz24032
