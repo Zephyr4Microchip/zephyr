@@ -13,5 +13,6 @@ ram: 128
 supported:
   - dma
   - pinctrl
+  - spi
   - uart
 vendor: microchip
