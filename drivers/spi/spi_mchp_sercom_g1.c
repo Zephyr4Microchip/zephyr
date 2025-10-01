@@ -82,6 +82,21 @@ LOG_MODULE_REGISTER(spi_mchp_sercom_g1);
 		((const spi_mchp_dev_config_t *)(dev->config))->spi_clock.clock_dev,               \
 		(((spi_mchp_dev_config_t *)(dev->config))->spi_clock.gclk_sys), &rate);
 
+#if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2)
+#define ENABLE_SPI_MODULE(regs)                                                                    \
+	if (regs == SERCOM1_REGS) {                                                                \
+		CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_SER2MD_Msk;                                        \
+	} else if (regs == SERCOM2_REGS) {                                                         \
+		CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_SER3MD_Msk;                                        \
+	}
+#elif defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
+#define ENABLE_SPI_MODULE(regs)                                                                    \
+	if (regs == SERCOM4_REGS) {                                                                \
+		CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_SER4MD_Msk;                                        \
+	} else if (regs == SERCOM5_REGS) {                                                         \
+		CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_SER5MD_Msk;                                        \
+	}
+#endif
 /***********************************
  * Typedefs and Enum Declarations
  ***********************************/
@@ -106,6 +121,16 @@ typedef struct mchp_spi_reg_config {
  * This structure contains the clock configuration parameters for the SPI
  * peripheral.
  */
+#if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2) ||                                            \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
+typedef struct mchp_spi_clock {
+	/* Clock driver */
+	const struct device *clock_dev;
+
+	/* Generic clock subsystem. */
+	clock_control_subsys_t gclk_sys;
+} mchp_spi_clock_t;
+#else
 typedef struct mchp_spi_clock {
 	/* Clock driver */
 	const struct device *clock_dev;
@@ -116,7 +141,7 @@ typedef struct mchp_spi_clock {
 	/* Generic clock subsystem. */
 	clock_control_subsys_t gclk_sys;
 } mchp_spi_clock_t;
-
+#endif
 /**
  * @brief DMA configuration structure for the SPI
  *
@@ -236,9 +261,16 @@ static inline int spi_master_mode(const mchp_spi_reg_config_t *spi_reg_cfg)
 static inline int spi_slave_mode(const mchp_spi_reg_config_t *spi_reg_cfg)
 {
 	/* Clear the MODE bit field and set it to SPI Slave mode */
+#if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2) ||                                            \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
+	spi_reg_cfg->regs->SPIS.SERCOM_CTRLA =
+		(spi_reg_cfg->regs->SPIS.SERCOM_CTRLA & ~SERCOM_SPIS_CTRLA_MODE_Msk) |
+		SERCOM_SPIS_CTRLA_MODE_SPI_SLAVE | SERCOM_SPIS_CTRLA_RUNSTDBY_Msk;
+#else
 	spi_reg_cfg->regs->SPIS.SERCOM_CTRLA =
 		(spi_reg_cfg->regs->SPIS.SERCOM_CTRLA & ~SERCOM_SPIS_CTRLA_MODE_Msk) |
 		SERCOM_SPIS_CTRLA_MODE_SPI_SLAVE;
+#endif
 
 	return 0;
 }
@@ -2102,12 +2134,18 @@ static int spi_mchp_init(const struct device *dev)
 			LOG_ERR("Failed to enable the gclk_sys for SPI: %d", err);
 			break;
 		}
+
+#if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2) ||                                            \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
+		ENABLE_SPI_MODULE(spi_reg_cfg->regs);
+#else
 		err = clock_control_on(cfg->spi_clock.clock_dev, cfg->spi_clock.mclk_sys);
 
 		if ((err < 0) && (err != -EALREADY)) {
 			LOG_ERR("Failed to enable the mclk_sys for SPI: %d", err);
 			break;
 		}
+#endif
 
 		/* Disable all SPI interrupts initially */
 		spi_disable_interrupts(spi_reg_cfg);
@@ -2215,11 +2253,17 @@ static DEVICE_API(spi, spi_mchp_api) = {
 #endif
 
 /* Do the peripheral clock related configuration */
-
+#if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2) ||                                            \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
+#define SPI_MCHP_CLOCK_DEFN(n)                                                                     \
+	.spi_clock.clock_dev = DEVICE_DT_GET(DT_NODELABEL(clock)),                                 \
+	.spi_clock.gclk_sys = (void *)(DT_INST_CLOCKS_CELL_BY_NAME(n, gclk, subsystem))
+#else
 #define SPI_MCHP_CLOCK_DEFN(n)                                                                     \
 	.spi_clock.clock_dev = DEVICE_DT_GET(DT_NODELABEL(clock)),                                 \
 	.spi_clock.mclk_sys = (void *)(DT_INST_CLOCKS_CELL_BY_NAME(n, mclk, subsystem)),           \
 	.spi_clock.gclk_sys = (void *)(DT_INST_CLOCKS_CELL_BY_NAME(n, gclk, subsystem))
+#endif
 
 /**
  * @brief Do the peripheral interrupt related configuration
