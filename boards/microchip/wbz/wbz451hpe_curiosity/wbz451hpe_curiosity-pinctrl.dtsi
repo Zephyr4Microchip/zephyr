@@ -43,4 +43,10 @@
 			pinmux = <PIN_DIRECT_MODE>;
 		};
 	};
+
+	pb4_default: pb4_default{
+		group1 {
+			pinmux = <PB4_EXTINT0_IN>;
+		};
+	};
 };
