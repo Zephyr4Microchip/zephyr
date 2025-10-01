@@ -84,6 +84,45 @@
  * This structure contains the clock configuration parameters for the UART
  * peripheral.
  */
+#if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2) ||                                            \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
+
+typedef struct mchp_uart_clock {
+	/* Clock driver */
+	const struct device *clock_dev;
+	/* Generic clock subsystem. */
+	clock_control_subsys_t gclk_sys;
+} mchp_uart_clock_t;
+
+#define UART_MCHP_CLOCK_DEFN(n)                                                                    \
+	.uart_clock.clock_dev = DEVICE_DT_GET(DT_NODELABEL(clock)),                                \
+	.uart_clock.gclk_sys = (void *)(DT_INST_CLOCKS_CELL_BY_NAME(n, gclk, subsystem)),
+
+#if defined(CONFIG_SOC_SERIES_PIC32CX_BZ25)
+#define UART_MCHP_ENABLE_MODULE(regs)                                                              \
+	if (regs == SERCOM0_REGS) {                                                                \
+		CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_SER1MD_Msk;                                        \
+	} else if (regs == SERCOM1_REGS) {                                                         \
+		CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_SER2MD_Msk;                                        \
+	} else if (regs == SERCOM3_REGS) {                                                         \
+		CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_SER4MD_Msk;                                        \
+	}
+#elif defined(CONFIG_SOC_SERIES_PIC32CX_BZ24)
+#define UART_MCHP_ENABLE_MODULE(regs)                                                              \
+	if (regs == SERCOM0_REGS) {                                                                \
+		CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_SER1MD_Msk;                                        \
+	}
+#elif defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
+#define UART_MCHP_ENABLE_MODULE(regs)                                                              \
+	if (regs == SERCOM0_REGS) {                                                                \
+		CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_SER0MD_Msk;                                        \
+	} else if (regs == SERCOM4_REGS) {                                                         \
+		CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_SER4MD_Msk;                                        \
+	} else if (regs == SERCOM5_REGS) {                                                         \
+		CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_SER5MD_Msk;                                        \
+	}
+#endif
+#else
 typedef struct mchp_uart_clock {
 	/* Clock driver */
 	const struct device *clock_dev;
@@ -99,6 +138,7 @@ typedef struct mchp_uart_clock {
 	.uart_clock.clock_dev = DEVICE_DT_GET(DT_NODELABEL(clock)),                                \
 	.uart_clock.mclk_sys = (void *)(DT_INST_CLOCKS_CELL_BY_NAME(n, mclk, subsystem)),          \
 	.uart_clock.gclk_sys = (void *)(DT_INST_CLOCKS_CELL_BY_NAME(n, gclk, subsystem)),
+#endif
 
 /**
  * @brief DMA configuration structure for the UART.
@@ -1294,6 +1334,15 @@ static int uart_mchp_init(const struct device *dev)
 	int retval = UART_SUCCESS;
 
 	do {
+#if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2) ||                                            \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
+		/* Enable the GCLK and Peripheral Module */
+		clock_control_on(cfg->uart_clock.clock_dev, cfg->uart_clock.gclk_sys);
+		if ((retval != UART_SUCCESS) && (retval != -EALREADY)) {
+			break;
+		}
+		UART_MCHP_ENABLE_MODULE(regs);
+#else
 		/* Enable the GCLK and MCLK*/
 		retval = clock_control_on(cfg->uart_clock.clock_dev, cfg->uart_clock.gclk_sys);
 		if ((retval != UART_SUCCESS) && (retval != -EALREADY)) {
@@ -1303,7 +1352,7 @@ static int uart_mchp_init(const struct device *dev)
 		if ((retval != UART_SUCCESS) && (retval != -EALREADY)) {
 			break;
 		}
-
+#endif
 		uart_disable_interrupts(regs, clock_external);
 
 		dev_data->config_cache.flow_ctrl = UART_CFG_FLOW_CTRL_NONE;
