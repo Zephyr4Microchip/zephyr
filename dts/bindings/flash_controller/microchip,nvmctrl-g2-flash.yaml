@@ -1,0 +1,8 @@
+# Copyright (c) 2025 Microchip Technology Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+description: Microchip Non-Volatile Memory Controller G2
+
+compatible: "microchip,nvmctrl-g2-flash"
+
+include: flash-controller.yaml
