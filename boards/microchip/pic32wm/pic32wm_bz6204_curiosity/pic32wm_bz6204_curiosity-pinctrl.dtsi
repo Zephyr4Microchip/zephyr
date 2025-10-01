@@ -27,4 +27,30 @@
 			<PA1_SCOM5P3_IN>;
 		};
 	};
+
+	sercom4_spi_master_socket1: sercom4_spi_master_socket1 {
+		group1 {
+			pinmux = <PA10_SCOM4P2_OUT>,
+			<PE5_SCOM4P1_OUT>,
+			<PA4_SCOM4P0_IN>,
+			<PA9_SCOM4P3_OUT>;
+		};
+	};
+	sercom4_spi_slave_socket1: sercom4_spi_slave_socket1 {
+		group1 {
+			pinmux = <PA10_SCOM4P2_IN>,
+			<PE5_SCOM4P1_IN>,
+			<PA4_SCOM4P0_OUT>,
+			<PA9_SCOM4P3_IN>;
+		};
+	};
+
+	sercom4_spi_master_socket2: sercom4_spi_master_socket2 {
+		group1 {
+			pinmux = <PB9_SCOM4P2_OUT>,
+			<PE5_SCOM4P1_OUT>,
+			<PA4_SCOM4P0_IN>,
+			<PA9_SCOM4P3_OUT>;
+		};
+	};
 };

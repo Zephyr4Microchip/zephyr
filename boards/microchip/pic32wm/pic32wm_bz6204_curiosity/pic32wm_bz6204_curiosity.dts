@@ -56,6 +56,56 @@
  *};
  */
 
+/* sercom 4 spi master mode for mikroBUS socket 1 */
+&sercom4 {
+	status = "okay";
+	compatible = "microchip,sercom-g1-spi";
+	dipo = <0>;
+	dopo = <2>;
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	pinctrl-0 = <&sercom4_spi_master_socket1>;
+	pinctrl-names = "default";
+
+	dmas = <&dmac 4 12>, <&dmac 5 13>;
+	dma-names = "rx", "tx";
+};
+
+/* sercom 4 spi slave mode for mikroBUS socket 1
+ *&sercom4 {
+ *	status = "okay";
+ *	compatible = "microchip,sercom-g1-spi";
+ *	dipo = <3>;
+ *	dopo = <0>;
+ *	#address-cells = <1>;
+ *	#size-cells = <0>;
+ *
+ *	pinctrl-0 = <&sercom4_spi_slave_socket1>;
+ *	pinctrl-names = "default";
+ *
+ *	dmas = <&dmac 4 12>, <&dmac 5 13>;
+ *	dma-names = "rx", "tx";
+ *};
+ */
+
+/* sercom 4 spi master mode for mikroBUS socket 2
+ * socket 2 does not support slave mode
+&sercom4 {
+	status = "okay";
+	compatible = "microchip,sercom-g1-spi";
+	dipo = <0>;
+	dopo = <2>;
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	pinctrl-0 = <&sercom4_spi_master_socket2>;
+	pinctrl-names = "default";
+
+	dmas = <&dmac 4 12>, <&dmac 5 13>;
+	dma-names = "rx", "tx";
+};
+*/
 
 /* sercom 5 uart mode for mikroBUS socket 2  */
 &sercom5 {
