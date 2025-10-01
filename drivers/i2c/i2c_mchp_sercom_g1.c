@@ -198,11 +198,29 @@ LOG_MODULE_REGISTER(i2c_mchp_sercom_g1, CONFIG_I2C_LOG_LEVEL);
  *
  * @param dev Pointer to the device structure for the I2C peripheral.
  */
+#if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2)
+#define I2C_MCHP_ENABLE_CLOCK(dev)                                                                 \
+	clock_control_on(((const i2c_mchp_dev_config_t *)(dev->config))->i2c_clock.clock_dev,      \
+			 (((i2c_mchp_dev_config_t *)(dev->config))->i2c_clock.gclk_sys));          \
+	if (((const i2c_mchp_dev_config_t *)(dev->config))->regs == SERCOM1_REGS) {                \
+		CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_SER2MD_Msk;                                        \
+	} else if (((const i2c_mchp_dev_config_t *)(dev->config))->regs == SERCOM2_REGS) {         \
+		CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_SER3MD_Msk;                                        \
+	}
+#elif defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
+#define I2C_MCHP_ENABLE_CLOCK(dev)                                                                 \
+	clock_control_on(((const i2c_mchp_dev_config_t *)(dev->config))->i2c_clock.clock_dev,      \
+			 (((i2c_mchp_dev_config_t *)(dev->config))->i2c_clock.gclk_sys));          \
+	if (((const i2c_mchp_dev_config_t *)(dev->config))->regs == SERCOM1_REGS) {                \
+		CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_SER1MD_Msk;                                        \
+	}
+#else
 #define I2C_MCHP_ENABLE_CLOCK(dev)                                                                 \
 	clock_control_on(((const i2c_mchp_dev_config_t *)(dev->config))->i2c_clock.clock_dev,      \
 			 (((i2c_mchp_dev_config_t *)(dev->config))->i2c_clock.gclk_sys));          \
 	clock_control_on(((const i2c_mchp_dev_config_t *)(dev->config))->i2c_clock.clock_dev,      \
 			 (((i2c_mchp_dev_config_t *)(dev->config))->i2c_clock.mclk_sys))
+#endif
 
 /*******************************************
  * Enum and typedefs
@@ -435,6 +453,17 @@ typedef enum {
  * @struct i2c_mchp_clock
  * @brief Structure to hold device clock configuration.
  */
+#if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2) ||                                            \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
+typedef struct i2c_mchp_clock {
+
+	/* Clock driver */
+	const struct device *clock_dev;
+
+	/* Generic clock subsystem. */
+	clock_control_subsys_t gclk_sys;
+} i2c_mchp_clock_t;
+#else
 typedef struct i2c_mchp_clock {
 
 	/* Clock driver */
@@ -447,7 +476,7 @@ typedef struct i2c_mchp_clock {
 	clock_control_subsys_t gclk_sys;
 
 } i2c_mchp_clock_t;
-
+#endif
 /**
  * @struct i2c_mchp_dma
  * @brief DMA configuration parameters for I2C operations.
@@ -2887,9 +2916,12 @@ static int i2c_set_apply_bitrate(const struct device *dev, uint32_t config)
 	case I2C_SPEED_FAST_PLUS:
 		bitrate = MHZ(1);
 		break;
+#if !defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2) &&                                           \
+	!defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
 	case I2C_SPEED_HIGH:
 		bitrate = MHZ(3.4);
 		break;
+#endif
 	default:
 		LOG_ERR("Unsupported speed code: %d", I2C_SPEED_GET(config));
 		retval = -ENOTSUP;
@@ -3087,10 +3119,17 @@ static DEVICE_API(i2c, i2c_mchp_api) = {
 	}
 #endif
 
+#if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2) ||                                            \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
+#define I2C_MCHP_CLOCK_DEFN(n)                                                                     \
+	.i2c_clock.clock_dev = DEVICE_DT_GET(DT_NODELABEL(clock)),                                 \
+	.i2c_clock.gclk_sys = (void *)(DT_INST_CLOCKS_CELL_BY_NAME(n, gclk, subsystem)),
+#else
 #define I2C_MCHP_CLOCK_DEFN(n)                                                                     \
 	.i2c_clock.clock_dev = DEVICE_DT_GET(DT_NODELABEL(clock)),                                 \
 	.i2c_clock.mclk_sys = (void *)(DT_INST_CLOCKS_CELL_BY_NAME(n, mclk, subsystem)),           \
 	.i2c_clock.gclk_sys = (void *)(DT_INST_CLOCKS_CELL_BY_NAME(n, gclk, subsystem)),
+#endif
 
 #if CONFIG_I2C_MCHP_DMA_DRIVEN
 #define I2C_MCHP_DMA_CHANNELS(n)                                                                   \
