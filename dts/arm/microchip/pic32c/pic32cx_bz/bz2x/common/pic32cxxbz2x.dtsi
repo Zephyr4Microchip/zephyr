@@ -25,6 +25,46 @@
 	};
 
 	soc {
+		clock: clock@44000000 {
+			compatible = "microchip,pic32cx-bz2-clock";
+			reg =	<
+			0x44000000 0x500
+			0x44000A00 0x200>;// cfg, cru
+			posc: posc {
+				compatible = "microchip,pic32cx-bz-posc";
+				posc-en = <1>;
+			};
+			sosc: sosc {
+				compatible = "microchip,pic32cx-bz-sosc";
+				sosc-en = <1>;
+			};
+			sysclk: sysclk {
+				compatible = "microchip,pic32cx-bz-sysclk";
+				sysclk-frc-div = <1>;
+				sysclk-new-osc = "spll1";
+			};
+			pbclk: pbclk {
+				compatible = "microchip,pic32cx-bz-pbclk";
+				pbclk3 {
+					subsystem = <CLOCK_MCHP_PBCLK_ID_3>;
+					pbclk-div = <9>;
+					pbclk-en = <1>;
+				};
+			};
+			refclk: refclk {
+				compatible = "microchip,pic32cx-bz-refclk";
+				refclk1 {
+					subsystem = <CLOCK_MCHP_REFCLK_ID_1>;
+					refclk-src-sel = "spll1";
+					refclk-en = <1>;
+				};
+			};
+			gclkperiph: gclkperiph {
+				compatible = "microchip,pic32cx-bz-gclkperiph";
+				#clock-cells = <1>;
+
+			};
+		};
 
 		nvmctrl: nvmctrl@44000600  {
 			compatible = "microchip,nvmctrl-g2-flash";
@@ -40,6 +80,7 @@
 				reg = <0x01000000 DT_SIZE_K(1024)>;
 			};
 		};
+
 
 	};
 };
