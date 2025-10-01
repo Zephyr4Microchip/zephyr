@@ -9,11 +9,27 @@ config CLOCK_CONTROL_MCHP_SAM_D5X_E5X
 	help
 	  This symbol define clock driver for Microchip SAM_D5X_E5X family.
 
+# Symbol for enabling clock driver for a family
+config CLOCK_CONTROL_MCHP_PIC32CX_BZ2
+	bool
+	default y
+	depends on DT_HAS_MICROCHIP_PIC32CX_BZ2_CLOCK_ENABLED
+	help
+	  This symbol define clock driver for Microchip PIC32CX_BZ2 family.
+
+# Symbol for enabling clock driver for a family
+config CLOCK_CONTROL_MCHP_PIC32CX_BZ6
+	bool
+	default y
+	depends on DT_HAS_MICROCHIP_PIC32CX_BZ6_CLOCK_ENABLED
+	help
+	  This symbol define clock driver for Microchip PIC32CX_BZ6 family.
+
 # Define menu symbol for configuring clock features
 menuconfig CLOCK_CONTROL_MCHP
 	bool "Microchip clock controller driver"
 	default y
-	depends on CLOCK_CONTROL_MCHP_SAM_D5X_E5X
+	depends on CLOCK_CONTROL_MCHP_SAM_D5X_E5X || CLOCK_CONTROL_MCHP_PIC32CX_BZ2 || CLOCK_CONTROL_MCHP_PIC32CX_BZ6
 	help
 	  Enable support for Microchip clock controller driver.
 

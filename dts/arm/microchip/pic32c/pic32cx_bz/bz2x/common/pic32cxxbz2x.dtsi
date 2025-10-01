@@ -5,6 +5,7 @@
  */
 
 #include <arm/armv7-m.dtsi>
+#include <zephyr/dt-bindings/clock/mchp_pic32cx_bz2_clock.h>
 
 / {
 	chosen {
@@ -62,7 +63,6 @@
 			gclkperiph: gclkperiph {
 				compatible = "microchip,pic32cx-bz-gclkperiph";
 				#clock-cells = <1>;
-
 			};
 		};
 
