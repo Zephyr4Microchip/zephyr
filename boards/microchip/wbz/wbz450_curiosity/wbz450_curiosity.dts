@@ -19,6 +19,37 @@
 		zephyr,sram = &sram0;
 	};
 
+	leds {
+		compatible = "gpio-leds";
+		led0: led_0 {
+			gpios = <&porta 9 GPIO_ACTIVE_HIGH>;
+			label = "Red LED 1";
+		};
+		led1: led_1 {
+			gpios = <&porta 10 GPIO_ACTIVE_HIGH>;
+			label = "Green LED 1";
+		};
+		led2: led_2 {
+			gpios = <&portb 5 GPIO_ACTIVE_HIGH>;
+			label = "Blue LED 1";
+		};
+	};
+
+	buttons {
+		compatible = "gpio-keys";
+		button0: button_0 {
+			gpios = <&portb 4 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>;
+			label = "SW0";
+			zephyr,code = <INPUT_KEY_0>;
+		};
+	};
+	/* These aliases are provided for compatibility with samples */
+	aliases {
+		led0 = &led0;
+		led1 = &led1;
+		led2 = &led2;
+		sw0 = &button0;
+	};
 };
 
 &cpu0 {
@@ -37,4 +68,12 @@
 
 	dmas = <&dmac 0 4>, <&dmac 1 5>;
 	dma-names = "rx", "tx";
+};
+
+&porta {
+	status = "okay";
+};
+
+&portb {
+	status = "okay";
 };
