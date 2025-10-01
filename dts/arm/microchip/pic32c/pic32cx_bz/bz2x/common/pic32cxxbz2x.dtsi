@@ -63,6 +63,69 @@
 			gclkperiph: gclkperiph {
 				compatible = "microchip,pic32cx-bz-gclkperiph";
 				#clock-cells = <1>;
+				gclkperiph_sercom0 {
+					subsystem = <CLOCK_MCHP_GCLKPERIPH_ID_GCLK_SERCOM0_CORE>;
+					gclkperiph-src-sel = "refclk_1";
+				};
+				gclkperiph_sercom1 {
+					subsystem = <CLOCK_MCHP_GCLKPERIPH_ID_GCLK_SERCOM1_CORE>;
+					gclkperiph-src-sel = "refclk_1";
+				};
+				gclkperiph_sercom2 {
+					subsystem = <CLOCK_MCHP_GCLKPERIPH_ID_GCLK_SERCOM2_CORE>;
+					gclkperiph-src-sel = "refclk_1";
+				};
+				gclkperiph_sercom3 {
+					subsystem = <CLOCK_MCHP_GCLKPERIPH_ID_GCLK_SERCOM3_CORE>;
+					gclkperiph-src-sel = "refclk_1";
+				};
+				gclkperiph_tcc0 {
+					subsystem = <CLOCK_MCHP_GCLKPERIPH_ID_GCLK_TCC0>;
+					gclkperiph-src-sel = "refclk_1";
+				};
+				gclkperiph_tcc1 {
+					subsystem = <CLOCK_MCHP_GCLKPERIPH_ID_GCLK_TCC1>;
+					gclkperiph-src-sel = "refclk_1";
+				};
+				gclkperiph_tcc2 {
+					subsystem = <CLOCK_MCHP_GCLKPERIPH_ID_GCLK_TCC2>;
+					gclkperiph-src-sel = "refclk_1";
+				};
+				gclkperiph_tc0 {
+					subsystem = <CLOCK_MCHP_GCLKPERIPH_ID_GCLK_TC0>;
+					gclkperiph-src-sel = "refclk_1";
+				};
+				gclkperiph_tc1 {
+					subsystem = <CLOCK_MCHP_GCLKPERIPH_ID_GCLK_TC1>;
+					gclkperiph-src-sel = "refclk_1";
+				};
+				gclkperiph_tc2 {
+					subsystem = <CLOCK_MCHP_GCLKPERIPH_ID_GCLK_TC2>;
+					gclkperiph-src-sel = "refclk_1";
+				};
+				gclkperiph_tc3 {
+					subsystem = <CLOCK_MCHP_GCLKPERIPH_ID_GCLK_TC3>;
+					gclkperiph-src-sel = "refclk_1";
+				};
+			};
+			wdtclk: wdtclk {
+				compatible = "microchip,pic32cx-bz-wdtclk";
+			};
+			vbkpclk: vbkpclk {
+				compatible = "microchip,pic32cx-bz-vbkpclk";
+			};
+			dswdtclk: dswdtclk {
+				compatible = "microchip,pic32cx-bz-dswdtclk";
+			};
+			lpclk: lpclk {
+				compatible = "microchip,pic32cx-bz-lpclk";
+			};
+			rtcclk: rtcclk {
+				compatible = "microchip,pic32cx-bz-rtcclk";
+				#clock-cells = <1>;
+				rtcclk-counter-mode-sel = "raw_32k";
+				rtcclk-vbkp-div-sel = "div_by_31.25";
+				rtcclk-vbkp-1k-32k-sel = "div_by_vbkp_div";
 			};
 		};
 		dmac: dmac@41004000 {

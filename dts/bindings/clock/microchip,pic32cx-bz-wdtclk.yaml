@@ -1,0 +1,16 @@
+# Copyright (c) 2025 Microchip Technology Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+include: [base.yaml]
+
+description: WDT Clock configuration.
+compatible: "microchip,pic32cx-bz-wdtclk"
+
+properties:
+  wdtclk-run-mode-clock-sel:
+    type: string
+    enum:
+      - "pbclk"
+      - "lprc"
+    default: "pbclk"
+    description: WDT RUN Mode Clock Select
