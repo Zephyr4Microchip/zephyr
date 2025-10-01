@@ -24,3 +24,22 @@ config FLASH_HAS_UNALIGNED_WRITE
 	  using read-modify-write operations to ensure data integrity. This allows
 	  applications to write data starting at any offset within the flash memory
 	  space, not just at aligned addresses.
+
+config FLASH_MCHP_NVMCTRL_G2
+	bool "Microchip Flash Driver for NVMCTRL G2 IP"
+	default y
+	depends on DT_HAS_MICROCHIP_NVMCTRL_G2_FLASH_ENABLED
+	select FLASH_HAS_PAGE_LAYOUT
+	select FLASH_HAS_DRIVER_ENABLED
+	select FLASH_HAS_EXPLICIT_ERASE
+	select MPU_ALLOW_FLASH_WRITE if ARM_MPU
+	help
+	  Enable Flash driver for Microchip Non Volatile Memory.
+
+config FLASH_HAS_PARTIAL_PAGE_WRITE
+	bool "Provide partial page write support"
+	help
+	  This option enhances the Zephyr flash API by enabling data
+	  to be written to flash memory not only from the start of a
+	  page but also from any offset within the available flash
+	  memory space
