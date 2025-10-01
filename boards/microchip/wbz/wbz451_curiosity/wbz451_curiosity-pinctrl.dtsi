@@ -28,4 +28,10 @@
 				<PIN_DIRECT_MODE>;
 		};
 	};
+
+	sercom2_i2c_default: sercom2_i2c_default {
+		group1 {
+			pinmux = <PIN_DIRECT_MODE>;
+		};
+	};
 };
