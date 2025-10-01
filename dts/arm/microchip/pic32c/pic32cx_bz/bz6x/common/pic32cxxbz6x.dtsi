@@ -87,6 +87,68 @@
 			#address-cells = <1>;
 			status = "okay";
 		};
+		sercom0: sercom@40000c00 {
+			compatible = "microchip,sercom-g1";
+			reg = <0x40000c00 0x31>;
+			interrupts = <15 6>;
+			clocks = <&gclkperiph CLOCK_MCHP_GCLKPERIPH_ID_GCLK_SERCOM0_CORE>;
+			clock-names = "gclk";
+			status = "disabled";
+		};
+
+		sercom1: sercom@40001000 {
+			compatible = "microchip,sercom-g1";
+			reg = <0x40001000 0x31>;
+			interrupts = <16 6>;
+			clocks = <&gclkperiph CLOCK_MCHP_GCLKPERIPH_ID_GCLK_SERCOM1_CORE>;
+			clock-names = "gclk";
+			status = "disabled";
+		};
+
+		sercom2: sercom@46000000 {
+			compatible = "microchip,sercom-g1";
+			reg = <0x46000000 0x31>;
+			interrupts = <17 6>;
+			clocks = <&gclkperiph CLOCK_MCHP_GCLKPERIPH_ID_GCLK_SERCOM2_CORE>;
+			clock-names = "gclk";
+			status = "disabled";
+		};
+
+		sercom3: sercom@46000400 {
+			compatible = "microchip,sercom-g1";
+			reg = <0x46000400 0x31>;
+			interrupts = <18 6>;
+			clocks = <&gclkperiph CLOCK_MCHP_GCLKPERIPH_ID_GCLK_SERCOM3_CORE>;
+			clock-names = "gclk";
+			status = "disabled";
+		};
+
+		sercom4: sercom@46000800 {
+			compatible = "microchip,sercom-g1";
+			reg = <0x46000800 0x31>;
+			interrupts = <19 6>;
+			clocks = <&gclkperiph CLOCK_MCHP_GCLKPERIPH_ID_GCLK_SERCOM4_CORE>;
+			clock-names = "gclk";
+			status = "disabled";
+		};
+
+		sercom5: sercom@46000c00 {
+			compatible = "microchip,sercom-g1";
+			reg = <0x46000c00 0x31>;
+			interrupts = <20 6>;
+			clocks = <&gclkperiph CLOCK_MCHP_GCLKPERIPH_ID_GCLK_SERCOM5_CORE>;
+			clock-names = "gclk";
+			status = "disabled";
+		};
+
+		sercom6: sercom@42000400 {
+			compatible = "microchip,sercom-g1";
+			reg = <0x42000400 0x31>;
+			interrupts = <21 6>;
+			clocks = <&gclkperiph CLOCK_MCHP_GCLKPERIPH_ID_GCLK_SERCOM6_CORE>;
+			clock-names = "gclk";
+			status = "disabled";
+		};
 	};
 
 };
