@@ -20,4 +20,21 @@
 		};
 	};
 
+	sercom2_spi_master: sercom2_spi_master {
+		group1 {
+			pinmux = <PB4_SCOM2P0_OUT>,
+			<PB3_SCOM2P1_OUT>,
+			<PB13_SCOM2P2_OUT>,
+			<PB5_SCOM2P3_IN>;
+		};
+	};
+
+	sercom2_spi_slave: sercom2_spi_slave {
+		group1 {
+			pinmux = <PB4_SCOM2P1_IN>,
+			<PB3_SCOM2P0_IN>,
+			<PB13_SCOM2P2_IN>,
+			<PB5_SCOM2P3_OUT>;
+		};
+	};
 };

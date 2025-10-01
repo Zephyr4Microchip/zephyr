@@ -40,6 +40,38 @@
 	dma-names = "rx", "tx";
 };
 
+/* sercom 2 spi master mode */
+&sercom2 {
+	status = "okay";
+	compatible = "microchip,sercom-g1-spi";
+	dipo = <3>;
+	dopo = <0>;
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	pinctrl-0 = <&sercom2_spi_master>;
+	pinctrl-names = "default";
+
+	dmas = <&dmac 4 8>, <&dmac 5 9>;
+	dma-names = "rx", "tx";
+};
+
+/* sercom 2 spi slave mode
+ *&sercom2 {
+ *	status = "okay";
+ *	compatible = "microchip,sercom-g1-spi";
+ *	dipo = <0>;
+ *	dopo = <2>;
+ *	#address-cells = <1>;
+ *	#size-cells = <0>;
+ *
+ *	pinctrl-0 = <&sercom2_spi_slave>;
+ *	pinctrl-names = "default";
+ *
+ *	dmas = <&dmac 4 8>, <&dmac 5 9>;
+ *	dma-names = "rx", "tx";
+ *};
+ */
 
 &sercom3 {
 	status = "okay";
