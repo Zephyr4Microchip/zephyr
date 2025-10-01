@@ -1,0 +1,55 @@
+/*
+ * Copyright (c) 2025 Microchip Technology Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/dts-v1/;
+#include <microchip/pic32c/pic32cx_bz/bz2x/bz25/pic32cx1012bz25048.dtsi>
+#include "wbz451_curiosity-pinctrl.dtsi"
+#include <zephyr/dt-bindings/input/input-event-codes.h>
+#include <zephyr/dt-bindings/i2c/i2c.h>
+
+/ {
+	model = "Microchip WBZ451 Curiosity";
+	compatible = "microchip,wbz451-curiosity";
+
+	chosen {
+		zephyr,console = &sercom0;
+		zephyr,shell-uart = &sercom0;
+		zephyr,sram = &sram0;
+	};
+};
+
+&cpu0 {
+	clock-frequency = <64000000>;
+};
+
+
+&sercom0 {
+	status = "okay";
+	compatible = "microchip,sercom-g1-uart";
+	rxpo = <1>;
+	txpo = <0>;
+	current-speed = <115200>;
+	pinctrl-0 = <&sercom0_uart_default>;
+	pinctrl-names = "default";
+
+	dmas = <&dmac 0 4>, <&dmac 1 5>;
+	dma-names = "rx", "tx";
+};
+
+/* sercom 1 in spi mode, so disable uart mode
+ *&sercom1 {
+ *	status = "okay";
+ *	compatible = "microchip,sercom-g1-uart";
+ *	rxpo = <1>;
+ *	txpo = <0>;
+ *	current-speed = <115200>;
+ *	pinctrl-0 = <&sercom1_uart_default>;
+ *	pinctrl-names = "default";
+ *
+ *	dmas = <&dmac 2 6>, <&dmac 3 7>;
+ *	dma-names = "rx", "tx";
+ *};
+ */

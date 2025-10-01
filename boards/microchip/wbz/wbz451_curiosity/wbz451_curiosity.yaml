@@ -1,0 +1,17 @@
+# Copyright (c) 2025 Microchip Technology Inc.
+# SPDX-License-Identifier: Apache-2.0
+identifier: wbz451_curiosity
+name: WBZ451 Curiosity
+type: mcu
+arch: arm
+toolchain:
+  - zephyr
+  - gnuarmemb
+  - xtools
+flash: 1024
+ram: 128
+supported:
+  - dma
+  - pinctrl
+  - uart
+vendor: microchip
