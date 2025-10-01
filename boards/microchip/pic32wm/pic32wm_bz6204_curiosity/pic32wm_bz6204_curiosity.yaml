@@ -12,6 +12,7 @@ flash: 2048
 ram: 512
 supported:
   - dma
+  - gpio
   - i2c
   - pinctrl
   - spi
