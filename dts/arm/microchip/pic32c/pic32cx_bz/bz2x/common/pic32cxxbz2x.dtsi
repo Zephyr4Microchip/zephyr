@@ -81,6 +81,12 @@
 			};
 		};
 
+		pinctrl: pinctrl@44001000 {
+			compatible = "microchip,pps-g1-pinctrl";
+			reg = <0x44001000 0x300>;
+			#address-cells = <1>;
+			status = "okay";
+		};
 
 	};
 };
