@@ -84,3 +84,16 @@
  *	dma-names = "rx", "tx";
  *};
  */
+
+&sercom2 {
+	status = "okay";
+	compatible = "microchip,sercom-g1-i2c";
+	clock-frequency = <I2C_BITRATE_STANDARD>;
+	#address-cells = <1>;
+	#size-cells = <0>;
+	pinctrl-0 = <&sercom2_i2c_default>;
+	pinctrl-names = "default";
+
+	dmas = <&dmac 4 8>, <&dmac 5 9>;
+	dma-names = "rx", "tx";
+};
