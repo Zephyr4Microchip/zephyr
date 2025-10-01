@@ -11,6 +11,7 @@
 / {
 	chosen {
 		zephyr,flash-controller = &nvmctrl;
+		zephyr,entropy = &trng;
 	};
 
 	cpus {
@@ -212,6 +213,15 @@
 			clocks = <&gclkperiph CLOCK_MCHP_GCLKPERIPH_ID_GCLK_SERCOM3_CORE>;
 			clock-names = "gclk";
 			status = "disabled";
+		};
+
+		trng: random@42002800 {
+			compatible = "microchip,trng-g1-entropy";
+			status = "disabled";
+			clocks = <&gclkperiph 0>;
+			clock-names = "gclk";
+			reg = <0x42002800 0x1e>;
+			interrupts = <26 6>;
 		};
 	};
 };
