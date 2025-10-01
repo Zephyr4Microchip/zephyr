@@ -1,0 +1,72 @@
+/*
+ * Copyright (c) 2025 Microchip Technology Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/dts-v1/;
+#include <microchip/pic32c/pic32cx_bz/bz6x/bz62/pic32cx2051bz62132.dtsi>
+#include "pic32wm_bz6204_curiosity-pinctrl.dtsi"
+#include <zephyr/dt-bindings/input/input-event-codes.h>
+#include <zephyr/dt-bindings/i2c/i2c.h>
+
+/ {
+	model = "Microchip PIC32WM_BZ6204 Curiosity";
+	compatible = "microchip,pic32wm-bz6204-curiosity";
+
+	chosen {
+		zephyr,console = &sercom0;
+		zephyr,shell-uart = &sercom0;
+		zephyr,sram = &sram0;
+	};
+
+};
+
+&cpu0 {
+	clock-frequency = <128000000>;
+};
+
+
+&sercom0 {
+	status = "okay";
+	compatible = "microchip,sercom-g1-uart";
+	rxpo = <1>;
+	txpo = <0>;
+	current-speed = <115200>;
+	pinctrl-0 = <&sercom0_uart_default>;
+	pinctrl-names = "default";
+
+	dmas = <&dmac 0 4>, <&dmac 1 5>;
+	dma-names = "rx", "tx";
+};
+
+
+/* sercom 4 uart mode for mikroBUS socket 1
+ *&sercom4 {
+ *	status = "okay";
+ *	compatible = "microchip,sercom-g1-uart";
+ *	rxpo = <2>;
+ *	txpo = <0>;
+ *	current-speed = <115200>;
+ *	pinctrl-0 = <&sercom4_uart_default>;
+ *	pinctrl-names = "default";
+ *
+ *	dmas = <&dmac 4 12>, <&dmac 5 13>;
+ *	dma-names = "rx", "tx";
+ *};
+ */
+
+
+/* sercom 5 uart mode for mikroBUS socket 2  */
+&sercom5 {
+	status = "okay";
+	compatible = "microchip,sercom-g1-uart";
+	rxpo = <3>;
+	txpo = <0>;
+	current-speed = <115200>;
+	pinctrl-0 = <&sercom5_uart_default>;
+	pinctrl-names = "default";
+
+	dmas = <&dmac 6 14>, <&dmac 7 15>;
+	dma-names = "rx", "tx";
+};
