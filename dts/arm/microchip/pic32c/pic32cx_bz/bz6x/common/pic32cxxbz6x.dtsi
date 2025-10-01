@@ -65,6 +65,16 @@
 				#clock-cells = <1>;
 			};
 		};
+		dmac: dmac@41004000 {
+			compatible = "microchip,dmac-g1-dma";
+			reg = <0x41004000 0x140>;
+			interrupts = <9 6>, <10 6>;
+			dma-channels = <16>;
+			dma-alignment = <16>;
+			#dma-cells = <2>;
+			clocks = <&gclkperiph 0>;
+			clock-names = "gclk";
+		};
 
 		nvmctrl: nvmctrl@44000600  {
 			compatible = "microchip,nvmctrl-g2-flash";
