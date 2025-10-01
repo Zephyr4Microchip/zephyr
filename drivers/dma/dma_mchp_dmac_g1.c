@@ -169,10 +169,11 @@ typedef struct dma_mchp_dev_config {
 
 	/* Pointer to the clock device used for controlling the DMA's clock. */
 	const struct device *clock_dev;
-
+#if !defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2) &&                                           \
+	!defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
 	/* Contains the clock control configuration for the DMA subsystem. */
 	clock_control_subsys_t mclk_sys;
-
+#endif
 	/* This field stores the number of interrupts associated with the DMA. */
 	uint8_t num_irq;
 
@@ -359,8 +360,15 @@ static int8_t dmac_ch_set_trig_src_n_dir(dmac_registers_t *dmac_reg, uint8_t cha
 		} else if ((channel_direction == MEMORY_TO_PERIPHERAL) ||
 			   (channel_direction == PERIPHERAL_TO_MEMORY)) {
 			/* One peripheral trigger per beat */
+#if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2) ||                                            \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
+			dmac_reg->CHANNEL[channel].DMAC_CHCTRLA = DMAC_CHCTRLA_TRIGACT_BURST |
+								  DMAC_CHCTRLA_TRIGSRC(trig_src) |
+								  DMAC_CHCTRLA_RUNSTDBY_Msk;
+#else
 			dmac_reg->CHANNEL[channel].DMAC_CHCTRLA =
 				DMAC_CHCTRLA_TRIGACT_BURST | DMAC_CHCTRLA_TRIGSRC(trig_src);
+#endif
 
 		} else {
 			ret_val = -EINVAL;
@@ -1652,6 +1660,8 @@ static int dma_mchp_init(const struct device *dev)
 	int ret = 0;
 
 	do {
+#if !defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2) &&                                           \
+	!defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
 		/* Enable DMA clock */
 		ret = clock_control_on(dev_cfg->clock_dev, dev_cfg->mclk_sys);
 
@@ -1659,7 +1669,7 @@ static int dma_mchp_init(const struct device *dev)
 			LOG_ERR("Failed to enable MCLK for DMA: %d", ret);
 			break;
 		}
-
+#endif
 		/* Reset the DMA controller */
 		dmac_controller_reset(DMAC_REGS);
 
@@ -1756,7 +1766,7 @@ static DEVICE_API(dma, dma_mchp_api) = {
 			DMA_MCHP_IRQ_CONNECT, \
 			(), \
 			n\
-		)                                                                          \
+		)                                                                         \
 	}
 
 /**
@@ -1790,6 +1800,15 @@ static DEVICE_API(dma, dma_mchp_api) = {
  *
  * This structure holds the static configuration of the DMA device.
  */
+#if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2) ||                                            \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
+#define DMA_MCHP_CONFIG_DEFN(n)                                                                    \
+	static const dma_mchp_dev_config_t dma_mchp_dev_config_##n = {                             \
+		.regs = ((dmac_registers_t *)DT_INST_REG_ADDR(n)),                                 \
+		.num_irq = DT_NUM_IRQS(DT_DRV_INST(n)),                                            \
+		.irq_config = mchp_dma_irq_connect_##n,                                            \
+		.clock_dev = DEVICE_DT_GET(DT_NODELABEL(clock))};
+#else
 #define DMA_MCHP_CONFIG_DEFN(n)                                                                    \
 	static const dma_mchp_dev_config_t dma_mchp_dev_config_##n = {                             \
 		.regs = ((dmac_registers_t *)DT_INST_REG_ADDR(n)),                                 \
@@ -1797,6 +1816,7 @@ static DEVICE_API(dma, dma_mchp_api) = {
 		.num_irq = DT_NUM_IRQS(DT_DRV_INST(n)),                                            \
 		.irq_config = mchp_dma_irq_connect_##n,                                            \
 		.clock_dev = DEVICE_DT_GET(DT_NODELABEL(clock))};
+#endif
 
 /**
  * @brief Define and initialize the DMA device.
