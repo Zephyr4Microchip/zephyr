@@ -7,3 +7,11 @@ config PINCTRL_MCHP_PORT_G1
 	depends on DT_HAS_MICROCHIP_PORT_G1_PINCTRL_ENABLED
 	help
 	  This option enables PINCTRL driver for group (g1) of PORT peripherals.
+
+
+config PINCTRL_MCHP_PPS_G1
+	bool "Microchip PPS G1 pin controller driver"
+	default y
+	depends on DT_HAS_MICROCHIP_PPS_G1_PINCTRL_ENABLED
+	help
+	  This option enables PINCTRL driver for group (g2) of PPS peripherals.
