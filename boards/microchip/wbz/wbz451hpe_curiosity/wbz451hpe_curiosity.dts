@@ -1,0 +1,55 @@
+/*
+ * Copyright (c) 2025 Microchip Technology Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/dts-v1/;
+#include <microchip/pic32c/pic32cx_bz/bz2x/bz25/pic32cx1012bz25048.dtsi>
+#include "wbz451hpe_curiosity-pinctrl.dtsi"
+#include <zephyr/dt-bindings/input/input-event-codes.h>
+#include <zephyr/dt-bindings/i2c/i2c.h>
+
+/ {
+	model = "Microchip WBZ451HPE Curiosity";
+	compatible = "microchip,wbz451hpe-curiosity";
+
+	chosen {
+		zephyr,console = &sercom0;
+		zephyr,shell-uart = &sercom0;
+		zephyr,sram = &sram0;
+	};
+
+};
+
+&cpu0 {
+	clock-frequency = <64000000>;
+};
+
+
+&sercom0 {
+	status = "okay";
+	compatible = "microchip,sercom-g1-uart";
+	rxpo = <1>;
+	txpo = <0>;
+	current-speed = <115200>;
+	pinctrl-0 = <&sercom0_uart_default>;
+	pinctrl-names = "default";
+
+	dmas = <&dmac 0 4>, <&dmac 1 5>;
+	dma-names = "rx", "tx";
+};
+
+
+&sercom3 {
+	status = "okay";
+	compatible = "microchip,sercom-g1-uart";
+	rxpo = <2>;
+	txpo = <0>;
+	current-speed = <115200>;
+	pinctrl-0 = <&sercom3_uart_default>;
+	pinctrl-names = "default";
+
+	dmas = <&dmac 6 10>, <&dmac 7 11>;
+	dma-names = "rx", "tx";
+};

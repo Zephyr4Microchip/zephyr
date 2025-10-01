@@ -1,0 +1,17 @@
+# Copyright (c) 2025 Microchip Technology Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+config BOARD_WBZ451HPE_CURIOSITY
+	select SOC_PIC32CX1012BZ25048
+
+choice FUSES_DEVCFG1_SCOM0_HSEN
+	default FUSES_DEVCFG1_SCOM0_HSEN_DIRECT if $(dt_nodelabel_enabled_with_compat,sercom0,$(DT_COMPAT_MICROCHIP_SERCOM_G1_UART))
+endchoice
+
+choice FUSES_DEVCFG1_SCOM1_HSEN
+	default FUSES_DEVCFG1_SCOM1_HSEN_DIRECT if $(dt_nodelabel_enabled_with_compat,sercom1,$(DT_COMPAT_MICROCHIP_SERCOM_G1_I2C))
+endchoice
+
+choice FUSES_DEVCFG1_SCOM2_HSEN
+	default FUSES_DEVCFG1_SCOM2_HSEN_PPS if $(dt_nodelabel_enabled_with_compat,sercom2,$(DT_COMPAT_MICROCHIP_SERCOM_G1_SPI))
+endchoice
