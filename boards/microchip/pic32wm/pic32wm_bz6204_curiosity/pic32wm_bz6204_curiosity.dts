@@ -40,6 +40,14 @@
 		};
 	};
 
+	pwmleds {
+		compatible = "pwm-leds";
+		pwm_led0: pwm_led_0 {
+			status = "okay";
+			pwms = <&tc0 1 PWM_MSEC(20) 0>;
+		};
+	};
+
 	buttons {
 		compatible = "gpio-keys";
 		button0: button_0 {
@@ -55,6 +63,7 @@
 		led2 = &led2;
 		sw0 = &button0;
 		rtc = &rtc;
+		pwm-led0 = &pwm_led0;
 	};
 };
 
@@ -213,4 +222,149 @@
 	prescaler = <1024>;
 	alarms-count = <2>;
 	cal-constant = <1048576>;  /*(8192 * 128 = 1048576)*/
+};
+
+&tcc0 {
+	status = "disabled";
+	compatible = "microchip,tcc-g1-pwm";
+	#pwm-cells = <3>;
+	pinctrl-0 = <&tcc0_pwm_default>;
+	pinctrl-names = "default";
+	max-bit-width = <24>;
+	prescaler = <1>;
+	channels = <6>;
+};
+
+&tcc1 {
+	status = "disabled";
+	compatible = "microchip,tcc-g1-pwm";
+	#pwm-cells = <3>;
+	pinctrl-0 = <&tcc1_pwm_default>;
+	pinctrl-names = "default";
+	max-bit-width = <24>;
+	prescaler = <1>;
+	channels = <6>;
+};
+
+&tcc2 {
+	status = "disabled";
+	compatible = "microchip,tcc-g1-pwm";
+	#pwm-cells = <3>;
+	pinctrl-0 = <&tcc2_pwm_default>;
+	pinctrl-names = "default";
+	max-bit-width = <16>;
+	prescaler = <256>;
+	channels = <2>;
+};
+
+
+&tc0 {
+	status = "okay";
+	compatible = "microchip,tc-g1-pwm";
+	#pwm-cells = <3>;
+	pinctrl-0 = <&tc0_pwm_default>;
+	pinctrl-names = "default";
+	max-bit-width = <16>;
+	prescaler = <256>;
+	channels = <2>;
+};
+
+
+&tc1 {
+	status = "disabled";
+	compatible = "microchip,tc-g1-pwm";
+	#pwm-cells = <3>;
+	pinctrl-0 = <&tc1_pwm_default>;
+	pinctrl-names = "default";
+	max-bit-width = <16>;
+	prescaler = <256>;
+	channels = <2>;
+};
+
+&tc2 {
+	status = "disabled";
+	compatible = "microchip,tc-g1-pwm";
+	#pwm-cells = <3>;
+	pinctrl-0 = <&tc2_pwm_default>;
+	pinctrl-names = "default";
+	max-bit-width = <16>;
+	prescaler = <256>;
+	channels = <2>;
+};
+
+&tc3 {
+	status = "disabled";
+	compatible = "microchip,tc-g1-pwm";
+	#pwm-cells = <3>;
+	pinctrl-0 = <&tc3_pwm_default>;
+	pinctrl-names = "default";
+	max-bit-width = <16>;
+	prescaler = <256>;
+	channels = <2>;
+};
+
+&tc4 {
+	status = "disabled";
+	compatible = "microchip,tc-g1-pwm";
+	#pwm-cells = <3>;
+	pinctrl-0 = <&tc4_pwm_default>;
+	pinctrl-names = "default";
+	max-bit-width = <16>;
+	prescaler = <256>;
+	channels = <2>;
+};
+
+&tc5 {
+	status = "disabled";
+	compatible = "microchip,tc-g1-pwm";
+	#pwm-cells = <3>;
+	pinctrl-0 = <&tc5_pwm_default>;
+	pinctrl-names = "default";
+	max-bit-width = <16>;
+	prescaler = <256>;
+	channels = <2>;
+};
+
+&tc6 {
+	status = "disabled";
+	compatible = "microchip,tc-g1-pwm";
+	#pwm-cells = <3>;
+	pinctrl-0 = <&tc6_pwm_default>;
+	pinctrl-names = "default";
+	max-bit-width = <16>;
+	prescaler = <256>;
+	channels = <2>;
+};
+
+&tc7 {
+	status = "disabled";
+	compatible = "microchip,tc-g1-pwm";
+	#pwm-cells = <3>;
+	pinctrl-0 = <&tc7_pwm_default>;
+	pinctrl-names = "default";
+	max-bit-width = <16>;
+	prescaler = <256>;
+	channels = <2>;
+};
+
+&tc8 {
+	status = "disabled";
+	compatible = "microchip,tc-g1-pwm";
+	#pwm-cells = <3>;
+	pinctrl-0 = <&tc8_pwm_default>;
+	pinctrl-names = "default";
+	max-bit-width = <16>;
+	prescaler = <256>;
+	channels = <2>;
+};
+
+&tc9 {
+	status = "disabled";
+	compatible = "microchip,tc-g1-pwm";
+	#pwm-cells = <3>;
+	pinctrl-0 = <&tc9_pwm_default>;
+	pinctrl-names = "default";
+	max-bit-width = <16>;
+	prescaler = <256>;
+	channels = <2>;
 };
