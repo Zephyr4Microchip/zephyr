@@ -224,6 +224,10 @@
 			interrupts = <26 6>;
 		};
 	};
+	bt_hci_microchip: bt_hci_microchip {
+		compatible = "microchip,pic32cx-bz-bt-hci";
+		status = "disabled";
+	};
 };
 
 &nvic {
