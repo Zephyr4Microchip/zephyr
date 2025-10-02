@@ -223,6 +223,12 @@
 			reg = <0x42002800 0x1e>;
 			interrupts = <26 6>;
 		};
+
+		rcon: rcon@44000a00 {
+			compatible = "microchip,rcon-g1-reset";
+			status = "okay";
+			reg = <0x44000a00 0x400>;
+		};
 	};
 	bt_hci_microchip: bt_hci_microchip {
 		compatible = "microchip,pic32cx-bz-bt-hci";
