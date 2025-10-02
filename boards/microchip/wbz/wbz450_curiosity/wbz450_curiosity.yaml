@@ -16,6 +16,7 @@ supported:
   - flash
   - gpio
   - pinctrl
+  - pwm
   - reset
   - rtc
   - trng

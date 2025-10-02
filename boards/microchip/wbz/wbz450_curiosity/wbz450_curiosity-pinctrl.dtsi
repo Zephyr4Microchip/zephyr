@@ -18,4 +18,64 @@
 			pinmux = <PB4_EXTINT0_IN>;
 		};
 	};
+
+	tcc0_pwm_default: tcc0_pwm_default {
+		group1 {
+			pinmux = <PB5_TCC0WO1_OUT>;
+		};
+	};
+
+	tcc1_pwm_default: tcc1_pwm_default {
+		group1 {
+			pinmux = <PA10_TCC1WO1_OUT>;
+		};
+	};
+
+	tcc2_pwm_default: tcc2_pwm_default {
+		group1 {
+			pinmux = <PA9_TCC2WO1_OUT>;
+		};
+	};
+
+	tc0_pwm_default: tc0_pwm_default {
+		group1 {
+			pinmux = <PB5_TC0WO1_OUT>;
+		};
+	};
+
+	tc1_pwm_default: tc1_pwm_default {
+		group1 {
+			pinmux = <PA10_TC1WO1_OUT>;
+		};
+	};
+
+	tc2_pwm_default: tc2_pwm_default {
+		group1 {
+			pinmux = <PA9_TC2WO1_OUT>;
+		};
+	};
+
+	tc3_pwm_default: tc3_pwm_default {
+		group1 {
+			pinmux = <PB5_TC3WO1_OUT>;
+		};
+	};
+
+	tc3_pwm_16bit: tc3_pwm_16bit {
+		group1 {
+			pinmux = <PA10_TC3WO1_OUT>;
+		};
+	};
+
+	tc3_pwm_8bit_p0: tc3_pwm_8bit_p0 {
+		group1 {
+			pinmux = <PB5_TC3WO0_OUT>;
+		};
+	};
+
+	tc3_pwm_8bit_p1: tc3_pwm_8bit_p1 {
+		group1 {
+			pinmux = <PB5_TC3WO1_OUT>;
+		};
+	};
 };
