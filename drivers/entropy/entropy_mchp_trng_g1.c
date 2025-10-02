@@ -122,11 +122,16 @@ typedef enum {
  * This structure defines the clock configuration for the entropy (TRNG)
  *  peripheral, including the clock device and subsystem.
  */
-
+#if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2)
+typedef struct entropy_mchp_clock {
+	const struct device *clock_dev;
+} entropy_mchp_clock_t;
+#else
 typedef struct entropy_mchp_clock {
 	const struct device *clock_dev;
 	clock_control_subsys_t mclk_sys;
 } entropy_mchp_clock_t;
+#endif
 
 /**
  * @struct entropy_mchp_config_t
@@ -423,8 +428,12 @@ static int entropy_mchp_init(const struct device *dev)
 	entropy_mchp_dev_data_t *mchp_entropy_data = dev->data;
 	int ret = ENTROPY_MCHP_SUCCESS;
 
+#if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2)
+	CFG_REGS->CFG_PMD3 &= (~0x40);
+#else
 	ret = clock_control_on(entropy_cfg->entropy_clock.clock_dev,
 			       entropy_cfg->entropy_clock.mclk_sys);
+#endif
 
 	if ((ret == ENTROPY_MCHP_SUCCESS) || (ret == -EALREADY)) {
 
@@ -501,6 +510,13 @@ static DEVICE_API(entropy, entropy_mchp_api) = {.get_entropy = entropy_mchp_get_
  *
  * @param n Device instance number.
  */
+#if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2)
+#define ENTROPY_MCHP_CONFIG_DEFN(n)                                                                \
+	static const entropy_mchp_config_t entropy_mchp_config_##n = {                             \
+		.regs = (trng_registers_t *)DT_INST_REG_ADDR(n),                                   \
+		.irq_config_func = entropy_mchp_irq_config_##n,                                    \
+		.run_in_standby = DT_INST_PROP(n, run_in_standby_en)}
+#else
 #define ENTROPY_MCHP_CONFIG_DEFN(n)                                                                \
 	static const entropy_mchp_config_t entropy_mchp_config_##n = {                             \
 		.regs = (trng_registers_t *)DT_INST_REG_ADDR(n),                                   \
@@ -509,7 +525,7 @@ static DEVICE_API(entropy, entropy_mchp_api) = {.get_entropy = entropy_mchp_get_
 										   subsystem))},   \
 		.irq_config_func = entropy_mchp_irq_config_##n,                                    \
 		.run_in_standby = DT_INST_PROP(n, run_in_standby_en)}
-
+#endif
 /**
  * @brief Macro to define the entropy data structure for a specific instance.
  *
