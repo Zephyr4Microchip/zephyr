@@ -123,6 +123,16 @@ typedef struct {
 	MCHP_PWM_LOCK_TYPE lock; /* Lock type for PWM configuration */
 } pwm_mchp_data_t;
 
+#if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2) ||                                            \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
+typedef struct mchp_counter_clock {
+	/* Clock driver */
+	const struct device *clock_dev;
+
+	/* Generic clock subsystem. */
+	clock_control_subsys_t host_gclk;
+} pwm_mchp_clock_t;
+#else
 typedef struct mchp_counter_clock {
 	/* Clock driver */
 	const struct device *clock_dev;
@@ -134,6 +144,8 @@ typedef struct mchp_counter_clock {
 	/* Generic clock subsystem. */
 	clock_control_subsys_t host_gclk;
 } pwm_mchp_clock_t;
+
+#endif
 
 /**
  * @brief Structure to hold the configuration for Microchip PWM.
@@ -696,6 +708,11 @@ static int tc_init(const pwm_mchp_config_t *const mchp_pwm_cfg)
 			break;
 		}
 
+#if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2) ||                                            \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
+		PWM_MODE16(pwm_reg)->TC_CTRLA |= TC_CTRLA_RUNSTDBY_Msk;
+#endif
+
 		ret = tc_enable(pwm_reg, max_bit_width, true);
 		if (ret != MCHP_PWM_SUCCESS) {
 			break;
@@ -705,6 +722,98 @@ static int tc_init(const pwm_mchp_config_t *const mchp_pwm_cfg)
 
 	return ret;
 }
+
+#if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2)
+/**
+ * PIC32CX_BZ2-Family-Silicon-Errata 2.23.5 TC Outputs
+ * The TC0/1/2/3 output is not working as expected with PPS;
+ * output signals are not visible on output
+ * pins via PPS even though the TC is working correctly.
+ */
+static void tc_enforce_output(const struct device *pwm_dev, uint32_t channel)
+{
+	const pwm_mchp_config_t *const mchp_pwm_cfg = pwm_dev->config;
+
+	const void *pwm_reg = mchp_pwm_cfg->regs;
+	const uint32_t max_bit_width = mchp_pwm_cfg->max_bit_width;
+	uint32_t did_revision = DSU_REGS->DSU_DID;
+
+	if ((did_revision >> 28) != (0x00)) { /* Only A0 silicon need the work around */
+		return;
+	}
+
+	tc_enable(pwm_reg, max_bit_width, false);
+
+	if (max_bit_width == BIT_MODE_8) {
+		PWM_MODE8(pwm_reg)->TC_CTRLA |= (TC_CTRLA_CAPTEN0_Msk | TC_CTRLA_COPEN0_Msk);
+		PWM_MODE8(pwm_reg)->TC_CTRLA |= (TC_CTRLA_CAPTEN1_Msk | TC_CTRLA_COPEN1_Msk);
+	} else if (max_bit_width == BIT_MODE_16) {
+		PWM_MODE16(pwm_reg)->TC_CTRLA |= (TC_CTRLA_CAPTEN0_Msk | TC_CTRLA_COPEN0_Msk);
+		PWM_MODE16(pwm_reg)->TC_CTRLA |= (TC_CTRLA_CAPTEN1_Msk | TC_CTRLA_COPEN1_Msk);
+	} else if (max_bit_width == BIT_MODE_32) {
+		PWM_MODE32(pwm_reg)->TC_CTRLA |= (TC_CTRLA_CAPTEN0_Msk | TC_CTRLA_COPEN0_Msk);
+		PWM_MODE32(pwm_reg)->TC_CTRLA |= (TC_CTRLA_CAPTEN1_Msk | TC_CTRLA_COPEN1_Msk);
+	}
+
+	tc_enable(pwm_reg, max_bit_width, true);
+}
+#endif
+
+#if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2)
+static int tc_enable_module(const struct device *pwm_dev)
+{
+	int ret_val = 0;
+	const pwm_mchp_config_t *const mchp_pwm_cfg = pwm_dev->config;
+
+	if ((tc_registers_t *)mchp_pwm_cfg->regs == TC0_REGS) {
+		CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_TC0MD_Msk;
+	} else if ((tc_registers_t *)mchp_pwm_cfg->regs == TC1_REGS) {
+		CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_TC1MD_Msk;
+	} else if ((tc_registers_t *)mchp_pwm_cfg->regs == TC2_REGS) {
+		CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_TC2MD_Msk;
+	} else if ((tc_registers_t *)mchp_pwm_cfg->regs == TC3_REGS) {
+		CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_TC3MD_Msk;
+	} else {
+		ret_val = -1;
+	}
+
+	return ret_val;
+}
+
+#elif defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
+static int tc_enable_module(const struct device *pwm_dev)
+{
+	int ret_val = 0;
+	const pwm_mchp_config_t *const mchp_pwm_cfg = pwm_dev->config;
+
+	if ((tc_registers_t *)mchp_pwm_cfg->regs == TC0_REGS) {
+		CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_TC0MD_Msk;
+	} else if ((tc_registers_t *)mchp_pwm_cfg->regs == TC1_REGS) {
+		CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_TC1MD_Msk;
+	} else if ((tc_registers_t *)mchp_pwm_cfg->regs == TC2_REGS) {
+		CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_TC2MD_Msk;
+	} else if ((tc_registers_t *)mchp_pwm_cfg->regs == TC3_REGS) {
+		CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_TC3MD_Msk;
+	} else if ((tc_registers_t *)mchp_pwm_cfg->regs == TC4_REGS) {
+		CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_TC4MD_Msk;
+	} else if ((tc_registers_t *)mchp_pwm_cfg->regs == TC5_REGS) {
+		CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_TC5MD_Msk;
+	} else if ((tc_registers_t *)mchp_pwm_cfg->regs == TC6_REGS) {
+		CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_TC6MD_Msk;
+	} else if ((tc_registers_t *)mchp_pwm_cfg->regs == TC7_REGS) {
+		CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_TC7MD_Msk;
+	} else if ((tc_registers_t *)mchp_pwm_cfg->regs == TC8_REGS) {
+		CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_TC8MD_Msk;
+	} else if ((tc_registers_t *)mchp_pwm_cfg->regs == TC9_REGS) {
+		CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_TC9MD_Msk;
+	} else {
+		ret_val = -1;
+	}
+
+	return ret_val;
+}
+#endif
+
 /***********************************
  * Zephyr APIs
  ***********************************/
@@ -774,6 +883,9 @@ static int pwm_mchp_set_cycles(const struct device *pwm_dev, uint32_t channel, u
 	} while (0);
 	MCHP_PWM_DATA_UNLOCK(&mchp_pwm_data->lock);
 
+#if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2)
+	tc_enforce_output(pwm_dev, channel);
+#endif
 	return ret_val;
 }
 
@@ -862,6 +974,14 @@ static int pwm_mchp_init(const struct device *pwm_dev)
 			LOG_ERR("Failed to enable the host_gclk for PWM: %d", ret_val);
 			break;
 		}
+#if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2) ||                                            \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
+		ret_val = tc_enable_module(pwm_dev);
+		if (ret_val < 0) {
+			LOG_ERR("module enable failed");
+			break;
+		}
+#else
 		ret_val = clock_control_on(mchp_pwm_cfg->pwm_clock.clock_dev,
 					   mchp_pwm_cfg->pwm_clock.host_mclk);
 		if ((ret_val < 0) && (ret_val != -EALREADY)) {
@@ -888,6 +1008,8 @@ static int pwm_mchp_init(const struct device *pwm_dev)
 				break;
 			}
 		}
+
+#endif
 
 		ret_val = pinctrl_apply_state(mchp_pwm_cfg->pinctrl_config, PINCTRL_STATE_DEFAULT);
 		if (ret_val < 0) {
@@ -930,11 +1052,18 @@ static int pwm_mchp_init(const struct device *pwm_dev)
  */
 
 /* clang-format off */
+#if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2) ||                                            \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
+#define PWM_MCHP_CLOCK_ASSIGN(n)								  \
+	.pwm_clock.clock_dev = DEVICE_DT_GET(DT_NODELABEL(clock)),                \
+	.pwm_clock.host_gclk = (void *)DT_INST_CLOCKS_CELL_BY_NAME(n, gclk, subsystem)
+#else
 #define PWM_MCHP_CLOCK_ASSIGN(n)								  \
 	.pwm_clock.clock_dev = DEVICE_DT_GET(DT_NODELABEL(clock)),				  \
 	.pwm_clock.host_mclk = (void *)(DT_INST_CLOCKS_CELL_BY_NAME(n, mclk, subsystem)),\
 	.pwm_clock.host_gclk = (void *)DT_INST_CLOCKS_CELL_BY_NAME(n, gclk, subsystem),    \
 	.pwm_clock.client_mclk = GET_THE_CLIENT_MCLOCK_IF_AVAILABLE(n)
+#endif
 /* clang-format on */
 
 /**
