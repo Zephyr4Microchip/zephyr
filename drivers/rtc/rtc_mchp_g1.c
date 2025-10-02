@@ -101,6 +101,21 @@ typedef struct rtc_mchp_time {
  * This structure contains the clock configuration parameters for RTC
  * peripheral.
  */
+#if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2) ||                                            \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
+typedef struct mchp_rtc_clock {
+
+	/* Clock driver */
+	const struct device *clock_dev;
+
+	/* osc32k rtcclk clock subsystem. */
+	clock_control_subsys_t rtcclk_sys;
+
+} mchp_rtc_clock_t;
+
+#define RTC_MCHP_ENABLE_MODULE() CFG_REGS->CFG_PMD1 &= ~CFG_PMD1_RTCCMD_Msk; /* enable RTCC */
+
+#else
 typedef struct mchp_rtc_clock {
 
 	/* Clock driver */
@@ -113,6 +128,7 @@ typedef struct mchp_rtc_clock {
 	clock_control_subsys_t rtcclk_sys;
 
 } mchp_rtc_clock_t;
+#endif
 
 /* Enumeration for RTC (Real-Time Clock) alarm mask selection */
 typedef enum {
@@ -1307,12 +1323,17 @@ static int rtc_mchp_init(const struct device *dev)
 			break;
 		}
 
+#if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2) ||                                            \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
+		RTC_MCHP_ENABLE_MODULE();
+#else
 		/* On Main clock for RTC */
 		ret = clock_control_on(cfg->rtc_clock.clock_dev, cfg->rtc_clock.mclk_sys);
 		if ((ret != 0) && (ret != -EALREADY)) {
 			LOG_ERR("Failed to enable the MCLK for RTC: %d", ret);
 			break;
 		}
+#endif
 
 		/* Initialize mutex for RTC data structure */
 		RTC_DATA_LOCK_INIT(&data->lock);
@@ -1384,10 +1405,17 @@ static DEVICE_API(rtc, rtc_mchp_api) = {
  * Sets the clock configuration clock dev, main clock and oscillator clock systems for the RTC
  * instance.
  */
+#if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2) ||                                            \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
+#define RTC_MCHP_CLOCK_DEFN(n)                                                                     \
+	.rtc_clock.clock_dev = DEVICE_DT_GET(DT_NODELABEL(clock)),                                 \
+	.rtc_clock.rtcclk_sys = (void *)(DT_INST_CLOCKS_CELL_BY_NAME(n, rtcclk, subsystem)),
+#else
 #define RTC_MCHP_CLOCK_DEFN(n)                                                                     \
 	.rtc_clock.clock_dev = DEVICE_DT_GET(DT_NODELABEL(clock)),                                 \
 	.rtc_clock.mclk_sys = (void *)(DT_INST_CLOCKS_CELL_BY_NAME(n, mclk, subsystem)),           \
 	.rtc_clock.rtcclk_sys = (void *)(DT_INST_CLOCKS_CELL_BY_NAME(n, rtcclk, subsystem)),
+#endif
 
 /* Do the peripheral interrupt related configuration */
 #if defined(CONFIG_RTC_ALARM)
@@ -1427,7 +1455,7 @@ static DEVICE_API(rtc, rtc_mchp_api) = {
 #define RTC_MCHP_DEVICE_INIT(n)                                                                    \
 	IF_ENABLED(CONFIG_RTC_ALARM, (						\
 	static void rtc_mchp_irq_config_##n(const struct device *dev);		\
-))                                                      \
+))                                                     \
 	RTC_MCHP_CONFIG_DEFN(n);                                                                   \
 	static rtc_mchp_dev_data_t rtc_mchp_dev_data_##n;                                          \
 	DEVICE_DT_INST_DEFINE(n, rtc_mchp_init, NULL, &rtc_mchp_dev_data_##n,                      \
