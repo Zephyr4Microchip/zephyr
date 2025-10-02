@@ -306,6 +306,7 @@ source "drivers/bluetooth/hci/Kconfig.esp32"
 source "drivers/bluetooth/hci/Kconfig.infineon"
 source "drivers/bluetooth/hci/Kconfig.nxp"
 source "drivers/bluetooth/hci/Kconfig.stm32"
+source "drivers/bluetooth/hci/Kconfig.mchp"
 
 config BT_DRIVER_QUIRK_NO_AUTO_DLE
 	bool "Host auto-initiated Data Length Update quirk"
