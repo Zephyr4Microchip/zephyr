@@ -121,6 +121,16 @@ typedef struct {
 	MCHP_PWM_LOCK_TYPE lock; /* Lock type for PWM configuration */
 } pwm_mchp_data_t;
 
+#if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2) ||                                            \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
+typedef struct mchp_counter_clock {
+	/* Clock driver */
+	const struct device *clock_dev;
+
+	/* Generic clock subsystem. */
+	clock_control_subsys_t periph_async_clk;
+} pwm_mchp_clock_t;
+#else
 typedef struct mchp_counter_clock {
 	/* Clock driver */
 	const struct device *clock_dev;
@@ -130,6 +140,7 @@ typedef struct mchp_counter_clock {
 	/* Generic clock subsystem. */
 	clock_control_subsys_t periph_async_clk;
 } pwm_mchp_clock_t;
+#endif
 
 /**
  * @brief Structure to hold the configuration for Microchip PWM.
@@ -242,6 +253,10 @@ void tcc_init(void *pwm_reg, uint32_t prescaler)
 	PWM_REG(pwm_reg)->TCC_CTRLA = TCC_CTRLA_SWRST(1);
 	tcc_sync_wait(pwm_reg);
 	PWM_REG(pwm_reg)->TCC_CTRLA |= prescaler;
+#if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2) ||                                            \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
+	PWM_REG(pwm_reg)->TCC_CTRLA |= TCC_CTRLA_RUNSTDBY_Msk;
+#endif
 	PWM_REG(pwm_reg)->TCC_WAVE = TCC_WAVE_WAVEGEN_NPWM;
 	PWM_REG(pwm_reg)->TCC_PER = TCC_PER_PER(0);
 	tcc_enable(pwm_reg, true);
@@ -260,6 +275,49 @@ static inline bool tcc_get_invert_status(void *pwm_reg, uint32_t channel)
 
 	return (invert_status == 0) ? true : false;
 }
+
+#if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2)
+static int tcc_enable_module(const struct device *pwm_dev)
+{
+	const pwm_mchp_config_t *const mchp_pwm_cfg = pwm_dev->config;
+	uint32_t did_revision = DSU_REGS->DSU_DID;
+
+	if ((did_revision >> 28) == (0x00)) { /* A0 silicon */
+		LOG_ERR("Failed to enable the TCC module for PWM, incompatible SOC version");
+		return -1;
+	}
+
+	if ((tcc_registers_t *)mchp_pwm_cfg->regs == TCC0_REGS) {
+		CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_TCC0MD_Msk;
+	} else if ((tcc_registers_t *)mchp_pwm_cfg->regs == TCC1_REGS) {
+		CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_TCC1MD_Msk;
+	} else if ((tcc_registers_t *)mchp_pwm_cfg->regs == TCC2_REGS) {
+		CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_TCC2MD_Msk;
+	} else {
+		return -1;
+	}
+
+	return 0;
+}
+
+#elif defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
+static int tcc_enable_module(const struct device *pwm_dev)
+{
+	const pwm_mchp_config_t *const mchp_pwm_cfg = pwm_dev->config;
+
+	if ((tcc_registers_t *)mchp_pwm_cfg->regs == TCC0_REGS) {
+		CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_TCC0MD_Msk;
+	} else if ((tcc_registers_t *)mchp_pwm_cfg->regs == TCC1_REGS) {
+		CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_TCC1MD_Msk;
+	} else if ((tcc_registers_t *)mchp_pwm_cfg->regs == TCC2_REGS) {
+		CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_TCC2MD_Msk;
+	} else {
+		return -1;
+	}
+
+	return 0;
+}
+#endif
 
 /***********************************
  * Zephyr APIs
@@ -401,12 +459,21 @@ static int pwm_mchp_init(const struct device *pwm_dev)
 			LOG_ERR("Failed to enable the periph_async_clk for PWM: %d", ret_val);
 			break;
 		}
+#if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2) ||                                            \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
+		ret_val = tcc_enable_module(pwm_dev);
+		if (ret_val < 0) {
+			LOG_ERR("module enable failed");
+			break;
+		}
+#else
 		ret_val = clock_control_on(mchp_pwm_cfg->pwm_clock.clock_dev,
 					   mchp_pwm_cfg->pwm_clock.host_core_sync_clk);
 		if ((ret_val < 0) && (ret_val != -EALREADY)) {
 			LOG_ERR("Failed to enable the host_core_sync_clk for PWM: %d", ret_val);
 			break;
 		}
+#endif
 		ret_val = pinctrl_apply_state(mchp_pwm_cfg->pinctrl_config, PINCTRL_STATE_DEFAULT);
 		if (ret_val < 0) {
 			LOG_ERR("Pincontrol apply state failed %d", ret_val);
@@ -442,6 +509,14 @@ static int pwm_mchp_init(const struct device *pwm_dev)
  * the presence of relevant device tree properties.
  */
 /* clang-format off */
+#if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2) ||                                            \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
+#define PWM_MCHP_CLOCK_ASSIGN(n)                                         \
+	.pwm_clock.clock_dev = DEVICE_DT_GET(DT_NODELABEL(clock)),           \
+	COND_CODE_1(DT_NODE_EXISTS(DT_INST_CLOCKS_CTLR_BY_NAME(n, gclk)),               \
+	(.pwm_clock.periph_async_clk = (void *)(DT_INST_CLOCKS_CELL_BY_NAME(n, gclk, subsystem)),),\
+	())
+#else
 #define PWM_MCHP_CLOCK_ASSIGN(n)                                         \
 	.pwm_clock.clock_dev = DEVICE_DT_GET(DT_NODELABEL(clock)),           \
 	.pwm_clock.host_core_sync_clk = (void *)(DT_INST_CLOCKS_CELL_BY_NAME(n, mclk, subsystem)),\
@@ -451,6 +526,7 @@ static int pwm_mchp_init(const struct device *pwm_dev)
 	()) COND_CODE_1(DT_NODE_EXISTS(DT_INST_CLOCKS_CTLR_BY_NAME(n, gclk)),               \
 	(.pwm_clock.periph_async_clk = (void *)(DT_INST_CLOCKS_CELL_BY_NAME(n, gclk, subsystem)),),\
 	())
+#endif
 /* clang-format on */
 
 /**
