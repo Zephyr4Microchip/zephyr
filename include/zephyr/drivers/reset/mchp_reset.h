@@ -15,6 +15,8 @@
 
 #if defined(CONFIG_RESET_MCHP_RSTC_G1)
 #include "mchp_rstc_g1.h"
+#elif defined(CONFIG_RESET_MCHP_RCON_G1)
+#include "mchp_rcon_g1.h"
 #endif
 
 #endif /* INCLUDE_ZEPHYR_DRIVERS_RESET_MCHP_RESET_H_ */
