@@ -20,6 +20,8 @@
 		zephyr,sram = &sram0;
 		zephyr,flash = &flash0;
 		zephyr,code-partition = &code_partition;
+		zephyr,bt-hci = &bt_hci_microchip;
+		zephyr,bt-c2h-uart = &sercom0;
 	};
 
 	leds {
@@ -132,6 +134,9 @@
 	dma-names = "rx", "tx";
 };
 
+&bt_hci_microchip {
+	status = "okay";
+};
 
 &trng {
 	status = "okay";
