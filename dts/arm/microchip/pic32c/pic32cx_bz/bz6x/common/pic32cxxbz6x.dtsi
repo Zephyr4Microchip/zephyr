@@ -300,6 +300,12 @@
 			clock-names = "gclk";
 			status = "disabled";
 		};
+
+		rcon: rcon@44000a00 {
+			compatible = "microchip,rcon-g1-reset";
+			status = "okay";
+			reg = <0x44000a00 0x400>;
+		};
 	};
 
 	bt_hci_microchip: bt_hci_microchip {
