@@ -1,0 +1,18 @@
+# Copyright (c) 2025 Microchip Technology Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+config BT_HCI_MCHP_BZ
+	bool "Microchip Bluetooth HCI driver"
+	default y
+	depends on DT_HAS_MICROCHIP_PIC32CX_BZ_BT_HCI_ENABLED
+	help
+		This option enables the HCI driver for Microchip PIC32CX BZ BT HCI.
+
+if BT_HCI_MCHP_BZ
+
+config HEAP_MEM_POOL_ADD_SIZE_BT_HCI
+	int
+	default 32768 if SOC_FAMILY_MICROCHIP_PIC32CX_BZ6
+	default 1024
+
+endif # BT_HCI_MCHP_BZ
