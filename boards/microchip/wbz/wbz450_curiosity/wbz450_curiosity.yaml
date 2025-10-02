@@ -11,6 +11,7 @@ toolchain:
 flash: 1024
 ram: 128
 supported:
+  - ble
   - dma
   - flash
   - gpio
