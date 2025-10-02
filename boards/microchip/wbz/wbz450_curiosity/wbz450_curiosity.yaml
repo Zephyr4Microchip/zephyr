@@ -17,6 +17,7 @@ supported:
   - gpio
   - pinctrl
   - reset
+  - rtc
   - trng
   - uart
 vendor: microchip
