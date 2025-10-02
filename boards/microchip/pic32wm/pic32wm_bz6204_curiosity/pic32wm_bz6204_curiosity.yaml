@@ -17,6 +17,7 @@ supported:
   - gpio
   - i2c
   - pinctrl
+  - reset
   - spi
   - uart
 vendor: microchip
