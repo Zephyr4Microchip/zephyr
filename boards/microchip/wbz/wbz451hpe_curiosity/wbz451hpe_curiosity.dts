@@ -54,6 +54,7 @@
 		led1 = &led1;
 		led2 = &led2;
 		sw0 = &button0;
+		rtc = &rtc;
 	};
 };
 
@@ -172,4 +173,12 @@
 
 &portb {
 	status = "okay";
+};
+
+&rtc {
+	compatible = "microchip,rtc-g1";
+	status = "okay";
+	prescaler = <1024>;
+	alarms-count = <2>;
+	cal-constant = <1048576>;  /*(8192 * 128 = 1048576)*/
 };
