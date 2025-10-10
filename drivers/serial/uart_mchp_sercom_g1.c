@@ -14,11 +14,13 @@
 #include <zephyr/sys/__assert.h>
 #include <soc.h>
 #include <zephyr/drivers/uart.h>
+#if CONFIG_UART_MCHP_ASYNC
 #include <zephyr/drivers/dma.h>
+#include <mchp_dt_helper.h>
+#endif
 #include <zephyr/drivers/pinctrl.h>
 #include <zephyr/drivers/clock_control.h>
 #include <zephyr/irq.h>
-#include <mchp_dt_helper.h>
 #include <zephyr/drivers/clock_control/mchp_clock_control.h>
 #include <string.h>
 
