@@ -27,7 +27,7 @@
 /* clang-format off */
 #define MCHP_PORT_ADDR_OR_NONE(nodelabel)                              \
 	IF_ENABLED(DT_NODE_EXISTS(DT_NODELABEL(nodelabel)),            \
-		(DT_REG_ADDR(DT_NODELABEL(nodelabel)))),
+		(DT_REG_ADDR(DT_NODELABEL(nodelabel)),))
 
 /**
  * @brief Array of port addresses for the MCHP G1 series.
