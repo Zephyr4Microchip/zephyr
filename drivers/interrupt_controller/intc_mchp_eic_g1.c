@@ -126,7 +126,7 @@ typedef struct eic_mchp_dev_data {
 	/* This will contain the address of data structure of gpio peripheral. It is used
 	 * for callback related functions.
 	 */
-	void *gpio_data;
+	void *gpio_data[PORT_GROUP_NUMBER];
 
 	/* Each bit of this uin16_t denotes an eic line. There are MCHP_PORT_ID_MAX number of such
 	 * variables. Whenever a eic_line is assigned to a particular port, it is to be updated in
@@ -347,7 +347,7 @@ int eic_mchp_config_interrupt(eic_config_params_t *eic_pin_config)
 	int eic_line = INTC_LINE_FREE;
 	int ret_val = 0;
 
-	eic_data->gpio_data = eic_pin_config->gpio_data;
+	eic_data->gpio_data[eic_pin_config->port_id] = eic_pin_config->gpio_data;
 	eic_data->eic_line_callback = eic_pin_config->eic_line_callback;
 	EIC_DATA_LOCK(eic_data->lock);
 	do {
@@ -477,17 +477,18 @@ static int eic_mchp_init(const struct device *dev)
  * - The interrupt flag is cleared by writing to the EIC_INTFLAG register.
  * - The callback is called only if it is not NULL.
  */
-#define EIC_MCHP_CB_INIT(eic_line, _)                                                              \
-	static void eic_mchp_isr_##eic_line(const struct device *dev)                              \
-	{                                                                                          \
-		const eic_mchp_dev_cfg_t *eic_cfg = dev->config;                                   \
-		eic_mchp_dev_data_t *eic_data = dev->data;                                         \
-                                                                                                   \
-		eic_cfg->regs->EIC_INTFLAG = BIT(EIC_LINE_##eic_line);                             \
-		if (eic_data->eic_line_callback != NULL) {                                         \
-			uint32_t pins = BIT(eic_data->lines[EIC_LINE_##eic_line].pin);             \
-			eic_data->eic_line_callback(pins, eic_data->gpio_data);                    \
-		}                                                                                  \
+#define EIC_MCHP_CB_INIT(eic_line, _)							\
+	static void eic_mchp_isr_##eic_line(const struct device *dev)			\
+	{										\
+		const eic_mchp_dev_cfg_t *eic_cfg = dev->config;			\
+		eic_mchp_dev_data_t *eic_data = dev->data;				\
+		uint8_t port_id = eic_data->lines[EIC_LINE_##eic_line].port ;		\
+											\
+		eic_cfg->regs->EIC_INTFLAG = BIT(EIC_LINE_##eic_line);			\
+		if (eic_data->eic_line_callback != NULL) {				\
+			uint32_t pins = BIT(eic_data->lines[EIC_LINE_##eic_line].pin);	\
+			eic_data->eic_line_callback(pins, eic_data->gpio_data[port_id]);\
+		}									\
 	}
 
 #define EIC_MCHP_IRQ_CONNECT(eic_line, inst)							\

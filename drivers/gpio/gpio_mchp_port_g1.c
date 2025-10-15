@@ -609,7 +609,7 @@ static mchp_eic_trigger_t get_eic_trig_type(uint32_t trigger_mode)
  * information.
  *
  */
-static void gpio_mchp_isr(uint32_t pins, void *arg)
+static void gpio_mchp_callback(uint32_t pins, void *arg)
 {
 	struct gpio_mchp_data *const data = (struct gpio_mchp_data *)arg;
 
@@ -652,7 +652,7 @@ static int gpio_mchp_pin_interrupt_configure(const struct device *dev, gpio_pin_
 	eic_pin_config.pin_num = pin;
 	eic_pin_config.debounce = (gpio_data->debounce & BIT(pin)) ? true : false;
 	eic_pin_config.port_addr = gpio_config->gpio_regs;
-	eic_pin_config.eic_line_callback = gpio_mchp_isr;
+	eic_pin_config.eic_line_callback = gpio_mchp_callback;
 	eic_pin_config.gpio_data = gpio_data;
 
 	LOG_DBG("trigger mode : 0x%x mode = 0x%x trig = 0x%x\nport address : %p", trigger_mode,
