@@ -39,7 +39,10 @@
 
 	tcc0_pwm_default: tcc0_pwm_default {
 		group1 {
-			pinmux = <PC18F_TCC0_WO2>;
+			pinmux = <PC18F_TCC0_WO2>,
+			<PC4F_TCC0_WO0>,
+			<PD8F_TCC0_WO1>,
+			<PD11F_TCC0_WO4>;
 		};
 	};
 };

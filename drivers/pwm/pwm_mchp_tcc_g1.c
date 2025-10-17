@@ -142,6 +142,9 @@ typedef struct {
 	uint16_t prescaler;     /* Prescaler value for PWM */
 	uint8_t channels;       /* Number of PWM channels */
 	uint32_t freq;          /* Frequency of the PWM signal */
+	uint8_t wexctrl_dths;
+	uint8_t wexctrl_dtls;
+	uint8_t wexctrl_otmx;
 } pwm_mchp_config_t;
 
 /***********************************
@@ -236,13 +239,22 @@ static int32_t tcc_set_invert(void *pwm_reg, uint32_t channel)
 /**
  *Initialize the PWM instance with the specified prescaler.
  */
-void tcc_init(void *pwm_reg, uint32_t prescaler)
+void tcc_init(const pwm_mchp_config_t *const mchp_pwm_cfg)
 {
+	void *pwm_reg = mchp_pwm_cfg->regs;
+	uint32_t prescaler = mchp_pwm_cfg->prescaler;
+
 	prescaler = tcc_get_prescale_val(prescaler);
 	PWM_REG(pwm_reg)->TCC_CTRLA = TCC_CTRLA_SWRST(1);
 	tcc_sync_wait(pwm_reg);
 	PWM_REG(pwm_reg)->TCC_CTRLA |= prescaler;
 	PWM_REG(pwm_reg)->TCC_WAVE = TCC_WAVE_WAVEGEN_NPWM;
+	PWM_REG(pwm_reg)->TCC_WEXCTRL = TCC_WEXCTRL_OTMX(mchp_pwm_cfg->wexctrl_otmx);
+	/* Dead time configurations */
+	PWM_REG(pwm_reg)->TCC_WEXCTRL |= TCC_WEXCTRL_DTIEN0_Msk | TCC_WEXCTRL_DTIEN1_Msk |
+					 TCC_WEXCTRL_DTIEN2_Msk | TCC_WEXCTRL_DTIEN3_Msk |
+					 TCC_WEXCTRL_DTLS(mchp_pwm_cfg->wexctrl_dtls) |
+					 TCC_WEXCTRL_DTHS(mchp_pwm_cfg->wexctrl_dths);
 	PWM_REG(pwm_reg)->TCC_PER = TCC_PER_PER(0);
 	tcc_enable(pwm_reg, true);
 }
@@ -412,7 +424,7 @@ static int pwm_mchp_init(const struct device *pwm_dev)
 			LOG_ERR("Pincontrol apply state failed %d", ret_val);
 			break;
 		}
-		tcc_init(mchp_pwm_cfg->regs, mchp_pwm_cfg->prescaler);
+		tcc_init(mchp_pwm_cfg);
 	} while (0);
 	ret_val = (ret_val == -EALREADY) ? 0 : ret_val;
 
@@ -468,6 +480,9 @@ static int pwm_mchp_init(const struct device *pwm_dev)
 		.channels = DT_INST_PROP(n, channels),                                             \
 		.regs = (void *)DT_INST_REG_ADDR(n),                                               \
 		.max_bit_width = DT_INST_PROP(n, max_bit_width),                                   \
+		.wexctrl_dths = DT_INST_PROP(n, wexctrl_dths),                                     \
+		.wexctrl_dtls = DT_INST_PROP(n, wexctrl_dtls),                                     \
+		.wexctrl_otmx = DT_INST_PROP(n, wexctrl_otmx),                                     \
 		PWM_MCHP_CLOCK_ASSIGN(n)}
 
 /**

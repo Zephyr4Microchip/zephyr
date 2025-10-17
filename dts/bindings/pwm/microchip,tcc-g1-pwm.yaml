@@ -21,6 +21,31 @@ include:
   - pinctrl-device.yaml
 
 properties:
+  wexctrl_dths:
+    type: int
+    default: 128
+    description: |
+     Dead-Time High Side Outputs Value. 
+     The value must not be more than 8bit.
+
+  wexctrl_dtls:
+    type: int
+    default: 128
+    description: |
+     Dead-Time Low Side Outputs Value
+     The value must not be more than 8bit.
+
+  wexctrl_otmx:
+    type: int
+    default: 0
+    enum:
+      - 0
+      - 1
+      - 2
+      - 3
+    description: |
+     Output Matrix
+
   "#pwm-cells":
     const: 3
 
