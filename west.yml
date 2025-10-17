@@ -23,6 +23,8 @@ manifest:
       url-base: https://github.com/zephyrproject-rtos
     - name: babblesim
       url-base: https://github.com/BabbleSim
+    - name: mchpz4m
+      url-base: https://github.com/Zephyr4Microchip/
 
   group-filter: [-babblesim, -optional]
 
@@ -195,8 +197,10 @@ manifest:
       groups:
         - hal
     - name: hal_microchip
-      revision: e5fe6469afc53d7aefcc74377dd99ce20428d42b
+      revision: 987f925dbe66966da60c132617d76e926ae20fd1
       path: modules/hal/microchip
+      remote: mchpz4m
+      repo-path: hal_microchip.git
       groups:
         - hal
     - name: hal_nordic
