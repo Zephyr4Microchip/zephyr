@@ -789,6 +789,7 @@ static DEVICE_API(comparator, comparator_mchp_api) = {
 				DT_ENUM_IDX_OR(DT_DRV_INST(n), interrupt_selection, 0),            \
 			.filter_length = DT_ENUM_IDX_OR(DT_DRV_INST(n), filter_length, 0),         \
 			.hysteresis_level = DT_ENUM_IDX_OR(DT_DRV_INST(n), hysteresis_level, 0),   \
+			.vddana_scale_value = DT_PROP_OR(DT_DRV_INST(n), vddana_scale_value, 0),   \
 			.interrupt_enable = DT_PROP_OR(DT_DRV_INST(n), interrupt_enable, 0),       \
 			.single_shot_mode = DT_PROP_OR(DT_DRV_INST(n), single_shot_mode, 0),       \
 			.hysteresis_enable = DT_PROP_OR(DT_DRV_INST(n), hysteresis_enable, 0),     \
