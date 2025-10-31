@@ -21,4 +21,6 @@ supported:
   - rtc
   - trng
   - uart
+  - ieee802154
+  - netif:openthread
 vendor: microchip
