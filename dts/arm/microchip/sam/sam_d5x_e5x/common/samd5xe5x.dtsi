@@ -214,6 +214,15 @@
 			channels = <3>;
 		};
 
+		trng: random@42002800 {
+			compatible = "microchip,trng-g1-entropy";
+			clocks = <&mclkperiph CLOCK_MCHP_MCLKPERIPH_ID_APBC_TRNG>;
+			clock-names = "mclk";
+			reg = <0x42002800 0x1e>;
+			interrupts = <131 0>;
+			status = "disabled";
+		};
+
 		sercom4: sercom@43000000 {
 			compatible = "microchip,sercom-g1";
 			status = "disabled";
