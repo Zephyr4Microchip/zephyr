@@ -22,6 +22,7 @@
 		zephyr,code-partition = &code_partition;
 		zephyr,bt-hci = &bt_hci_microchip;
 		zephyr,bt-c2h-uart = &sercom0;
+		zephyr,ieee802154 = &ieee802154;
 	};
 
 	leds {
@@ -146,6 +147,10 @@
 
 
 &bt_hci_microchip {
+	status = "okay";
+};
+
+&ieee802154 {
 	status = "okay";
 };
 

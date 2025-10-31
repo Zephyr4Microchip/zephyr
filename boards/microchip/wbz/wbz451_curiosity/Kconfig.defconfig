@@ -11,5 +11,11 @@ config MAIN_STACK_SIZE
 
 config IDLE_STACK_SIZE
 	default 512
+endif
 
-endif # BT
+if IEEE802154
+config FPU
+	default y
+config MAIN_STACK_SIZE
+	default 4096
+endif # IEEE802154
