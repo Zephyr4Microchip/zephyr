@@ -41,10 +41,10 @@ SECTION_PROLOGUE(.mchp_bt,0x20018C00(NOLOAD),)
     . = ALIGN(4);
     KEEP(*(.mchp_bt))
 }
-
+#endif
 SECTION_PROLOGUE (.pbss,0x44014000, )
 {
     KEEP(*(SORT_BY_NAME(".pbss*")))
 }
 
-#endif
+
