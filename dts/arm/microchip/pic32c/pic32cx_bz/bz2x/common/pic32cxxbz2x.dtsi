@@ -308,6 +308,10 @@
 		compatible = "microchip,pic32cx-bz-bt-hci";
 		status = "disabled";
 	};
+	ieee802154: ieee802154 {
+		compatible = "microchip,pic32cx-bz-ieee802154";
+		status = "disabled";
+	};
 };
 
 &nvic {
