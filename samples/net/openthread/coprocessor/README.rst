@@ -52,6 +52,26 @@ Example building for the nrf52840dk/nrf52840 for RCP:
    :goals: run
    :compact:
 
+Example building for the Microchip wbz451/wbz450/wbz451hpe curiosity boards for RCP:
+
+.. zephyr-app-commands::
+   :zephyr-app: samples/net/openthread/coprocessor
+   :board: <board to use>
+   :west-args: -T sample.openthread.coprocessor.rcp
+   :gen-args: -DDTC_OVERLAY_FILE=boards/wbz45x_curisity_board.overlay -DEXTRA_CONF_FILE=boards/wbz45x_curisity_board.conf
+   :goals: build
+   :compact:
+
+Example building for the Microchip pic32cx_bz6204_curiosity boards for RCP:
+
+.. zephyr-app-commands::
+   :zephyr-app: samples/net/openthread/coprocessor
+   :board: pic32cx_bz6204_curiosity
+   :west-args: -T sample.openthread.coprocessor.rcp
+   :gen-args: -DDTC_OVERLAY_FILE=boards/pic32cx_bz6204_curiosity.overlay -DEXTRA_CONF_FILE=boards/pic32cx_bz6204_curiosity.conf
+   :goals: build
+   :compact:
+
 There are configuration files for different boards and setups in the
 coprocessor directory:
 

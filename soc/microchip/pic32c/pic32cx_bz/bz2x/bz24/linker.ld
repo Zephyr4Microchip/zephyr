@@ -50,4 +50,3 @@ SECTION_PROLOGUE (.pbss,0x44014000, )
 {
     KEEP(*(SORT_BY_NAME(".pbss*")))
 }
-
