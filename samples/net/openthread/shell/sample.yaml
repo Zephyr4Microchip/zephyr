@@ -13,6 +13,10 @@ tests:
     platform_allow:
       - nrf52840dk/nrf52840
       - nrf52840dongle/nrf52840
+      - wbz450_curiosity
+      - wbz451_curiosity
+      - wbz451hpe_curosity
+      - pic32wm_bz6204_curiosity
     integration_platforms:
       - nrf52840dk/nrf52840
   sample.net.openthread.shell.rw612_openthread_rcp_host:
