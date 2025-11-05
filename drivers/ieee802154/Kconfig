@@ -92,6 +92,8 @@ source "drivers/ieee802154/Kconfig.esp32"
 
 source "drivers/ieee802154/Kconfig.uart_pipe"
 
+source "drivers/ieee802154/Kconfig.mchp_pic32cx_bz"
+
 config IEEE802154_CSL_ENDPOINT
 	bool "Support for CSL Endpoint"
 	help
