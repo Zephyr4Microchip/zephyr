@@ -21,9 +21,11 @@ if IEEE802154
 
 config HPA_SUPPORTED
 	default y
-	
+
 config FPU
 	default y
+
 config MAIN_STACK_SIZE
 	default 4096
+
 endif # IEEE802154
