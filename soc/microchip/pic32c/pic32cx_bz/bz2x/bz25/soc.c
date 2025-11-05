@@ -10,7 +10,7 @@
 #endif
 #include <zephyr/kernel.h>
 
-#ifdef CONFIG_BT
+#if defined(CONFIG_BT) || defined(CONFIG_IEEE802154)
 #include <rf_system.h>
 #endif
 
@@ -51,7 +51,7 @@ void z_arm_on_enter_cpu_idle_prepare(void)
 }
 #endif
 
-#ifdef CONFIG_BT
+#if defined(CONFIG_BT) || defined(CONFIG_IEEE802154)
 static __ramfunc void pche_setup(void)
 {
 	/* Set Flash Wait states and enable pre-fetch */
@@ -69,7 +69,7 @@ static __ramfunc void pche_setup(void)
 
 void soc_early_init_hook(void)
 {
-#ifdef CONFIG_BT
+#if defined(CONFIG_BT) || defined(CONFIG_IEEE802154)
 	SYS_ClkGen_Config();
 	pche_setup();
 #endif
