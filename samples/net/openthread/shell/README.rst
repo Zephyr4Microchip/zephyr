@@ -50,6 +50,25 @@ Example building for NXP's RW612 FRDM (RCP host).
    :goals: build
    :compact:
 
+Example building for Microchip's wbz450/wbz451/wbz451hpe curiosity boards.
+
+.. zephyr-app-commands::
+   :zephyr-app: samples/net/openthread/shell
+   :board: <board to use>
+   :conf: "prj.conf"
+   :goals: build
+   :compact:
+
+Example building for Microchip's pic32wm_bz6204_curiosity board.
+
+.. zephyr-app-commands::
+   :zephyr-app: samples/net/openthread/shell
+   :board: pic32wm_bz6204_curiosity
+   :conf: "prj.conf"
+   :gen-args: "-DEXTRA_CONF_FILE=boards/pic32wm_bz6204_curiosity.conf"
+   :goals: build
+   :compact:
+
 Sample console interaction
 ==========================
 
