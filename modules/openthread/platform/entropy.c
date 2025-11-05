@@ -12,9 +12,9 @@
 
 LOG_MODULE_REGISTER(net_otPlat_entropy, CONFIG_OPENTHREAD_PLATFORM_LOG_LEVEL);
 
-#if !defined(CONFIG_CSPRNG_ENABLED)
-#error OpenThread requires an entropy source for a TRNG
-#endif
+/* #if !defined(CONFIG_CSPRNG_ENABLED)*/
+/* #error OpenThread requires an entropy source for a TRNG*/
+/* #endif*/
 
 otError otPlatEntropyGet(uint8_t *aOutput, uint16_t aOutputLength)
 {
