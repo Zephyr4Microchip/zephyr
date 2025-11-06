@@ -1,0 +1,8 @@
+# Copyright (c) 2022 Nordic Semiconductor ASA
+# SPDX-License-Identifier: Apache-2.0
+
+description: Microchip PIC32CX_BZ IEEE 802.15.4 node
+
+compatible: "microchip,pic32cx-bz-ieee802154"
+
+include: base.yaml
