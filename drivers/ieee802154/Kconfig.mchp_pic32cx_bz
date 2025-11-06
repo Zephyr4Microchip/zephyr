@@ -1,0 +1,41 @@
+# Microchip PIC32CX_BZ configuration options
+
+# Copyright (c) 2025 Microchip
+# SPDX-License-Identifier: Apache-2.0
+
+
+menuconfig IEEE802154_PIC32CX_BZ
+	bool "Microchip PIC32CX_BZ Driver support"
+	default y
+	depends on DT_HAS_MICROCHIP_PIC32CX_BZ_IEEE802154_ENABLED
+	#select MCHP_IEEE802154_PHY_DRIVER
+
+if IEEE802154_PIC32CX_BZ
+
+config IEEE802154_PIC32CX_BZ_RX_STACK_SIZE
+	int "Driver's internal RX thread stack size"
+	default 800
+	help
+	  This option sets the driver's stack size for its internal RX thread.
+	  The default value should be sufficient, but in case it proves to be
+	  a too little one, this option makes it easy to play with the size.
+
+config IEEE802154_PIC32CX_BZ_INIT_PRIO
+	int "RF2X initialization priority"
+	default 80
+	help
+	  Set the initialization priority number. Do not mess with it unless
+	  you know what you are doing. It has to start before the net stack.
+
+config IEEE802154_PIC32CX_BZ_CRYPTO
+	bool "Radio Interface layer cyptography"
+	default n
+	help
+	  This helps encryption of Enhanced ACK frame
+
+config IEEE802154_PIC32CX_BZ_CARRIER_FUNCTIONS
+	bool "Radio Interface layer carrier functions"
+	default n
+	help
+	  This helps enabling continuous wave carrier functions
+endif

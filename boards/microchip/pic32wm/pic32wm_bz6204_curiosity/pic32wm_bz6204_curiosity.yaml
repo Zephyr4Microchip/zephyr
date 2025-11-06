@@ -22,4 +22,6 @@ supported:
   - rtc
   - spi
   - uart
+  - ieee802154
+  - netif:openthread
 vendor: microchip

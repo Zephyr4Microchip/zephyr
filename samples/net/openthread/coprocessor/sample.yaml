@@ -34,6 +34,10 @@ tests:
       - nrf52840dk/nrf52840
       - nrf52833dk/nrf52833
       - tlsr9518adk80d
+      - wbz450_curiosity
+      - wbz451_curiosity
+      - wbz451hpe_curosity
+      - pic32wm_bz6204_curiosity
     integration_platforms:
       - nrf52840dk/nrf52840
     extra_args: EXTRA_CONF_FILE=overlay-rcp.conf

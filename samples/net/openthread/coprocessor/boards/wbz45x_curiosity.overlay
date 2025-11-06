@@ -1,0 +1,20 @@
+/*
+ * Copyright (c) 2025 Microchip Technology Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/ {
+	chosen {
+		zephyr,ot-uart = &sercom0;
+	};
+};
+
+&sercom0{
+	status = "okay";
+};
+
+
+&trng{
+	status = "okay";
+};
