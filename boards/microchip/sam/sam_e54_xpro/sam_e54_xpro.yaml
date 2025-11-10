@@ -24,6 +24,7 @@ supported:
   - gpio
   - hwinfo
   - i2c
+  - mspi
   - pinctrl
   - pwm
   - reset
