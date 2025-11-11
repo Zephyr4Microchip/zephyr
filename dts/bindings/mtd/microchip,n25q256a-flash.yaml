@@ -1,0 +1,64 @@
+# Copyright (c) 2025 Microchip Technology Inc.
+# SPDX-License-Identifier: Apache-2.0
+title: Microchip MSPI/QSPI child flash (vendor extensions)
+
+description: |
+  Vendor-specific properties for flashes attached to the Microchip MSPI/QSPI
+  controller. This augments the standard "jedec,spi-nor" binding.
+
+compatible: "micron,n25q256a-flash"
+
+include: ["jedec,mspi-nor.yaml"]
+
+properties:
+  reg:             # CE index
+    description: |
+      Chip-select index for the flash device (0-based).
+    required: true
+
+  mspi-max-frequency:
+    description: Maximum supported SPI clock frequency in Hz.
+
+  mspi-io-mode:
+    type: string
+    description: Bus IO width used in instruction mode (1-1-1, 1-1-2, 1-1-4).
+
+  mspi-data-rate:
+    type: string
+    description: Transfer rate mode for instruction/data phases.
+
+  mspi-cpp-mode:
+    type: string
+    description: Controller-specific command polarity and phase protocol mode.
+
+  mspi-ce-polarity:
+    type: string
+    description: Chip-select polarity as driven by the controller.
+
+  rx-dummy:
+    type: int
+    description: Number of dummy cycles for read transactions.
+
+  tx-dummy:
+    type: int
+    description: Number of dummy cycles for program transactions (usually 0).
+
+  read-command:
+    type: int
+    description: Read opcode to use for instruction-mode access.
+
+  write-command:
+    type: int
+    description: Program opcode to use for page program.
+
+  command-length:
+    type: string
+    description: Width of the instruction phase in bytes.
+
+  address-length:
+    type: string
+    description: Address length used by controller for instruction-mode ops.
+
+  ce-break-config:
+    type: array
+    description: Controller-specific CE break config <memory_boundary time_to_break>.
