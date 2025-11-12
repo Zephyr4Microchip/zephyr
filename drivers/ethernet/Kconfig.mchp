@@ -1,0 +1,87 @@
+# Copyright (c) 2026 Microchip Technology Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+config ETH_MCHP_GMAC_G1
+	bool "Microchip G1 Ethernet driver"
+	default y
+	depends on NET_BUF_FIXED_DATA_SIZE
+	depends on DT_HAS_MICROCHIP_GMAC_G1_ETH_ENABLED
+	select NOCACHE_MEMORY if ARCH_HAS_NOCACHE_MEMORY_SUPPORT
+	select MDIO
+	select ETH_DSA_SUPPORT_DEPRECATED
+	select PINCTRL
+	help
+	  Enable Microchip MCU Family Ethernet driver.
+
+# Define menu symbol for configuring ethernet features
+menuconfig ETH_MCHP_GMAC
+	bool "Microchip GMAC Ethernet driver"
+	default y
+	depends on ETH_MCHP_GMAC_G1
+	help
+	  Enable support for Microchip Ethernet driver.
+
+if ETH_MCHP_GMAC
+
+# Workaround for not being able to have commas in macro arguments
+DT_ETH_MCHP_PATH := $(dt_nodelabel_path,gmac)
+
+# Just for readability, to keep the following lines shorter.
+DT_ETH_MCHP_NQ := $(dt_node_int_prop_int,$(DT_ETH_MCHP_PATH),num-queues)
+
+config ETH_MCHP_BUF_RX_COUNT
+	int "Network RX buffers preallocated by the SAM ETH driver"
+	default 12
+	help
+	  Number of network buffers that will be permanently allocated by the
+	  Ethernet driver. These buffers are used in receive path. They are
+	  preallocated by the driver and made available to the GMAC module to be
+	  filled in with incoming data. Their number has to be large enough to fit
+	  at least one complete Ethernet frame. SAM ETH driver will always allocate
+	  that amount of buffers for itself thus reducing the NET_BUF_RX_COUNT
+	  which is a total amount of RX data buffers used by the whole networking
+	  stack. One has to ensure that NET_PKT_RX_COUNT is large enough to
+	  fit at least two Ethernet frames: one being received by the GMAC module
+	  and the other being processed by the higher layer networking stack.
+
+config ETH_MCHP_MAC_I2C_EEPROM
+	default y
+	select I2C
+	bool "Read from an I2C EEPROM"
+	help
+	  Read MAC address from an I2C EEPROM.
+
+if ETH_MCHP_MAC_I2C_EEPROM
+
+config ETH_MCHP_MAC_I2C_INT_ADDRESS
+	hex "I2C EEPROM internal address"
+	default 0x9A
+	range 0 0xffffffff
+	help
+	  Internal address of the EEPROM chip where the MAC address is stored.
+	  Chips with 1 to 4 byte internal address size are supported. Address
+	  size has to be configured in a separate Kconfig option.
+
+config ETH_MCHP_MAC_I2C_INT_ADDRESS_SIZE
+	int "I2C EEPROM internal address size"
+	default 1
+	range 1 4
+	help
+	  Size (in bytes) of the internal EEPROM address.
+
+endif # ETH_MCHP_MAC_I2C_EEPROM
+
+config ETH_MCHP_RX_THREAD_STACK_SIZE
+	int "MCHP RX Work thread stack size"
+	default 1600
+	help
+	  RX thread stack size in bytes.
+
+config ETH_MCHP_RX_THREAD_PRIORITY
+	int "MCHP RX work thread priority"
+	default 2
+	help
+	  Ethernet Driver handles RX in thread.
+	  This options sets the priority of that thread.
+
+endif # ETH_MCHP_GMAC
