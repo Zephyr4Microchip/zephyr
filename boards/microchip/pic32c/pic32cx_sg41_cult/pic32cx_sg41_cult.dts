@@ -148,3 +148,7 @@
 &portd {
 	status = "okay";
 };
+
+&dmac {
+	status = "okay";
+};
