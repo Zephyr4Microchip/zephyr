@@ -18,5 +18,16 @@
 			clock-names = "mclk-ahb", "mclk-apb";
 			status = "disabled";
 		};
+
+		mdio: mdio@42000800 {
+			compatible = "microchip,gmac-g1-mdio";
+			reg = <0x42000800 0x400>;
+			clocks = <&mclkperiph CLOCK_MCHP_MCLKPERIPH_ID_AHB_GMAC>,
+					 <&mclkperiph CLOCK_MCHP_MCLKPERIPH_ID_APBC_GMAC>;
+			clock-names = "mclk-ahb", "mclk-apb";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "disabled";
+		};
 	};
 };
