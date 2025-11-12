@@ -25,6 +25,7 @@ supported:
   - hwinfo
   - i2c
   - mspi
+  - netif:eth
   - pinctrl
   - pwm
   - reset

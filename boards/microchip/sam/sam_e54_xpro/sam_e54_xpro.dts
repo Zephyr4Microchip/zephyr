@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Microchip Technology Inc.
+ * Copyright (c) 2025-2026 Microchip Technology Inc.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -415,6 +415,11 @@
 	dmas = <&dmac 10 0x12>, <&dmac 11 0x13>;
 	dma-names = "rx", "tx";
 	status = "okay";
+
+	eeprom: eeprom@5e {
+		compatible = "microchip,at24mac402";
+		reg = <0x5e>;
+	};
 };
 
 &tc0 {
@@ -464,4 +469,17 @@ ext3_serial: &sercom1 {
 &dac {
 	pinctrl-0 = <&dac_default>;
 	pinctrl-names = "default";
+};
+
+&gmac {
+	compatible = "microchip,gmac-g1-eth";
+	pinctrl-0 = <&gmac_rmii>;
+	pinctrl-names = "default";
+	mac-eeprom = <&eeprom>;
+	phy-handle = <&phy>;
+	status = "okay";
+};
+
+&trng {
+	status = "okay";
 };
