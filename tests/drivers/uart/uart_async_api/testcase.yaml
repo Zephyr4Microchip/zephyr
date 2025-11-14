@@ -154,3 +154,5 @@ tests:
     filter: CONFIG_SERIAL_SUPPORT_ASYNC
     platform_allow:
       - sam_e54_xpro
+      - pic32cx_sg41_cult
+      - pic32cx_sg61_cult
