@@ -1,6 +1,8 @@
 # Copyright (c) 2025 Microchip Technology Inc.
 # SPDX-License-Identifier: Apache-2.0
 
+title: Microchip G1 Analog Comparator
+
 description: |
   Binding for the Microchip Comparator driver supporting AC G1 peripherals.
 
@@ -22,11 +24,6 @@ properties:
     enum: [0, 1]
     description: |
       Comparator channel index (0 or 1).
-
-  interrupt-enable:
-    type: boolean
-    description: |
-      Enable interrupt generation for the comparator channel.
 
   single-shot-mode:
     type: boolean
@@ -76,17 +73,6 @@ properties:
         - off:   Output is not routed to COMPn I/O pin (0x0)
         - async: Asynchronous output is routed (0x1)
         - sync:  Synchronous filtered output is routed (0x2)
-
-  interrupt-selection:
-    type: string
-    enum: ["toggle", "rising", "falling", "eoc"]
-    default: "toggle"
-    description: |
-      Interrupt generation condition:
-        - toggle:  Interrupt on any toggle of the comparator output (0x0)
-        - rising:  Interrupt on rising edge of the comparator output (0x1)
-        - falling: Interrupt on falling edge of the comparator output (0x2)
-        - eoc:     Interrupt on end of comparison (valid only in single-shot mode) (0x3)
 
   run-standby:
     type: boolean
