@@ -1366,7 +1366,11 @@ static int uart_mchp_init(const struct device *dev)
 		k_work_init_delayable(&dev_data->tx_timeout_work, uart_mchp_tx_timeout);
 		k_work_init_delayable(&dev_data->rx_timeout_work, uart_mchp_rx_timeout);
 
-		if (cfg->uart_dma.tx_dma_channel != 0xFFU) {
+		int req_channel = cfg->uart_dma.tx_dma_channel;
+		retval = dma_request_channel(cfg->uart_dma.dma_dev, (void *)&req_channel);
+
+		if ((cfg->uart_dma.tx_dma_channel != 0xFFU) &&
+		    (retval == cfg->uart_dma.tx_dma_channel)) {
 			struct dma_config dma_cfg = {0};
 			struct dma_block_config dma_blk = {0};
 
@@ -1391,7 +1395,11 @@ static int uart_mchp_init(const struct device *dev)
 			}
 		}
 
-		if (cfg->uart_dma.rx_dma_channel != 0xFFU) {
+		req_channel = cfg->uart_dma.rx_dma_channel;
+		retval = dma_request_channel(cfg->uart_dma.dma_dev, (void *)&req_channel);
+
+		if ((cfg->uart_dma.rx_dma_channel != 0xFFU) &&
+		    (retval == cfg->uart_dma.rx_dma_channel)) {
 			struct dma_config dma_cfg = {0};
 			struct dma_block_config dma_blk = {0};
 
