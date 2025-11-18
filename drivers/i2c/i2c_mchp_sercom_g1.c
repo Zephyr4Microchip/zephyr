@@ -104,6 +104,16 @@ struct i2c_mchp_dev_data {
 #ifdef CONFIG_I2C_MCHP_DMA_DRIVEN
 	const struct i2c_mchp_dev_config *cfg;
 #endif /*CONFIG_I2C_MCHP_DMA_DRIVEN*/
+
+#ifdef CONFIG_I2C_TARGET_BUFFER_MODE
+	uint8_t rx_buf_internal[CONFIG_I2C_MCHP_TARGET_BUFF_SIZE];
+	uint32_t rx_len;
+	uint8_t *tx_buf_ptr;
+	uint32_t tx_pos;
+	uint32_t tx_len;
+#endif /*CONFIG_I2C_TARGET_BUFFER_MODE */
+
+	/* First byte read after an address match. */
 	bool firstReadAfterAddrMatch;
 };
 
@@ -771,14 +781,37 @@ static void i2c_target_data_ready(const struct device *dev, struct i2c_mchp_dev_
 		     I2C_MCHP_TARGET_ACK_STATUS_RECEIVED_ACK)) {
 
 			/* Host is reading */
+
+#ifdef CONFIG_I2C_TARGET_BUFFER_MODE
+			if (data->tx_len == 0U) {
+				/* Request a new buffer of data to send */
+				retval = target_cb->buf_read_requested(
+					&data->target_config, &data->tx_buf_ptr, &data->tx_len);
+				data->tx_pos = 0;
+				if ((retval < 0) || (data->tx_len == 0U) ||
+				    (data->tx_buf_ptr == NULL)) {
+					i2c_target_set_command(dev,
+							       I2C_MCHP_TARGET_COMMAND_SEND_NACK);
+					return;
+				}
+			}
+
+			/* Send next byte from the buffer */
+			i2c_byte_write(dev, data->tx_buf_ptr[data->tx_pos]);
+			data->tx_len--;
+			data->tx_pos++;
+
+#else
 			i2c_byte_write(dev, data->rx_tx_data);
+
+			/* Load the next byte for host read*/
+			target_cb->read_processed(&data->target_config, &data->rx_tx_data);
+
+#endif /* CONFIG_I2C_TARGET_BUFFER_MODE */
 
 			/* first byte read after address match done*/
 			data->firstReadAfterAddrMatch = false;
 			i2c_target_set_command(dev, I2C_MCHP_TARGET_COMMAND_RECEIVE_ACK_NAK);
-
-			/* Load the next byte for host read*/
-			target_cb->read_processed(&data->target_config, &data->rx_tx_data);
 
 		} else {
 			i2c_target_set_command(dev, I2C_MCHP_TARGET_COMMAND_WAIT_FOR_START);
@@ -786,11 +819,22 @@ static void i2c_target_data_ready(const struct device *dev, struct i2c_mchp_dev_
 	} else {
 		/* Host is writing */
 		i2c_target_set_command(dev, I2C_MCHP_TARGET_COMMAND_SEND_ACK);
+
+#ifdef CONFIG_I2C_TARGET_BUFFER_MODE
+
+		/* Store to the internal buffer  */
+		if (data->rx_len < CONFIG_I2C_MCHP_TARGET_BUFF_SIZE) {
+			data->rx_buf_internal[data->rx_len] = i2c_byte_read(dev);
+			data->rx_len++;
+		}
+
+#else
 		data->rx_tx_data = i2c_byte_read(dev);
 		retval = target_cb->write_received(&data->target_config, data->rx_tx_data);
 		if (retval != I2C_MCHP_SUCCESS) {
 			i2c_target_set_command(dev, I2C_MCHP_TARGET_COMMAND_SEND_NACK);
 		}
+#endif /* CONFIG_I2C_TARGET_BUFFER_MODE */
 	}
 }
 
@@ -825,6 +869,16 @@ static void i2c_target_handler(const struct device *dev)
 	/* Handle stop condition interrupt */
 	if ((int_status & SERCOM_I2CS_INTFLAG_PREC_Msk) == SERCOM_I2CS_INTFLAG_PREC_Msk) {
 		i2c_target_int_flag_clear(dev, SERCOM_I2CS_INTFLAG_PREC_Msk);
+
+#ifdef CONFIG_I2C_TARGET_BUFFER_MODE
+		if ((data->rx_len > 0U) && (target_cb->buf_write_received != NULL)) {
+			target_cb->buf_write_received(&data->target_config, data->rx_buf_internal,
+						      data->rx_len);
+		}
+		data->rx_len = 0;
+		data->tx_len = 0;
+		data->tx_pos = 0;
+#endif /*CONFIG_I2C_TARGET_BUFFER_MODE */
 
 		/* Notify that a stop condition was received */
 		target_cb->stop(&data->target_config);
@@ -1113,6 +1167,11 @@ static int i2c_mchp_target_register(const struct device *dev, struct i2c_target_
 	data->target_callbacks.read_requested = target_cfg->callbacks->read_requested;
 	data->target_callbacks.read_processed = target_cfg->callbacks->read_processed;
 	data->target_callbacks.stop = target_cfg->callbacks->stop;
+
+#ifdef CONFIG_I2C_TARGET_BUFFER_MODE
+	data->target_callbacks.buf_write_received = target_cfg->callbacks->buf_write_received;
+	data->target_callbacks.buf_read_requested = target_cfg->callbacks->buf_read_requested;
+#endif /*CONFIG_I2C_TARGET_BUFFER_MODE */
 
 	i2c_target_enable(dev, false);
 	i2c_target_int_disable(dev, SERCOM_I2CS_INTENSET_Msk);
