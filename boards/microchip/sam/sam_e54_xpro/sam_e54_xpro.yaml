@@ -18,6 +18,7 @@ supported:
   - entropy
   - eic
   - flash
+  - mcuboot
   - gpio
   - hwinfo
   - i2c

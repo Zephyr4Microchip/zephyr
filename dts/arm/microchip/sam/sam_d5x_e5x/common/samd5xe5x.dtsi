@@ -187,7 +187,7 @@
 
 		nvmctrl: nvmctrl@41004000 {
 			compatible = "microchip,nvmctrl-g1-flash";
-			status = "disabled";
+			status = "okay";
 			reg = <0x41004000 0x30>;
 			interrupts = <29 0>, <30 0>;
 			clocks = <&mclkperiph CLOCK_MCHP_MCLKPERIPH_ID_APBB_NVMCTRL>;
@@ -202,7 +202,7 @@
 				erase-block-size = <8192>;
 			};
 
-		    userrow: nvmuserrow@804000 {
+			userrow: nvmuserrow@804000 {
 				compatible = "soc-nv-flash";
 				reg = <0x00804000 0x200>;
 				write-block-size = <8>;

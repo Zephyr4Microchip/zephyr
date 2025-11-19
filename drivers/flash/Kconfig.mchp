@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 config FLASH_MCHP_NVMCTRL_G1
-	bool "Microchip Flash Driver for NVMCTRL G1 IP"
+	bool "Microchip G1 Flash Driver for NVMCTRL"
 	default y
 	depends on DT_HAS_MICROCHIP_NVMCTRL_G1_FLASH_ENABLED
 	select FLASH_HAS_PAGE_LAYOUT

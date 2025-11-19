@@ -6,16 +6,17 @@
 
 /**
  * @file mchp_flash.h
- * @brief Microchip Flash Controller IP Header Inclusion
+ * @brief Microchip Flash Controller Driver Header
  *
- * This header file serves as a central inclusion point for IP-specific
- * flash controller headers for Microchip devices. Depending on the build
- * configuration, it conditionally includes the appropriate header files
- * for the supported flash controller IP blocks.
- *
- * @note This file is to manage inclusion of the correct IP-specific headers.
+ * @details
+ * This header provides conditional inclusion of Microchip flash controller
+ * driver headers for supported controller versions (e.g., G1, G2).
+ * Depending on the build configuration, the appropriate version-specific
+ * header file is included to enable support for the corresponding flash
+ * controller peripheral.
  *
  */
+
 #ifndef INCLUDE_ZEPHYR_DRIVERS_FLASH_MCHP_FLASH_H_
 #define INCLUDE_ZEPHYR_DRIVERS_FLASH_MCHP_FLASH_H_
 
