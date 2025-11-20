@@ -12,7 +12,9 @@ ram: 256
 supported:
   - clock
   - dma
+  - flash
   - gpio
+  - mcuboot
   - pinctrl
   - pwm
   - uart
