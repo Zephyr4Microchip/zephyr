@@ -18,6 +18,8 @@ tests:
       - nucleo_u385rg_q
       - stm32h7s78_dk
       - sam_e54_xpro
+      - pic32cx_sg41_cult
+      - pic32cx_sg61_cult
     integration_platforms:
       - nrf52840dk/nrf52840
       - esp32_devkitc/esp32/procpu
