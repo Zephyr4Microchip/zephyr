@@ -1,9 +1,9 @@
-# Copyright (c) 2025 Microchip Technology Inc.
+# Copyright (c) 2026 Microchip Technology Inc.
 # SPDX-License-Identifier: Apache-2.0
 
 config SOC_SERIES_PIC32CK_GC00
 	bool
-	select SOC_FAMILY_MICROCHIP_PIC32CK_GC
+	select SOC_FAMILY_MICROCHIP_PIC32CK_SG_GC
 	help
 	  Enable support for Microchip PIC32CK GC00 Cortex-M33 microcontrollers.
 
