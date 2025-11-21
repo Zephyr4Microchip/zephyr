@@ -1,0 +1,19 @@
+/*
+ * Copyright (c) 2025 Microchip Technology Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/* Memory configuration for 1025 memory variant */
+
+/ {
+	soc {
+		flash0: flash@c000000 {
+			reg = <0x0c000000 DT_SIZE_M(1)>;
+		};
+
+		sram0: memory@20000000 {
+			reg = <0x20000000 DT_SIZE_K(256)>;
+		};
+	};
+};
