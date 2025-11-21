@@ -1,9 +1,9 @@
-.. zephyr:board:: pic32ck_gc_cult
+.. zephyr:board:: pic32ck_gc01_cult
 
 Overview
 ********
 
-The PIC32CK GC Curiosity Ultra evaluation kit is a hardware platform
+The PIC32CK GC01 Curiosity Ultra evaluation kit is a hardware platform
 to evaluate the Microchip PIC32CK GC microcontrollers, and the
 evaluation kit part number is EV44P93A. This kit provides a comprehensive
 set of features that allow users to explore the PIC32CK GC peripherals
@@ -43,7 +43,7 @@ Supported Features
 Connections and IOs
 ===================
 
-The `PIC32CK GC Curiosity Ultra User Guide`_ has detailed information about board connections.
+The `PIC32CK GC01 Curiosity Ultra User Guide`_ has detailed information about board connections.
 
 Programming & Debugging
 ***********************
@@ -74,9 +74,9 @@ To flash the board using the J-Link debugger, follow the steps below:
 
    .. code-block:: console
 
-      west build -b pic32ck_gc_cult -p -s samples/basic/blinky
+      west build -b pic32ck_gc01_cult -p -s samples/basic/blinky
 
-   This will build the Blinky application for the ``pic32ck_gc_cult`` board.
+   This will build the Blinky application for the ``pic32ck_gc01_cult`` board.
 
 4. Flash the Device
 
@@ -106,9 +106,9 @@ To debug the board using the J-Link debugger, follow the steps below:
 
    .. code-block:: console
 
-      west build -b pic32ck_gc_cult -p -s samples/basic/blinky
+      west build -b pic32ck_gc01_cult -p -s samples/basic/blinky
 
-   This will build the Blinky application for the ``pic32ck_gc_cult`` board.
+   This will build the Blinky application for the ``pic32ck_gc01_cult`` board.
 
 2. Debug the Application
 
@@ -165,8 +165,8 @@ To debug using VSCode, create or edit the **.vscode/launch.json** file in your p
                ],
 
                //Zephyr SDK toolchain paths
-               "gdbPath": "***/zephyr-sdk-0.17.4/arm-zephyr-eabi/bin/arm-zephyr-eabi-gdb.exe",
-               "objdumpPath": "***/zephyr-sdk-0.17.4/arm-zephyr-eabi/bin/arm-zephyr-eabi-objdump.exe",
+               "gdbPath": "***/zephyr-sdk-x.xx.x/arm-zephyr-eabi/bin/arm-zephyr-eabi-gdb.exe",
+               "objdumpPath": "***/zephyr-sdk-x.xx.x/arm-zephyr-eabi/bin/arm-zephyr-eabi-objdump.exe",
          }
       ]
    }
@@ -198,10 +198,10 @@ PIC32CK GC Product Page:
 PIC32CK SG/GC Product Family Page:
    https://www.microchip.com/en-us/products/microcontrollers/32-bit-mcus/pic32-sam/pic32ck-sg-gc
 
-.. _PIC32CK GC Curiosity Ultra evaluation kit Page:
+.. _PIC32CK GC01 Curiosity Ultra evaluation kit Page:
    https://www.microchip.com/en-us/development-tool/EV44P93A
 
-.. _PIC32CK GC Curiosity Ultra User Guide:
+.. _PIC32CK GC01 Curiosity Ultra User Guide:
    https://ww1.microchip.com/downloads/aemDocuments/documents/MCU32/ProductDocuments/UserGuides/PIC32CK-SG01-GC01-Curiosity-Ultra-User-Guide-DS70005529.pdf
 
 .. _J-Link software:

@@ -1,20 +1,21 @@
 /*
- * Copyright (c) 2025 Microchip Technology Inc.
+ * Copyright (c) 2026 Microchip Technology Inc.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 
 /dts-v1/;
-#include <microchip/pic32c/pic32ck_gc/pic32ck_gc01/pic32ck2051gc01144.dtsi>
+#include <microchip/pic32c/pic32ck_sg_gc/pic32ck_gc01/pic32ck2051gc01144.dtsi>
 #include <zephyr/dt-bindings/input/input-event-codes.h>
 
 / {
-	model = "PIC32CK GC Curiosity Ultra";
-	compatible = "microchip,pic32ck_gc_cult";
+	model = "PIC32CK GC01 Curiosity Ultra";
+	compatible = "microchip,pic32ck_gc01_cult";
 
 	chosen {
 		zephyr,sram = &sram0;
-		zephyr,flash = &flash0;
+		zephyr,flash = &flash1;
+		zephyr,code-partition = &code_partition;
 	};
 
 	aliases {
@@ -29,12 +30,12 @@
 
 		led0: led_0 {
 			gpios = <&portd 20 GPIO_ACTIVE_HIGH>;
-			label = "Green LED";
+			label = "LED0";
 		};
 
 		led1: led_1 {
 			gpios = <&portb 25 GPIO_ACTIVE_HIGH>;
-			label = "Red LED";
+			label = "LED1";
 		};
 	};
 
@@ -61,19 +62,27 @@
 		#address-cells = <1>;
 		#size-cells = <1>;
 
-		boot_partition: partition@8000000 {
+		boot_partition: partition@0 {
 			label = "boot_flash";
-			reg = <0x08000000 0x00020000>; /* 128 KB Boot Flash */
+			reg = <0x0 DT_SIZE_K(128)>;
 		};
+	};
+};
 
-		code_partition: partition@c000000 {
+&flash1 {
+	partitions {
+		compatible = "fixed-partitions";
+		#address-cells = <1>;
+		#size-cells = <1>;
+
+		code_partition: partition@0 {
 			label = "program_flash";
-			reg = <0x0c000000 0x00200000>; /* 2 MB Program Flash (PFM) */
+			reg = <0x0 DT_SIZE_K(2032)>;
 		};
 
-		storage_partition: partition@c1fc000 {
+		storage_partition: partition@1fc000 {
 			label = "storage";
-			reg = <0x00c1fc000 0x4000>;
+			reg = <0x1fc000 DT_SIZE_K(16)>;
 		};
 	};
 };
@@ -82,12 +91,10 @@
 	clock-frequency = <48000000>;
 };
 
-
 &portb {
-	status="okay";
+	status = "okay";
 };
 
-
 &portd {
-	status="okay";
+	status = "okay";
 };

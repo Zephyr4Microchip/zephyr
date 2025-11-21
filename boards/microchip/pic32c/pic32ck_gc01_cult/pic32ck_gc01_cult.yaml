@@ -1,8 +1,8 @@
-# Copyright (c) 2025 Microchip Technology Inc.
+# Copyright (c) 2026 Microchip Technology Inc.
 # SPDX-License-Identifier: Apache-2.0
 
-identifier: pic32ck_gc_cult
-name: PIC32CK GC Curiosity Ultra
+identifier: pic32ck_gc01_cult
+name: PIC32CK GC01 Curiosity Ultra
 type: mcu
 arch: arm
 toolchain:
