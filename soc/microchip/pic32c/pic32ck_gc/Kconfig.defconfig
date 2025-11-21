@@ -1,0 +1,24 @@
+# Copyright (c) 2026 Microchip Technology Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+if SOC_FAMILY_MICROCHIP_PIC32CK_GC
+
+config NUM_IRQS
+	default 158
+
+config SYS_CLOCK_HW_CYCLES_PER_SEC
+	default $(dt_node_int_prop_int,/cpus/cpu@0,clock-frequency)
+
+config ROMSTART_RELOCATION_ROM
+	bool
+	default y
+
+config ROMSTART_REGION_ADDRESS
+	hex
+	default $(dt_nodelabel_reg_addr_hex,boot_partition)
+
+config ROMSTART_REGION_SIZE
+	hex
+	default $(dt_nodelabel_reg_size_hex,boot_partition,0,k)
+
+endif # SOC_FAMILY_MICROCHIP_PIC32CK_GC
