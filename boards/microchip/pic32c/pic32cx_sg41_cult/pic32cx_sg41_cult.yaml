@@ -10,7 +10,7 @@ toolchain:
 flash: 1024
 ram: 256
 supported:
-  - clock
+  - clock_control
   - dma
   - flash
   - gpio
