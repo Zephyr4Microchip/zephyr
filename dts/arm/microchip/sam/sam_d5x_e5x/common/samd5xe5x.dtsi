@@ -10,11 +10,6 @@
 #include <zephyr/dt-bindings/clock/mchp_sam_d5x_e5x_clock.h>
 
 / {
-	chosen {
-		zephyr,entropy = &trng;
-		zephyr,flash-controller = &nvmctrl;
-	};
-
 	cpus {
 		#address-cells = <1>;
 		#size-cells = <0>;
@@ -350,11 +345,11 @@
 
 		trng: random@42002800 {
 			compatible = "microchip,trng-g1-entropy";
-			status = "disabled";
 			clocks = <&mclkperiph CLOCK_MCHP_MCLKPERIPH_ID_APBC_TRNG>;
 			clock-names = "mclk";
 			reg = <0x42002800 0x1e>;
 			interrupts = <131 0>;
+			status = "disabled";
 		};
 
 		sercom4: sercom@43000000 {

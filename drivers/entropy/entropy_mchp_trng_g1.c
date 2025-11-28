@@ -4,460 +4,220 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-/**
- * @file entropy_mchp_trng_g1.c
- * @brief Microchip g1 True Random Number Generator (TRNG) Entropy driver for Zephyr
- *
- * This file implements the driver for the Microchip g1 TRNG hardware,
- * providing entropy services to the Zephyr OS entropy subsystem.
- *
- */
+#define DT_DRV_COMPAT microchip_trng_g1_entropy
+
 #include <soc.h>
 #include <zephyr/logging/log.h>
 #include <zephyr/drivers/entropy.h>
 #include <zephyr/drivers/clock_control/mchp_clock_control.h>
 
-/*******************************************
- * @brief Devicetree definitions
- *******************************************/
-#define DT_DRV_COMPAT microchip_trng_g1_entropy
-
-/*******************************************
- * Const and Macro Defines
- *******************************************/
 LOG_MODULE_REGISTER(entropy_mchp_trng_g1, CONFIG_ENTROPY_LOG_LEVEL);
 
-/** @brief Macro indicating successful operation. */
-#define ENTROPY_MCHP_SUCCESS 0
-
-/** @brief Timeout value for TRNG readiness polling. */
-#define TRNG_TIMEOUT 1000000
-
-/** @brief Use busy-waiting to get entropy data. */
-#define ENTROPY_BLOCKING ENTROPY_BUSYWAIT
-
-/** @brief Do not block when getting entropy data. */
-#define ENTROPY_NON_BLOCKING 0
-
-/** @brief Macro to access the TRNG register block from the device config. */
-#define ENTROPY_REGS ((const entropy_mchp_config_t *)(dev)->config)->regs
-
-/**
- * @brief Timeout for acquiring the entropy data ready semaphore.
- *
- * Specifies the timeout (in milliseconds) to wait for the semaphore.
- */
-#define ENTROPY_DATA_RDY_SEM_TIMEOUT K_MSEC(1)
-
-/**
- * @brief Initial count for the entropy data ready semaphore.
- *
- * The semaphore starts with a count of 0, so the first take will block until released.
- */
+#define ENTROPY_MCHP_SUCCESS            0
+#define ENTROPY_BLOCKING                ENTROPY_BUSYWAIT
+#define ENTROPY_NON_BLOCKING            0
+#define ENTROPY_DATA_RDY_SEM_TIMEOUT    K_USEC(10)
 #define ENTROPY_DATA_RDY_SEM_INIT_COUNT 0
-
-/**
- * @brief Maximum count for the entropy data ready semaphore.
- *
- * Sets the maximum number of times the semaphore can be given.
- */
-#define ENTROPY_DATA_RDY_SEM_LIMIT 1
-
-/**
- * @brief Initialize the entropy data ready semaphore.
- *
- * Initializes the semaphore with the defined initial count and limit.
- *
- * @param p_sem Pointer to the semaphore to initialize.
- */
-#define ENTROPY_DATA_RDY_SEM_INIT(p_sem)                                                           \
-	k_sem_init(p_sem, ENTROPY_DATA_RDY_SEM_INIT_COUNT, ENTROPY_DATA_RDY_SEM_LIMIT)
-
-/**
- * @brief Take the entropy data ready semaphore.
- *
- * Attempts to take the semaphore, blocking for the defined timeout.
- *
- * @param p_sem Pointer to the semaphore to take.
- * @return 0 on success, negative error code on failure or timeout.
- */
+#define ENTROPY_DATA_RDY_SEM_LIMIT      1
 #define ENTROPY_DATA_RDY_SEM_TAKE(p_sem)                                                           \
 	k_sem_take((p_sem),                                                                        \
 		   ((k_is_in_isr() == true) ? (K_NO_WAIT) : (ENTROPY_DATA_RDY_SEM_TIMEOUT)))
 
-/*******************************************
- * @brief Data type definitions
- ******************************************/
-/**
- * @struct entropy_mchp_clock
- * @brief Clock configuration structure for entropy (TRNG) peripheral.
- *
- * This structure defines the clock configuration for the entropy (TRNG)
- *  peripheral, including the clock device and subsystem.
- */
+/* Timeout values for WAIT_FOR macro*/
+#define TRNG_TIMEOUT_VALUE_US 10
+#define DELAY_US              1
 
-typedef struct entropy_mchp_clock {
+struct entropy_mchp_clock {
 	const struct device *clock_dev;
 	clock_control_subsys_t mclk_sys;
-} entropy_mchp_clock_t;
+};
 
-/**
- * @struct entropy_mchp_config_t
- * @brief Entropy configuration structure.
- *
- * This structure defines the configuration for the entropy (TRNG) peripheral.
- */
-typedef struct entropy_mchp_config {
-
-	/** Pointer to the TRNG registers */
+struct entropy_mchp_config {
 	trng_registers_t *regs;
-
-	/** Clock control configuration for the TRNG subsystem */
-	entropy_mchp_clock_t entropy_clock;
-
-	/**< Function to configure IRQ */
+	struct entropy_mchp_clock entropy_clock;
 	void (*irq_config_func)(const struct device *dev);
-
-	/* Enable peripheral operation in standby sleep mode. */
 	uint8_t run_in_standby;
+};
 
-} entropy_mchp_config_t;
-
-/**
- * @struct entropy_mchp_dev_data
- * @brief Structure to hold entropy device data.
- */
-typedef struct entropy_mchp_dev_data {
-
-	/**< Pointer to the entropy device instance. */
+struct entropy_mchp_dev_data {
 	const struct device *dev;
-
-	/**< Semaphore lock for entropy interrupt operations */
 	struct k_sem entropy_data_rdy_sem;
-
-	/**< Random generated data */
 	volatile uint32_t trng_data;
+};
 
-} entropy_mchp_dev_data_t;
-
-/*******************************************
- * @brief Helper functions
- ******************************************/
-/**
- * @brief Enable or disable the TRNG Data Ready interrupt.
- *
- * This function sets or clears the Data Ready interrupt for the TRNG peripheral.
- *
- * @param dev    Pointer to the device structure.
- * @param enable If true, enable the interrupt; if false, disable it.
- */
-static void entropy_trng_interrupt_enable(const struct device *dev, bool enable)
+static void entropy_trng_interrupt_enable(const struct device *dev)
 {
-	const entropy_mchp_config_t *const entropy_cfg = dev->config;
+	const struct entropy_mchp_config *const entropy_cfg = dev->config;
 	trng_registers_t *trng_regs = entropy_cfg->regs;
 
-	if (enable == true) {
-
-		/* Enable the Data Ready interrupt */
-		trng_regs->TRNG_INTENSET = TRNG_INTENSET_DATARDY(1);
-	} else {
-
-		/* Disable the Data Ready interrupt */
-		trng_regs->TRNG_INTENCLR = TRNG_INTENCLR_DATARDY(1);
-	}
+	trng_regs->TRNG_INTENSET = TRNG_INTENSET_DATARDY(1);
 }
 
-/**
- * @brief Enable the TRNG module.
- *
- * This function enables the TRNG peripheral module.
- *
- * @param dev Pointer to the device structure.
- */
-static inline void entropy_trng_enable(const struct device *dev)
+static void entropy_trng_interrupt_disable(const struct device *dev)
 {
-	/* Enable TRNG module */
-	ENTROPY_REGS->TRNG_CTRLA |= TRNG_CTRLA_ENABLE(1);
+	const struct entropy_mchp_config *const entropy_cfg = dev->config;
+	trng_registers_t *trng_regs = entropy_cfg->regs;
+
+	trng_regs->TRNG_INTENCLR = TRNG_INTENCLR_DATARDY(1);
 }
 
-/**
- * @brief Check if TRNG data is ready.
- *
- * This function checks if the TRNG has generated new random data.
- *
- * @param dev Pointer to the device structure for the TRNG peripheral.
- *
- * @retval 0 if data is ready
- * @retval 1 if not ready
- */
+static void entropy_trng_enable(const struct device *dev)
+{
+	const struct entropy_mchp_config *const entropy_cfg = dev->config;
+	trng_registers_t *trng_regs = entropy_cfg->regs;
+	uint8_t reg8_val = trng_regs->TRNG_CTRLA;
+
+	reg8_val &= ~TRNG_CTRLA_ENABLE_Msk;
+	reg8_val |= TRNG_CTRLA_ENABLE(1);
+	trng_regs->TRNG_CTRLA = reg8_val;
+}
+
 static inline uint8_t entropy_ready(const struct device *dev)
 {
-	entropy_mchp_dev_data_t *mchp_entropy_data = dev->data;
+	struct entropy_mchp_dev_data *mchp_entropy_data = dev->data;
 
 	return ENTROPY_DATA_RDY_SEM_TAKE(&mchp_entropy_data->entropy_data_rdy_sem);
 }
 
-/**
- * @brief Enable or disable run in standby mode for the TRNG peripheral.
- *
- * This function sets the run in standby mode for the TRNG peripheral based on the device
- * configuration.
- *
- * @param dev Pointer to the device structure.
- */
 static void entropy_runstandby_enable(const struct device *dev)
 {
-	const entropy_mchp_config_t *const entropy_cfg = dev->config;
+	const struct entropy_mchp_config *const entropy_cfg = dev->config;
 	trng_registers_t *trng_regs = entropy_cfg->regs;
-	uint32_t reg32_val = trng_regs->TRNG_CTRLA;
+	uint8_t reg8_val = trng_regs->TRNG_CTRLA;
 
-	reg32_val &= ~TRNG_CTRLA_RUNSTDBY_Msk;
-	reg32_val |= TRNG_CTRLA_RUNSTDBY(entropy_cfg->run_in_standby);
-	trng_regs->TRNG_CTRLA = reg32_val;
+	reg8_val &= ~TRNG_CTRLA_RUNSTDBY_Msk;
+	reg8_val |= TRNG_CTRLA_RUNSTDBY(entropy_cfg->run_in_standby);
+	trng_regs->TRNG_CTRLA = reg8_val;
 }
 
-/**
- * @brief Wait for TRNG to be ready.
- *
- * This function waits for the True Random Number Generator (TRNG) to be ready
- * by checking the readiness status. It will timeout if the TRNG is not ready
- * within a specified period.
- *
- * @param dev Pointer to the device structure for the TRNG peripheral.
- *
- * @retval 0 on success
- * @retval -ETIMEDOUT on timeout
- */
 static int entropy_wait_ready(const struct device *dev)
 {
-	/* Wait for the TRNG to be ready */
-	int timeout = TRNG_TIMEOUT; /* Timeout value */
-	int ret = 0;
+	const struct entropy_mchp_config *const entropy_cfg = dev->config;
+	trng_registers_t *trng_regs = entropy_cfg->regs;
+	struct entropy_mchp_dev_data *mchp_entropy_data = dev->data;
 
-	while (entropy_ready(dev) != 0) {
-		if (timeout == 0) {
-			ret = -ETIMEDOUT;
-			break;
-		}
-		timeout--;
+	if (WAIT_FOR((trng_regs->TRNG_INTFLAG & TRNG_INTFLAG_DATARDY_Msk) != 0,
+		     TRNG_TIMEOUT_VALUE_US, k_busy_wait(DELAY_US)) == false) {
+		LOG_ERR("TRNG not ready — timeout occurred (busy-wait)");
+		return -ETIMEDOUT;
 	}
 
-	return ret;
+	mchp_entropy_data->trng_data = trng_regs->TRNG_DATA;
+
+	return ENTROPY_MCHP_SUCCESS;
 }
 
-/**
- * @brief Read entropy data from the TRNG.
- *
- * This function reads random data from the TRNG hardware into the provided buffer.
- * It supports both blocking and non-blocking modes.
- *
- * @param dev Pointer to the device structure for the TRNG peripheral.
- * @param buffer Pointer to the buffer to store random data.
- * @param length Number of bytes to read.
- * @param flags Flags to control blocking/non-blocking behavior.
- *
- * @retval Number of bytes read on success
- * @retval -EAGAIN if data is not ready (non-blocking)
- * @retval -ETIMEDOUT if TRNG is not ready in time (blocking)
- * @retval -EINVAL on invalid arguments
- */
 static int entropy_read(const struct device *dev, uint8_t *buffer, uint16_t length, uint32_t flags)
 {
-	int ret = -EINVAL;
-	uint16_t cnt = length;
-	entropy_mchp_dev_data_t *mchp_entropy_data = dev->data;
+	int ret;
+	uint16_t bytes_left = length;
+	struct entropy_mchp_dev_data *mchp_entropy_data = dev->data;
 
-	while (length > 0) {
+	if (buffer == NULL) {
+		LOG_ERR("Invalid argument — buffer is NULL");
+		return -EINVAL;
+	}
 
-		size_t to_copy = 0;
-
-		/* Enable DATARDY interrupt */
-		entropy_trng_interrupt_enable(dev, true);
-
+	while (bytes_left > 0U) {
 		if ((flags & ENTROPY_BUSYWAIT) != 0U) {
-			int wait = entropy_wait_ready(dev);
-
-			if (wait < 0) {
-				ret = wait;
-				break;
-			}
+			entropy_trng_interrupt_disable(dev);
+			ret = entropy_wait_ready(dev);
 		} else {
-			if (entropy_ready(dev) != 0) {
-				ret = -EAGAIN;
-				break;
-			}
-			ret = (int)(cnt - length);
+			entropy_trng_interrupt_enable(dev);
+			ret = entropy_ready(dev);
 		}
 
-		to_copy = MIN(length, sizeof(mchp_entropy_data->trng_data));
+		if (ret != ENTROPY_MCHP_SUCCESS) {
+			LOG_ERR("TRNG not ready (ret=%d)", ret);
+			return ret;
+		}
 
-		uint8_t *src = (uint8_t *)&mchp_entropy_data->trng_data;
-		uint8_t *dst = buffer;
+		size_t to_copy = MIN(bytes_left, sizeof(mchp_entropy_data->trng_data));
+		uint32_t val = mchp_entropy_data->trng_data;
+		const uint8_t *src = (const uint8_t *)&val;
 
 		for (size_t i = 0; i < to_copy; i++) {
-			*dst = *src;
-			dst++;
-			src++;
+			buffer[i] = src[i];
 		}
 
 		buffer += to_copy;
-		length -= to_copy;
+		bytes_left -= to_copy;
 	}
 
-	if (length == 0) {
-		ret = (int)cnt;
-	}
-
-	return ret;
+	return length;
 }
 
-/******************************************************************************
- * @brief API functions
- *****************************************************************************/
-/**
- * @brief Get entropy (random data) from the TRNG (blocking).
- *
- * This function retrieves random data from the TRNG in a blocking manner.
- *
- * @param dev Pointer to the device structure for the TRNG peripheral.
- * @param buffer Pointer to the buffer to store random data.
- * @param length Number of bytes to read.
- *
- * @retval 0 on success
- * @retval -EINVAL on invalid arguments or failure
- */
 static int entropy_mchp_get_entropy(const struct device *dev, uint8_t *buffer, uint16_t length)
 {
-	int ret = -EINVAL;
-
-	if (length > 0) {
-
-		/* Always blocking in this API */
-		int bk_ret = entropy_read(dev, buffer, length, ENTROPY_BLOCKING);
-
-		if (bk_ret == length) {
-			ret = 0;
-		}
-	} else {
-		LOG_DBG("Invalid length:error %d", ret);
+	if (length == 0) {
+		LOG_ERR("Invalid length: %d", length);
+		return -EINVAL;
 	}
 
-	return ret;
+	int ret = entropy_read(dev, buffer, length, ENTROPY_BLOCKING);
+
+	return (ret == length) ? ENTROPY_MCHP_SUCCESS : ret;
 }
 
-/**
- * @brief Get entropy (random data) from the TRNG (ISR context).
- *
- * This function retrieves random data from the TRNG, supporting both blocking
- * and non-blocking modes, suitable for use in interrupt service routines.
- *
- * @param dev Pointer to the device structure for the TRNG peripheral.
- * @param buffer Pointer to the buffer to store random data.
- * @param length Number of bytes to read.
- * @param flags Flags to control blocking/non-blocking behavior.
- *
- * @retval Number of bytes read on success
- * @retval -EAGAIN if data is not ready (non-blocking)
- * @retval -EINVAL on invalid arguments
- */
 static int entropy_mchp_get_entropy_isr(const struct device *dev, uint8_t *buffer, uint16_t length,
 					uint32_t flags)
 {
-	int ret = -EINVAL;
+	int ret;
 
-	if (length > 0) {
-		if ((flags & ENTROPY_BUSYWAIT) == 0U) {
+	if (length == 0) {
+		LOG_ERR("Invalid length: %d", length);
+		return -EINVAL;
+	}
 
-			/* Non-blocking: only read if ready */
-			ret = entropy_read(dev, buffer, length, ENTROPY_NON_BLOCKING);
-
-		} else {
-
-			/* Blocking: wait until ready */
-			ret = entropy_read(dev, buffer, length, ENTROPY_BLOCKING);
-		}
+	if ((flags & ENTROPY_BUSYWAIT) == ENTROPY_BUSYWAIT) {
+		ret = entropy_read(dev, buffer, length, ENTROPY_BLOCKING);
+	} else {
+		ret = entropy_read(dev, buffer, length, ENTROPY_NON_BLOCKING);
 	}
 
 	return ret;
 }
 
-/**
- * @brief Initialize the entropy device.
- *
- * This function initializes the entropy device.
- *
- * @param dev Pointer to the device structure.
- *
- * @return 0 on success.
- */
 static int entropy_mchp_init(const struct device *dev)
 {
-	const entropy_mchp_config_t *entropy_cfg = dev->config;
-	entropy_mchp_dev_data_t *mchp_entropy_data = dev->data;
-	int ret = ENTROPY_MCHP_SUCCESS;
+	const struct entropy_mchp_config *entropy_cfg = dev->config;
+	struct entropy_mchp_dev_data *mchp_entropy_data = dev->data;
 
-	ret = clock_control_on(entropy_cfg->entropy_clock.clock_dev,
-			       entropy_cfg->entropy_clock.mclk_sys);
-
-	if ((ret == ENTROPY_MCHP_SUCCESS) || (ret == -EALREADY)) {
-
-		ENTROPY_DATA_RDY_SEM_INIT(&mchp_entropy_data->entropy_data_rdy_sem);
-
-		entropy_cfg->irq_config_func(dev);
-
-		entropy_runstandby_enable(dev);
-
-		entropy_trng_enable(dev);
-
-		ret = ENTROPY_MCHP_SUCCESS;
+	int ret = clock_control_on(entropy_cfg->entropy_clock.clock_dev,
+				   entropy_cfg->entropy_clock.mclk_sys);
+	if ((ret != ENTROPY_MCHP_SUCCESS) && (ret != -EALREADY)) {
+		LOG_ERR("Failed to enable clock (ret=%d)", ret);
+		return ret;
 	}
 
-	return ret;
+	k_sem_init(&mchp_entropy_data->entropy_data_rdy_sem, ENTROPY_DATA_RDY_SEM_INIT_COUNT,
+		   ENTROPY_DATA_RDY_SEM_LIMIT);
+
+	entropy_cfg->irq_config_func(dev);
+
+	entropy_runstandby_enable(dev);
+	entropy_trng_enable(dev);
+
+	return ENTROPY_MCHP_SUCCESS;
 }
 
-/**
- * @brief ISR for Microchip TRNG peripheral.
- *
- * Handles TRNG interrupts by signaling data ready and reading new entropy data.
- *
- * @param dev Pointer to the entropy device structure.
- */
 static void entropy_mchp_isr(const struct device *dev)
 {
-	/* Disable DATARDY interrupt */
-	entropy_trng_interrupt_enable(dev, false);
+	entropy_trng_interrupt_disable(dev);
+	struct entropy_mchp_dev_data *mchp_entropy_data = dev->data;
+	const struct entropy_mchp_config *const entropy_cfg = dev->config;
 
-	entropy_mchp_dev_data_t *mchp_entropy_data = dev->data;
-
-	/* Read random generated data */
-	mchp_entropy_data->trng_data = ENTROPY_REGS->TRNG_DATA;
+	mchp_entropy_data->trng_data = entropy_cfg->regs->TRNG_DATA;
 
 	k_sem_give(&mchp_entropy_data->entropy_data_rdy_sem);
 }
 
-/******************************************************************************
- * @brief Zephyr driver instance creation
- *****************************************************************************/
-/** Entropy driver API structure. */
 static DEVICE_API(entropy, entropy_mchp_api) = {.get_entropy = entropy_mchp_get_entropy,
 						.get_entropy_isr = entropy_mchp_get_entropy_isr};
 
-/**
- * @brief Declare the ENTROPY IRQ handler.
- *
- * @param n Instance number.
- */
 #define ENTROPY_MCHP_IRQ_HANDLER_DECL(n)                                                           \
 	static void entropy_mchp_irq_config_##n(const struct device *dev)
 
-/**
- * @brief Define and connect the ENTROPY IRQ handler for a given instance.
- *
- * This macro defines the IRQ configuration function for the specified ENTROPY instance,
- * connects the ENTROPY interrupt to its handler, and enables the IRQ.
- *
- * @param n Instance number.
- */
 #define ENTROPY_MCHP_IRQ_HANDLER(n)                                                                \
 	static void entropy_mchp_irq_config_##n(const struct device *dev)                          \
 	{                                                                                          \
@@ -466,16 +226,8 @@ static DEVICE_API(entropy, entropy_mchp_api) = {.get_entropy = entropy_mchp_get_
 		irq_enable(DT_INST_IRQ_BY_IDX(n, 0, irq));                                         \
 	}
 
-/**
- * @brief Initialize entropy device instances.
- *
- * This macro initializes instances of the entropy device for each compatible
- * device tree node.
- *
- * @param n Device instance number.
- */
 #define ENTROPY_MCHP_CONFIG_DEFN(n)                                                                \
-	static const entropy_mchp_config_t entropy_mchp_config_##n = {                             \
+	static const struct entropy_mchp_config entropy_mchp_config_##n = {                        \
 		.regs = (trng_registers_t *)DT_INST_REG_ADDR(n),                                   \
 		.entropy_clock = {.clock_dev = DEVICE_DT_GET(DT_NODELABEL(clock)),                 \
 				  .mclk_sys = (void *)(DT_INST_CLOCKS_CELL_BY_NAME(n, mclk,        \
@@ -483,42 +235,13 @@ static DEVICE_API(entropy, entropy_mchp_api) = {.get_entropy = entropy_mchp_get_
 		.irq_config_func = entropy_mchp_irq_config_##n,                                    \
 		.run_in_standby = DT_INST_PROP(n, run_in_standby_en)}
 
-/**
- * @brief Macro to define the entropy data structure for a specific instance.
- *
- * This macro defines the entropy data structure for a specific instance of
- * the entropy device.
- *
- * @param n Instance number.
- */
-#define ENTROPY_MCHP_DATA_DEFN(n) static entropy_mchp_dev_data_t entropy_mchp_data_##n
+#define ENTROPY_MCHP_DATA_DEFN(n) static struct entropy_mchp_dev_data entropy_mchp_data_##n
 
-/**
- * @brief Macro to define the device structure for a specific instance of the entropy device.
- *
- * This macro defines the device structure for a specific instance of the entropy device.
- * It uses the DEVICE_DT_INST_DEFINE macro to create the device instance with the specified
- * initialization function, data structure, configuration structure, and driver API.
- *
- * @param n Instance number.
- */
 #define ENTROPY_MCHP_DEVICE_DT_DEFN(n)                                                             \
-	DEVICE_DT_INST_DEFINE(n, entropy_mchp_init,     /* init function */                        \
-			      NULL,                     /* PM device (or NULL) */                  \
-			      &entropy_mchp_data_##n,   /* data (or pointer to data struct) */     \
-			      &entropy_mchp_config_##n, /* config (or pointer to config struct) */ \
-			      POST_KERNEL,              /* initialization level */                 \
-			      CONFIG_KERNEL_INIT_PRIORITY_DEVICE, /* initialization priority */    \
-			      &entropy_mchp_api                   /* API struct */                 \
-	)
-/**
- * @brief Initialize entropy device instances.
- *
- * This macro initializes instances of the entropy device for each compatible
- * device tree node.
- *
- * @param n Device instance number.
- */
+	DEVICE_DT_INST_DEFINE(n, entropy_mchp_init, NULL, &entropy_mchp_data_##n,                  \
+			      &entropy_mchp_config_##n, POST_KERNEL,                               \
+			      CONFIG_KERNEL_INIT_PRIORITY_DEVICE, &entropy_mchp_api)
+
 #define ENTROPY_DEVICE_INIT(n)                                                                     \
 	ENTROPY_MCHP_IRQ_HANDLER_DECL(n);                                                          \
 	ENTROPY_MCHP_CONFIG_DEFN(n);                                                               \
