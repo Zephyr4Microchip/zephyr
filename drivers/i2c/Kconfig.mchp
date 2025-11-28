@@ -13,7 +13,7 @@ config I2C_MCHP_SERCOM_G1
 	select PINCTRL
 	select I2C_MCHP_SERCOM
 	help
-	  Enable support for Microchip I2C driver for SERCOM_G1 IP.
+	  Enable support for Microchip SERCOM I2C g1 driver.
 
 if I2C_MCHP_SERCOM
 
