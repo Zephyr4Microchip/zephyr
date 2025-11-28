@@ -17,5 +17,6 @@ supported:
   - mcuboot
   - pinctrl
   - pwm
+  - reset
   - uart
 vendor: microchip
