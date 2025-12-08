@@ -22,6 +22,14 @@ config CLOCK_CONTROL_MCHP_PIC32CM_JH
 	help
 	  Enable clock controller driver for Microchip PIC32CM_JH family.
 
+config CLOCK_CONTROL_MCHP_PIC32CZ_CA
+	bool
+	default y
+	depends on DT_HAS_MICROCHIP_PIC32CZ_CA_CLOCK_ENABLED
+	select CLOCK_CONTROL_MCHP_COMMON
+	help
+	  Enable clock controller driver for Microchip PIC32CZ_CA family.
+
 if CLOCK_CONTROL_MCHP_COMMON
 
 config CLOCK_CONTROL_MCHP_CONFIG_BOOTUP
