@@ -132,6 +132,7 @@
 			compatible = "microchip,nvmctrl-g1-flash";
 			reg = <0x41004000 0x30>;
 			interrupts = <29 0>, <30 0>;
+			interrupt-names = "flash", "eeprom";
 			clocks = <&mclkperiph CLOCK_MCHP_MCLKPERIPH_ID_APBB_NVMCTRL>;
 			clock-names = "mclk";
 			lock-regions = <32>;
