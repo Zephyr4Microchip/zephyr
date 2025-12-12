@@ -265,11 +265,8 @@
 };
 
 &rtc {
-	compatible = "microchip,rtc-g1";
-	status = "okay";
 	prescaler = <1024>;
-	alarms-count = <2>;
-	cal-constant = <1048576>;  /*(8192 * 128 = 1048576)*/
+	status = "okay";
 };
 
 &sercom0 {
