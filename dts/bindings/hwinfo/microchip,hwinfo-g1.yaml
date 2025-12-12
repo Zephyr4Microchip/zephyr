@@ -1,6 +1,8 @@
 # Copyright (c) 2025 Microchip Technology Inc.
 # SPDX-License-Identifier: Apache-2.0
 
+title: Microchip G1 hwinfo driver
+
 description: |
   Microchip Hardware information driver bindings.
 

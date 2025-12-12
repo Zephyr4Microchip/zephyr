@@ -265,7 +265,8 @@ config HWINFO_AMBIQ
 config HWINFO_MCHP_G1
 	bool "Microchip hwinfo"
 	default y
-	depends on DT_HAS_MICROCHIP_HWINFO_G1_ENABLED
+	depends on DT_HAS_MICROCHIP_HWINFO_G1_ENABLED || \
+		   DT_HAS_MICROCHIP_RSTC_G1_RESET_ENABLED
 	select HWINFO_HAS_DRIVER
 	help
 	  Enable mchp hwinfo driver
