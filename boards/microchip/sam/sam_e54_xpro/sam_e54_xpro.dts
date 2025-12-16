@@ -371,7 +371,6 @@
 };
 
 &tc0 {
-	status = "disabled";
 	compatible = "microchip,tc-g1-pwm";
 	#pwm-cells = <3>;
 	pinctrl-0 = <&tc0_pwm_default>;

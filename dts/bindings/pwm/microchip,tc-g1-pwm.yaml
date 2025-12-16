@@ -1,24 +1,25 @@
 # Copyright (c) 2025 Microchip Technology Inc.
 # SPDX-License-Identifier: Apache-2.0
+title: Microchip PWM TC g1 driver.
 
 description: |
-  Microchip PWM TC  driver.
+  Microchip PWM TC g1 driver.
 
   This driver is responsible for configuring
   and managing the TC peripheral in Microchip microcontrollers for PWM configuration.
   The supported devices :
-    - tc-u2249.
+    - tc-u2249 (3.0.0)
 
   Example usage in a Device Tree Source (DTS) file:
 
      pwm_led0: pwm_led_0 {
          status = "okay";
-         pwms = <&tcc0 2 PWM_MSEC(20) 0>;
+         pwms = <&tc0 1 PWM_MSEC(20) 0>;
      };
 
   Explanation:
      - 'pwm_led0' is a node representing a device (e.g., an LED) controlled by PWM.
-     - The 'pwms' property uses the phandle to the PWM controller (here, 'tcc0'),
+     - The 'pwms' property uses the phandle to the PWM controller (here, 'tc0'),
        specifies channel 2, sets the PWM period to 20 milliseconds,
        and uses a polarity of 0 (normal).
      - The order of the 'pwms' arguments matches the 'pwm-cells' definition:
@@ -26,10 +27,8 @@ description: |
      - This allows the device to be driven with a specific PWM configuration using
        the Microchip PWM TC driver.
 
-# Compatible string to match this device with the corresponding driver
 compatible: "microchip,tc-g1-pwm"
 
-# Include base properties from the common TC binding file
 include:
   - pwm-controller.yaml
   - microchip,tc-g1.yaml

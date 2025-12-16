@@ -27,6 +27,7 @@
 			clock-names = "mclk", "gclk";
 			max-bit-width = <16>;
 			channels = <2>;
+			status = "disabled";
 		};
 
 		tc5: tc@42001800 {
@@ -38,6 +39,7 @@
 			clock-names = "mclk", "gclk";
 			max-bit-width = <16>;
 			channels = <2>;
+			status = "disabled";
 		};
 
 		sercom6: sercom@43000800 {
@@ -82,6 +84,7 @@
 			clock-names = "mclk", "gclk";
 			max-bit-width = <16>;
 			channels = <2>;
+			status = "disabled";
 		};
 
 		tc7: tc@43001800 {
@@ -93,6 +96,7 @@
 			clock-names = "mclk", "gclk";
 			max-bit-width = <16>;
 			channels = <2>;
+			status = "disabled";
 		};
 
 	};

@@ -4,15 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-/**
- * @file pwm_mchp_tc_g1.c
- * @brief PWM driver for Microchip devices.
- *
- * This file provides the implementation of pwm functions
- * for Microchip TC G1 peripheral
- */
-
-#include <stdio.h>
 #include <zephyr/kernel.h>
 #include <zephyr/drivers/pwm.h>
 #include <zephyr/logging/log.h>
@@ -20,14 +11,7 @@
 #include <zephyr/drivers/clock_control.h>
 #include <zephyr/drivers/clock_control/mchp_clock_control.h>
 
-/******************************************************************************
- * @brief Devicetree definitions
- *****************************************************************************/
 #define DT_DRV_COMPAT microchip_tc_g1_pwm
-
-/*******************************************
- * Const and Macro Defines
- *******************************************/
 
 LOG_MODULE_REGISTER(pwm_mchp_tc_g1, CONFIG_PWM_LOG_LEVEL);
 
@@ -37,62 +21,19 @@ LOG_MODULE_REGISTER(pwm_mchp_tc_g1, CONFIG_PWM_LOG_LEVEL);
 
 #define MCHP_PWM_SUCCESS 0
 
-/**
- * @brief Type definition for the PWM lock.
- *
- * This macro defines the type of the lock used to protect access to the PWM APIs.
- */
-#define MCHP_PWM_LOCK_TYPE struct k_mutex
-
-/**
- * @brief Timeout duration for acquiring the PWM lock.
- *
- * This macro defines the timeout duration for acquiring the PWM lock.
- * The timeout is specified in milliseconds.
- */
 #define MCHP_PWM_LOCK_TIMEOUT K_MSEC(10)
 
-/**
- * @brief Initialize the PWM lock.
- *
- * This macro initializes the PWM lock.
- *
- * @param p_lock Pointer to the lock to be initialized.
- */
-#define MCHP_PWM_DATA_LOCK_INIT(p_lock) k_mutex_init(p_lock)
+#define TIMEOUT_VALUE_US 5000000
+#define DELAY_US         2
 
-/**
- * @brief Acquire the PWM lock.
- *
- * This macro acquires the PWM lock. If the lock is not available, the
- * function will wait for the specified timeout duration.
- *
- * @param p_lock Pointer to the lock to be acquired.
- * @return 0 if the lock was successfully acquired, or a negative error code.
- */
-#define MCHP_PWM_DATA_LOCK(p_lock) k_mutex_lock(p_lock, MCHP_PWM_LOCK_TIMEOUT)
-
-/**
- * @brief Release the PWM lock.
- *
- * This macro releases the PWM lock.
- *
- * @param p_lock Pointer to the lock to be released.
- * @return 0 if the lock was successfully released, or a negative error code.
- */
-#define MCHP_PWM_DATA_UNLOCK(p_lock) k_mutex_unlock(p_lock)
-
-/***********************************
- * Typedefs and Enum Declarations
- ***********************************/
-typedef enum {
+enum pwm_counter_modes {
 	BIT_MODE_8 = 8,
 	BIT_MODE_16 = 16,
 	BIT_MODE_24 = 24,
 	BIT_MODE_32 = 32,
-} pwm_counter_modes_t;
+};
 
-typedef enum {
+enum pwm_prescale_modes {
 	PWM_PRESCALE_1 = 1,
 	PWM_PRESCALE_2 = 2,
 	PWM_PRESCALE_4 = 4,
@@ -104,61 +45,36 @@ typedef enum {
 	PWM_PRESCALE_256 = 256,
 	PWM_PRESCALE_512 = 512,
 	PWM_PRESCALE_1024 = 1024
-} pwm_prescale_modes_t;
+};
 
-/**
- * @brief Structure for managing flags for the pwm.
- */
-typedef enum {
-	PWM_MCHP_FLAGS_CAPTURE_TYPE_PERIOD,
-	PWM_MCHP_FLAGS_CAPTURE_TYPE_PULSE,
-	PWM_MCHP_FLAGS_CAPTURE_TYPE_BOTH,
-	PWM_MCHP_FLAGS_CAPTURE_MODE_SINGLE,
-	PWM_MCHP_FLAGS_CAPTURE_MODE_CONTINUOUS,
-} pwm_mchp_flags_t;
+struct pwm_mchp_data {
+	struct k_mutex lock;
+};
 
-/**
- * @brief Structure to hold PWM data specific to Microchip hardware.
- */
-typedef struct {
-	MCHP_PWM_LOCK_TYPE lock; /* Lock type for PWM configuration */
-} pwm_mchp_data_t;
-
-typedef struct mchp_counter_clock {
-	/* Clock driver */
+struct mchp_pwm_clock {
 	const struct device *clock_dev;
-
-	/* Main clock subsystem. */
 	clock_control_subsys_t host_mclk;
 	clock_control_subsys_t client_mclk;
-
-	/* Generic clock subsystem. */
 	clock_control_subsys_t host_gclk;
-} pwm_mchp_clock_t;
+};
 
-/**
- * @brief Structure to hold the configuration for Microchip PWM.
- */
-typedef struct {
-	void *regs;                 /*Pointer to PWM peripheral registers */
-	uint32_t max_bit_width;     /* Used for finding the mode of tc peripheral */
-	pwm_mchp_clock_t pwm_clock; /* PWM clock configuration */
-	const struct pinctrl_dev_config *pinctrl_config; /* Pin control configuration */
-	uint16_t prescaler;                              /* Prescaler value for PWM */
-	uint8_t channels;                                /* Number of PWM channels */
-	uint32_t freq;                                   /* Frequency of the PWM signal */
-} pwm_mchp_config_t;
+struct pwm_mchp_config {
+	void *regs;             /*Pointer to PWM peripheral registers */
+	uint32_t max_bit_width; /* Used for finding the mode of tc peripheral */
+	struct mchp_pwm_clock pwm_clock;
+	const struct pinctrl_dev_config *pinctrl_config;
+	uint16_t prescaler;
+	uint8_t channels; /* Number of PWM channels */
+	uint32_t freq;    /* Frequency of the PWM signal */
+};
 
-/***********************************
- * Internal functions
- ***********************************/
 /*
  *This function maps a given prescaler constant to its corresponding numerical
  *value. If the prescaler does not match any predefined constants, it returns 0.
  */
 static uint32_t tc_get_prescale_val(uint32_t prescaler)
 {
-	uint32_t prescaler_val = 0;
+	uint32_t prescaler_val;
 
 	switch (prescaler) {
 	case PWM_PRESCALE_1:
@@ -186,7 +102,7 @@ static uint32_t tc_get_prescale_val(uint32_t prescaler)
 		prescaler_val = TC_CTRLA_PRESCALER_DIV1024;
 		break;
 	default:
-		prescaler_val = TC_CTRLA_PRESCALER_DIV1; /*  Default fallback */
+		prescaler_val = TC_CTRLA_PRESCALER_DIV1;
 		LOG_ERR("Unsupported prescaler specified in dts. Initialising with default "
 			"prescaler of DIV1");
 		break;
@@ -195,49 +111,43 @@ static uint32_t tc_get_prescale_val(uint32_t prescaler)
 	return prescaler_val;
 }
 
-/**
+/*
  * This function will check whether the tc peripheral is in slave mode or not.
  * This is for ensuring that the tc peripheral will not be configured if it is chained to a host tc
  * peripheral to achieve 32 bit mode.
  */
 static bool check_slave_status(const void *pwm_reg)
 {
-	bool ret = false;
+	bool ret;
 
-	ret = PWM_MODE8(pwm_reg)->TC_STATUS & TC_STATUS_SLAVE_Msk;
+	ret = ((PWM_MODE8(pwm_reg)->TC_STATUS & TC_STATUS_SLAVE_Msk) != 0) ? true : false;
 	LOG_DBG("%s", (ret ? "tc is a slave" : "tc is not a slave"));
 
 	return ret;
 }
 
-/*
- * This function waits for the synchronization of the TC (Timer/Counter)
- * registers to complete. It takes a pointer to a the pwm peripheral base address and max bit width
- * as input. Depending on the max_bit_width of the PWM, it determines the appropriate register
- * address:
- * - For 8-bit mode, it uses the COUNT8 register.
- * - For 16- mode, it uses the COUNT16 register.
- * - For 32-bit mode, it uses the COUNT32 register.
- * It then enters a while loop, continuously checking the TC_SYNCBUSY bit until
- * it is cleared, indicating synchronization is complete. If the max_bit_width is
- * not supported, it logs an error message.
- */
 static void tc_sync_wait(const void *pwm_reg, const uint32_t max_bit_width)
 {
 	switch (max_bit_width) {
 	case BIT_MODE_8:
-		while (0 != (PWM_MODE8(pwm_reg)->TC_SYNCBUSY)) {
-		};
+		if ((WAIT_FOR((0 == (PWM_MODE8(pwm_reg)->TC_SYNCBUSY)), TIMEOUT_VALUE_US,
+			      k_busy_wait(DELAY_US))) == false) {
+			LOG_ERR("TC_SYNCBUSY8 reset timed out");
+		}
 		break;
 
 	case BIT_MODE_16:
-		while (0 != (PWM_MODE16(pwm_reg)->TC_SYNCBUSY)) {
-		};
+		if ((WAIT_FOR((0 == (PWM_MODE16(pwm_reg)->TC_SYNCBUSY)), TIMEOUT_VALUE_US,
+			      k_busy_wait(DELAY_US))) == false) {
+			LOG_ERR("TC_SYNCBUSY16 reset timed out");
+		}
 		break;
 
 	case BIT_MODE_32:
-		while (0 != (PWM_MODE32(pwm_reg)->TC_SYNCBUSY)) {
-		};
+		if ((WAIT_FOR((0 == (PWM_MODE32(pwm_reg)->TC_SYNCBUSY)), TIMEOUT_VALUE_US,
+			      k_busy_wait(DELAY_US))) == false) {
+			LOG_ERR("TC_SYNCBUSY32 reset timed out");
+		}
 		break;
 
 	default:
@@ -254,41 +164,37 @@ static void tc_sync_wait(const void *pwm_reg, const uint32_t max_bit_width)
  */
 static int tc_reset_regs(const void *pwm_reg, const uint32_t max_bit_width)
 {
-	int32_t ret_val = MCHP_PWM_SUCCESS;
+	bool slave_mode = check_slave_status(pwm_reg);
 
-	do {
-		ret_val = check_slave_status(pwm_reg);
-		if (ret_val != 0) {
-			ret_val = -EBUSY;
-			break;
-		}
+	if (slave_mode == true) {
+		LOG_ERR("tc is in slave mode");
+		return -EBUSY;
+	}
 
-		switch (max_bit_width) {
-		case BIT_MODE_8:
-			PWM_MODE8(pwm_reg)->TC_CTRLA = TC_CTRLA_SWRST(1);
-			break;
+	switch (max_bit_width) {
+	case BIT_MODE_8:
+		PWM_MODE8(pwm_reg)->TC_CTRLA = TC_CTRLA_SWRST(1);
+		break;
 
-		case BIT_MODE_16:
-			PWM_MODE16(pwm_reg)->TC_CTRLA = TC_CTRLA_SWRST(1);
-			break;
+	case BIT_MODE_16:
+		PWM_MODE16(pwm_reg)->TC_CTRLA = TC_CTRLA_SWRST(1);
+		break;
 
-		case BIT_MODE_32:
-			PWM_MODE32(pwm_reg)->TC_CTRLA = TC_CTRLA_SWRST(1);
-			break;
+	case BIT_MODE_32:
+		PWM_MODE32(pwm_reg)->TC_CTRLA = TC_CTRLA_SWRST(1);
+		break;
 
-		default:
-			LOG_ERR("%s : Unsupported PWM mode %d", __func__, max_bit_width);
-			ret_val = -ENOTSUP;
-			break;
-		}
-		LOG_DBG("%s invoked %d", __func__, max_bit_width);
-		tc_sync_wait(pwm_reg, max_bit_width);
-	} while (0);
+	default:
+		LOG_ERR("%s : Unsupported PWM mode %d", __func__, max_bit_width);
+		return -ENOTSUP;
+	}
+	LOG_DBG("%s invoked %d", __func__, max_bit_width);
+	tc_sync_wait(pwm_reg, max_bit_width);
 
-	return ret_val;
+	return MCHP_PWM_SUCCESS;
 }
 
-/**
+/*
  * This function enables or disables the TC based on the enable parameter.
  * It sets or clears the TC_CTRLA_ENABLE bit in the TC_CTRLA register based on
  * the max_bit_width. After setting or clearing the enable bit, it waits for
@@ -296,52 +202,46 @@ static int tc_reset_regs(const void *pwm_reg, const uint32_t max_bit_width)
  */
 static int32_t tc_enable(const void *pwm_reg, const uint32_t max_bit_width, bool enable)
 {
-	int32_t ret_val = MCHP_PWM_SUCCESS;
+	bool slave_mode = check_slave_status(pwm_reg);
 
-	do {
-		ret_val = check_slave_status(pwm_reg);
-		if (ret_val != 0) {
-			LOG_ERR("tc is in slave mode");
-			ret_val = -EBUSY;
-			break;
+	if (slave_mode == true) {
+		LOG_ERR("tc is in slave mode");
+		return -EBUSY;
+	}
+
+	switch (max_bit_width) {
+	case BIT_MODE_8:
+		if (enable != 0) {
+			PWM_MODE8(pwm_reg)->TC_CTRLA |= TC_CTRLA_ENABLE(1);
+		} else {
+			PWM_MODE8(pwm_reg)->TC_CTRLA &= ~TC_CTRLA_ENABLE(1);
 		}
-		switch (max_bit_width) {
-		case BIT_MODE_8:
-			if (enable != 0) {
-				PWM_MODE8(pwm_reg)->TC_CTRLA |= TC_CTRLA_ENABLE(1);
-			} else {
-				PWM_MODE8(pwm_reg)->TC_CTRLA &= ~TC_CTRLA_ENABLE(1);
-			}
-			LOG_DBG("%s %d invoked 0x%x", __func__, enable,
-				PWM_MODE8(pwm_reg)->TC_CTRLA);
-			break;
+		LOG_DBG("%s %d invoked 0x%x", __func__, enable, PWM_MODE8(pwm_reg)->TC_CTRLA);
+		break;
 
-		case BIT_MODE_16:
-			if (enable != 0) {
-				PWM_MODE16(pwm_reg)->TC_CTRLA |= TC_CTRLA_ENABLE(1);
-			} else {
-				PWM_MODE16(pwm_reg)->TC_CTRLA &= ~TC_CTRLA_ENABLE(1);
-			}
-			break;
-
-		case BIT_MODE_32:
-			if (enable != 0) {
-				PWM_MODE32(pwm_reg)->TC_CTRLA |= TC_CTRLA_ENABLE(1);
-			} else {
-				PWM_MODE32(pwm_reg)->TC_CTRLA &= ~TC_CTRLA_ENABLE(1);
-			}
-			break;
-
-		default:
-			LOG_ERR("%s : Unsupported PWM mode %d", __func__, max_bit_width);
-			ret_val = -ENOTSUP;
-			break;
+	case BIT_MODE_16:
+		if (enable != 0) {
+			PWM_MODE16(pwm_reg)->TC_CTRLA |= TC_CTRLA_ENABLE(1);
+		} else {
+			PWM_MODE16(pwm_reg)->TC_CTRLA &= ~TC_CTRLA_ENABLE(1);
 		}
+		break;
 
-		tc_sync_wait(pwm_reg, max_bit_width);
-	} while (0);
+	case BIT_MODE_32:
+		if (enable != 0) {
+			PWM_MODE32(pwm_reg)->TC_CTRLA |= TC_CTRLA_ENABLE(1);
+		} else {
+			PWM_MODE32(pwm_reg)->TC_CTRLA &= ~TC_CTRLA_ENABLE(1);
+		}
+		break;
 
-	return ret_val;
+	default:
+		LOG_ERR("%s : Unsupported PWM mode %d", __func__, max_bit_width);
+		return -ENOTSUP;
+	}
+	tc_sync_wait(pwm_reg, max_bit_width);
+
+	return MCHP_PWM_SUCCESS;
 }
 
 /*
@@ -352,49 +252,45 @@ static int32_t tc_enable(const void *pwm_reg, const uint32_t max_bit_width, bool
  */
 static int32_t tc_set_mode(const void *pwm_reg, const uint32_t max_bit_width)
 {
-	int32_t ret_val = MCHP_PWM_SUCCESS;
-	uint32_t reg_val = 0;
+	uint32_t reg_val;
+	bool slave_mode = check_slave_status(pwm_reg);
 
-	do {
-		ret_val = check_slave_status(pwm_reg);
-		if (ret_val != 0) {
-			LOG_ERR("tc is in slave mode");
-			ret_val = -EBUSY;
-			break;
-		}
-		switch (max_bit_width) {
-		case BIT_MODE_8:
-			reg_val = PWM_MODE8(pwm_reg)->TC_CTRLA;
-			reg_val &= (~TC_CTRLA_MODE_Msk);
-			reg_val |= TC_CTRLA_MODE(TC_CTRLA_MODE_COUNT8_Val);
-			PWM_MODE8(pwm_reg)->TC_CTRLA = (uint8_t)reg_val;
-			LOG_DBG("CTRLA = 0x%x\n", PWM_MODE8(pwm_reg)->TC_CTRLA);
-			break;
+	if (slave_mode == true) {
+		LOG_ERR("tc is in slave mode");
+		return -EBUSY;
+	}
 
-		case BIT_MODE_16:
-			reg_val = PWM_MODE16(pwm_reg)->TC_CTRLA;
-			reg_val &= (~TC_CTRLA_MODE_Msk);
-			reg_val |= TC_CTRLA_MODE(TC_CTRLA_MODE_COUNT16_Val);
-			PWM_MODE16(pwm_reg)->TC_CTRLA = (uint16_t)reg_val;
-			break;
+	switch (max_bit_width) {
+	case BIT_MODE_8:
+		reg_val = PWM_MODE8(pwm_reg)->TC_CTRLA;
+		reg_val &= (~TC_CTRLA_MODE_Msk);
+		reg_val |= TC_CTRLA_MODE(TC_CTRLA_MODE_COUNT8_Val);
+		PWM_MODE8(pwm_reg)->TC_CTRLA = (uint8_t)reg_val;
+		LOG_DBG("CTRLA = 0x%x\n", PWM_MODE8(pwm_reg)->TC_CTRLA);
+		break;
 
-		case BIT_MODE_32:
-			reg_val = PWM_MODE32(pwm_reg)->TC_CTRLA;
-			reg_val &= (~TC_CTRLA_MODE_Msk);
-			reg_val |= TC_CTRLA_MODE(TC_CTRLA_MODE_COUNT32_Val);
-			PWM_MODE32(pwm_reg)->TC_CTRLA = reg_val;
-			break;
+	case BIT_MODE_16:
+		reg_val = PWM_MODE16(pwm_reg)->TC_CTRLA;
+		reg_val &= (~TC_CTRLA_MODE_Msk);
+		reg_val |= TC_CTRLA_MODE(TC_CTRLA_MODE_COUNT16_Val);
+		PWM_MODE16(pwm_reg)->TC_CTRLA = (uint16_t)reg_val;
+		break;
 
-		default:
-			LOG_ERR("%s : Unsupported PWM mode %d", __func__, max_bit_width);
-			ret_val = -ENOTSUP;
-			break;
-		}
-		tc_sync_wait(pwm_reg, max_bit_width);
-		LOG_DBG("Mode set = %x\n", TC_CTRLA_MODE(TC_CTRLA_MODE_COUNT8_Val));
-	} while (0);
+	case BIT_MODE_32:
+		reg_val = PWM_MODE32(pwm_reg)->TC_CTRLA;
+		reg_val &= (~TC_CTRLA_MODE_Msk);
+		reg_val |= TC_CTRLA_MODE(TC_CTRLA_MODE_COUNT32_Val);
+		PWM_MODE32(pwm_reg)->TC_CTRLA = reg_val;
+		break;
 
-	return ret_val;
+	default:
+		LOG_ERR("%s : Unsupported PWM mode %d", __func__, max_bit_width);
+		return -ENOTSUP;
+	}
+	tc_sync_wait(pwm_reg, max_bit_width);
+	LOG_DBG("Mode set = %x\n", TC_CTRLA_MODE(TC_CTRLA_MODE_COUNT8_Val));
+
+	return MCHP_PWM_SUCCESS;
 }
 
 /*
@@ -410,38 +306,35 @@ static int32_t tc_set_mode(const void *pwm_reg, const uint32_t max_bit_width)
 static int32_t tc_set_pulse_buf(const void *pwm_reg, uint32_t max_bit_width, uint32_t channel,
 				uint32_t pulse)
 {
-	int32_t ret_val = 0;
+	bool slave_mode = check_slave_status(pwm_reg);
 
-	do {
-		ret_val = check_slave_status(pwm_reg);
-		if (ret_val != 0) {
-			ret_val = -EBUSY;
-			break;
-		}
-		switch (max_bit_width) {
-		case BIT_MODE_8:
-			PWM_MODE8(pwm_reg)->TC_CCBUF[channel] = TC_COUNT8_CCBUF_CCBUF(pulse);
-			LOG_DBG("m_tc_set_pulse invoked 8: 0x%x", TC_COUNT8_CCBUF_CCBUF(pulse));
-			break;
+	if (slave_mode == true) {
+		LOG_ERR("tc is in slave mode");
+		return -EBUSY;
+	}
 
-		case BIT_MODE_16:
-			PWM_MODE16(pwm_reg)->TC_CCBUF[1] = TC_COUNT16_CCBUF_CCBUF(pulse);
-			LOG_DBG("m_tc_set_pulse invoked 16: 0x%x", TC_COUNT16_CCBUF_CCBUF(pulse));
-			break;
+	switch (max_bit_width) {
+	case BIT_MODE_8:
+		PWM_MODE8(pwm_reg)->TC_CCBUF[channel] = TC_COUNT8_CCBUF_CCBUF(pulse);
+		LOG_DBG("m_tc_set_pulse invoked 8: 0x%x", TC_COUNT8_CCBUF_CCBUF(pulse));
+		break;
 
-		case BIT_MODE_32:
-			PWM_MODE32(pwm_reg)->TC_CCBUF[1] = TC_COUNT32_CCBUF_CCBUF(pulse);
-			LOG_DBG("m_tc_set_pulse invoked 32 : 0x%x", TC_COUNT32_CCBUF_CCBUF(pulse));
-			break;
+	case BIT_MODE_16:
+		PWM_MODE16(pwm_reg)->TC_CCBUF[1] = TC_COUNT16_CCBUF_CCBUF(pulse);
+		LOG_DBG("m_tc_set_pulse invoked 16: 0x%x", TC_COUNT16_CCBUF_CCBUF(pulse));
+		break;
 
-		default:
-			LOG_ERR("%s : Unsupported PWM mode %d", __func__, max_bit_width);
-			ret_val = -ENOTSUP;
-			break;
-		}
-	} while (0);
+	case BIT_MODE_32:
+		PWM_MODE32(pwm_reg)->TC_CCBUF[1] = TC_COUNT32_CCBUF_CCBUF(pulse);
+		LOG_DBG("m_tc_set_pulse invoked 32 : 0x%x", TC_COUNT32_CCBUF_CCBUF(pulse));
+		break;
 
-	return ret_val;
+	default:
+		LOG_ERR("%s : Unsupported PWM mode %d", __func__, max_bit_width);
+		return -ENOTSUP;
+	}
+
+	return MCHP_PWM_SUCCESS;
 }
 
 /*
@@ -453,40 +346,33 @@ static int32_t tc_set_pulse_buf(const void *pwm_reg, uint32_t max_bit_width, uin
 static int32_t tc_set_period(const void *pwm_reg, const uint32_t max_bit_width,
 			     const uint32_t period)
 {
-	int32_t ret_val = MCHP_PWM_SUCCESS;
+	bool slave_mode = check_slave_status(pwm_reg);
 
-	do {
-		ret_val = check_slave_status(pwm_reg);
-		if (ret_val != 0) {
-			LOG_ERR("tc is in slave mode");
-			ret_val = -EBUSY;
-			break;
-		}
-		switch (max_bit_width) {
-		case BIT_MODE_8:
-			/** Set the period value */
-			PWM_MODE8(pwm_reg)->TC_PER = TC_COUNT8_PER_PER(period);
-			break;
+	if (slave_mode == true) {
+		LOG_ERR("tc is in slave mode");
+		return -EBUSY;
+	}
 
-		case BIT_MODE_16:
-			/** Set the period value */
-			PWM_MODE16(pwm_reg)->TC_CC[0u] = TC_COUNT16_CC_CC(period);
-			break;
+	switch (max_bit_width) {
+	case BIT_MODE_8:
+		PWM_MODE8(pwm_reg)->TC_PER = TC_COUNT8_PER_PER(period);
+		break;
 
-		case BIT_MODE_32:
-			/** Set the period value */
-			PWM_MODE32(pwm_reg)->TC_CC[0] = TC_COUNT32_CC_CC(period);
-			break;
+	case BIT_MODE_16:
+		PWM_MODE16(pwm_reg)->TC_CC[0u] = TC_COUNT16_CC_CC(period);
+		break;
 
-		default:
-			LOG_ERR("%s : Unsupported PWM mode %d", __func__, max_bit_width);
-			ret_val = -ENOTSUP;
-			break;
-		}
-		tc_sync_wait(pwm_reg, max_bit_width);
-	} while (0);
+	case BIT_MODE_32:
+		PWM_MODE32(pwm_reg)->TC_CC[0] = TC_COUNT32_CC_CC(period);
+		break;
 
-	return ret_val;
+	default:
+		LOG_ERR("%s : Unsupported PWM mode %d", __func__, max_bit_width);
+		return -ENOTSUP;
+	}
+	tc_sync_wait(pwm_reg, max_bit_width);
+
+	return MCHP_PWM_SUCCESS;
 }
 
 /*
@@ -498,44 +384,37 @@ static int32_t tc_set_period(const void *pwm_reg, const uint32_t max_bit_width,
 static int32_t tc_set_period_buf(const void *pwm_reg, const uint32_t max_bit_width,
 				 const uint32_t period)
 {
-	int32_t ret_val = MCHP_PWM_SUCCESS;
+	bool slave_mode = check_slave_status(pwm_reg);
 
-	do {
-		ret_val = check_slave_status(pwm_reg);
-		if (ret_val != 0) {
-			LOG_ERR("tc is in slave mode");
-			ret_val = -EBUSY;
-			break;
-		}
-		switch (max_bit_width) {
-		case BIT_MODE_8:
-			/** Set the period value */
-			PWM_MODE8(pwm_reg)->TC_PERBUF = TC_COUNT8_CCBUF_CCBUF(period);
-			break;
+	if (slave_mode == true) {
+		LOG_ERR("tc is in slave mode");
+		return -EBUSY;
+	}
 
-		case BIT_MODE_16:
-			/** Set the period value */
-			PWM_MODE16(pwm_reg)->TC_CCBUF[0u] = TC_COUNT16_CCBUF_CCBUF(period);
-			break;
+	switch (max_bit_width) {
+	case BIT_MODE_8:
+		PWM_MODE8(pwm_reg)->TC_PERBUF = TC_COUNT8_CCBUF_CCBUF(period);
+		break;
 
-		case BIT_MODE_32:
-			/** Set the period value */
-			PWM_MODE32(pwm_reg)->TC_CCBUF[0] = TC_COUNT32_CCBUF_CCBUF(period);
-			break;
+	case BIT_MODE_16:
+		PWM_MODE16(pwm_reg)->TC_CCBUF[0u] = TC_COUNT16_CCBUF_CCBUF(period);
+		break;
 
-		default:
-			LOG_ERR("%s : Unsupported PWM mode %d", __func__, max_bit_width);
-			ret_val = -ENOTSUP;
-			break;
-		}
-		LOG_DBG("period %d bit:  set to %x", max_bit_width, period);
-		tc_sync_wait(pwm_reg, max_bit_width);
-	} while (0);
+	case BIT_MODE_32:
+		PWM_MODE32(pwm_reg)->TC_CCBUF[0u] = TC_COUNT32_CCBUF_CCBUF(period);
+		break;
 
-	return ret_val;
+	default:
+		LOG_ERR("%s : Unsupported PWM mode %d", __func__, max_bit_width);
+		return -ENOTSUP;
+	}
+	LOG_DBG("period %d bit:  set to %x", max_bit_width, period);
+	tc_sync_wait(pwm_reg, max_bit_width);
+
+	return MCHP_PWM_SUCCESS;
 }
 
-/**
+/*
  * This function sets the invert mode for the specified channel based on the
  * max_bit_width. It first disables the TC, waits for synchronization, and then
  * sets the invert mask in the TC_DRVCTRL register. After setting the invert
@@ -543,56 +422,54 @@ static int32_t tc_set_period_buf(const void *pwm_reg, const uint32_t max_bit_wid
  */
 static int32_t tc_set_invert(const void *pwm_reg, const uint32_t max_bit_width, uint32_t channel)
 {
-	int32_t ret_val = MCHP_PWM_SUCCESS;
-	uint8_t reg_val = 0;
+	uint8_t reg_val;
+	bool slave_mode = check_slave_status(pwm_reg);
 
-	do {
-		ret_val = check_slave_status(pwm_reg);
-		if (ret_val != 0) {
-			ret_val = -EBUSY;
-			break;
-		}
-		uint32_t invert_mask = 1 << (channel + TC_DRVCTRL_INVEN0_Pos);
+	if (slave_mode == true) {
+		LOG_ERR("tc is in slave mode");
+		return -EBUSY;
+	}
+	uint32_t invert_mask = BIT(channel + TC_DRVCTRL_INVEN0_Pos);
 
-		tc_enable(pwm_reg, max_bit_width, false);
-		tc_sync_wait(pwm_reg, max_bit_width);
+	tc_enable(pwm_reg, max_bit_width, false);
+	tc_sync_wait(pwm_reg, max_bit_width);
 
-		switch (max_bit_width) {
-		case BIT_MODE_8:
-			reg_val = PWM_MODE8(pwm_reg)->TC_DRVCTRL;
-			reg_val &= (~TC_DRVCTRL_INVEN_Msk);
-			reg_val |= invert_mask;
-			PWM_MODE8(pwm_reg)->TC_DRVCTRL = reg_val;
-			LOG_DBG("tc set invert 0x%x invoked", invert_mask);
-			break;
+	switch (max_bit_width) {
+	case BIT_MODE_8:
+		reg_val = PWM_MODE8(pwm_reg)->TC_DRVCTRL;
+		reg_val &= (~TC_DRVCTRL_INVEN_Msk);
+		reg_val |= invert_mask;
+		PWM_MODE8(pwm_reg)->TC_DRVCTRL = reg_val;
+		LOG_DBG("tc set invert 0x%x invoked", invert_mask);
+		break;
 
-		case BIT_MODE_16:
-			reg_val = PWM_MODE16(pwm_reg)->TC_DRVCTRL;
-			reg_val &= (~TC_DRVCTRL_INVEN_Msk);
-			reg_val |= invert_mask;
-			PWM_MODE16(pwm_reg)->TC_DRVCTRL = reg_val;
-			break;
+	case BIT_MODE_16:
+		reg_val = PWM_MODE16(pwm_reg)->TC_DRVCTRL;
+		reg_val &= (~TC_DRVCTRL_INVEN_Msk);
+		reg_val |= invert_mask;
+		PWM_MODE16(pwm_reg)->TC_DRVCTRL = reg_val;
+		break;
 
-		case BIT_MODE_32:
-			reg_val = PWM_MODE32(pwm_reg)->TC_DRVCTRL;
-			reg_val &= (~TC_DRVCTRL_INVEN_Msk);
-			reg_val |= invert_mask;
-			PWM_MODE32(pwm_reg)->TC_DRVCTRL = reg_val;
-			break;
+	case BIT_MODE_32:
+		reg_val = PWM_MODE32(pwm_reg)->TC_DRVCTRL;
+		reg_val &= (~TC_DRVCTRL_INVEN_Msk);
+		reg_val |= invert_mask;
+		PWM_MODE32(pwm_reg)->TC_DRVCTRL = reg_val;
+		break;
 
-		default:
-			LOG_ERR("%s : Unsupported PWM mode %d", __func__, max_bit_width);
-			ret_val = -ENOTSUP;
-			break;
-		}
+	default:
 		tc_enable(pwm_reg, max_bit_width, true);
 		tc_sync_wait(pwm_reg, max_bit_width);
-	} while (0);
+		LOG_ERR("%s : Unsupported PWM mode %d", __func__, max_bit_width);
+		return -ENOTSUP;
+	}
+	tc_enable(pwm_reg, max_bit_width, true);
+	tc_sync_wait(pwm_reg, max_bit_width);
 
-	return ret_val;
+	return MCHP_PWM_SUCCESS;
 }
 
-/**
+/*
  * This function retrieves the invert status for the specified channel based on
  * the max_bit_width. It reads the invert status from the TC_DRVCTRL register and
  * checks if the invert mask is set. Returns true if the invert status is not
@@ -626,7 +503,7 @@ static bool tc_get_invert_status(const void *pwm_reg, const uint32_t max_bit_wid
 	return (invert_status == 0) ? true : false;
 }
 
-/**
+/*
  * This function sets the prescaler value for the TC based on the max_bit_width.
  * It writes the prescaler value to the TC_CTRLA register and also sets the configuration
  * for reloading/resetting the counter on next prescaler clock Position.
@@ -635,51 +512,46 @@ static bool tc_get_invert_status(const void *pwm_reg, const uint32_t max_bit_wid
 static int32_t tc_set_prescaler(const void *pwm_reg, const uint32_t max_bit_width,
 				uint32_t prescaler)
 {
-	int32_t ret_val = MCHP_PWM_SUCCESS;
 	uint32_t reg_val = 0;
+	bool slave_mode = check_slave_status(pwm_reg);
 
-	do {
-		ret_val = check_slave_status(pwm_reg);
-		if (ret_val != 0) {
-			LOG_ERR("tc is in slave mode");
-			ret_val = -EBUSY;
-			break;
-		}
-		prescaler = tc_get_prescale_val(prescaler);
-		switch (max_bit_width) {
-		case BIT_MODE_8:
-			reg_val = PWM_MODE8(pwm_reg)->TC_CTRLA;
-			reg_val &= ~(TC_CTRLA_PRESCSYNC_Msk | TC_CTRLA_PRESCALER_Msk);
-			reg_val |= (prescaler | TC_CTRLA_PRESCSYNC_PRESC);
-			PWM_MODE8(pwm_reg)->TC_CTRLA = reg_val;
-			break;
+	if (slave_mode == true) {
+		LOG_ERR("tc is in slave mode");
+		return -EBUSY;
+	}
+	prescaler = tc_get_prescale_val(prescaler);
+	switch (max_bit_width) {
+	case BIT_MODE_8:
+		reg_val = PWM_MODE8(pwm_reg)->TC_CTRLA;
+		reg_val &= ~(TC_CTRLA_PRESCSYNC_Msk | TC_CTRLA_PRESCALER_Msk);
+		reg_val |= (prescaler | TC_CTRLA_PRESCSYNC_PRESC);
+		PWM_MODE8(pwm_reg)->TC_CTRLA = reg_val;
+		break;
 
-		case BIT_MODE_16:
-			reg_val = PWM_MODE16(pwm_reg)->TC_CTRLA;
-			reg_val &= ~(TC_CTRLA_PRESCSYNC_Msk | TC_CTRLA_PRESCALER_Msk);
-			reg_val |= (prescaler | TC_CTRLA_PRESCSYNC_PRESC);
-			PWM_MODE16(pwm_reg)->TC_CTRLA = reg_val;
-			break;
+	case BIT_MODE_16:
+		reg_val = PWM_MODE16(pwm_reg)->TC_CTRLA;
+		reg_val &= ~(TC_CTRLA_PRESCSYNC_Msk | TC_CTRLA_PRESCALER_Msk);
+		reg_val |= (prescaler | TC_CTRLA_PRESCSYNC_PRESC);
+		PWM_MODE16(pwm_reg)->TC_CTRLA = reg_val;
+		break;
 
-		case BIT_MODE_32:
-			reg_val = PWM_MODE32(pwm_reg)->TC_CTRLA;
-			reg_val &= ~(TC_CTRLA_PRESCSYNC_Msk | TC_CTRLA_PRESCALER_Msk);
-			reg_val |= (prescaler | TC_CTRLA_PRESCSYNC_PRESC);
-			PWM_MODE32(pwm_reg)->TC_CTRLA = reg_val;
-			break;
+	case BIT_MODE_32:
+		reg_val = PWM_MODE32(pwm_reg)->TC_CTRLA;
+		reg_val &= ~(TC_CTRLA_PRESCSYNC_Msk | TC_CTRLA_PRESCALER_Msk);
+		reg_val |= (prescaler | TC_CTRLA_PRESCSYNC_PRESC);
+		PWM_MODE32(pwm_reg)->TC_CTRLA = reg_val;
+		break;
 
-		default:
-			LOG_ERR("%s : Unsupported PWM mode %d", __func__, max_bit_width);
-			ret_val = -ENOTSUP;
-			break;
-		}
-		tc_sync_wait(pwm_reg, max_bit_width);
-	} while (0);
+	default:
+		LOG_ERR("%s : Unsupported PWM mode %d", __func__, max_bit_width);
+		return -ENOTSUP;
+	}
+	tc_sync_wait(pwm_reg, max_bit_width);
 
-	return ret_val;
+	return MCHP_PWM_SUCCESS;
 }
 
-/**
+/*
  * This function sets the wave generation type for the TC based on the
  * max_bit_width. It writes the appropriate wave generation value to the TC_WAVE
  * register. After setting the wave type, it waits for synchronization to
@@ -691,41 +563,37 @@ static int32_t tc_set_prescaler(const void *pwm_reg, const uint32_t max_bit_widt
 static int32_t tc_set_wave_type(const void *pwm_reg, const uint32_t max_bit_width,
 				uint32_t wave_type)
 {
-	int32_t ret_val = MCHP_PWM_SUCCESS;
+	bool slave_mode = check_slave_status(pwm_reg);
 
-	do {
-		ret_val = check_slave_status(pwm_reg);
-		if (ret_val != 0) {
-			LOG_ERR("tc is in slave mode");
-			ret_val = -EBUSY;
-			break;
-		}
-		switch (max_bit_width) {
-		case BIT_MODE_8:
-			PWM_MODE8(pwm_reg)->TC_WAVE = TC_WAVE_WAVEGEN(wave_type);
-			break;
+	if (slave_mode == true) {
+		LOG_ERR("tc is in slave mode");
+		return -EBUSY;
+	}
 
-		case BIT_MODE_16:
-			PWM_MODE16(pwm_reg)->TC_WAVE = TC_WAVE_WAVEGEN(TC_WAVE_WAVEGEN_MPWM);
-			break;
+	switch (max_bit_width) {
+	case BIT_MODE_8:
+		PWM_MODE8(pwm_reg)->TC_WAVE = TC_WAVE_WAVEGEN(wave_type);
+		break;
 
-		case BIT_MODE_32:
-			PWM_MODE32(pwm_reg)->TC_WAVE = TC_WAVE_WAVEGEN(TC_WAVE_WAVEGEN_MPWM);
-			break;
+	case BIT_MODE_16:
+		PWM_MODE16(pwm_reg)->TC_WAVE = TC_WAVE_WAVEGEN(TC_WAVE_WAVEGEN_MPWM);
+		break;
 
-		default:
-			LOG_ERR("%s : Unsupported PWM mode %d", __func__, max_bit_width);
-			ret_val = -ENOTSUP;
-			break;
-		}
-		tc_sync_wait(pwm_reg, max_bit_width);
-		LOG_DBG("%s invoked", __func__);
-	} while (0);
+	case BIT_MODE_32:
+		PWM_MODE32(pwm_reg)->TC_WAVE = TC_WAVE_WAVEGEN(TC_WAVE_WAVEGEN_MPWM);
+		break;
 
-	return ret_val;
+	default:
+		LOG_ERR("%s : Unsupported PWM mode %d", __func__, max_bit_width);
+		return -ENOTSUP;
+	}
+	tc_sync_wait(pwm_reg, max_bit_width);
+	LOG_DBG("%s invoked", __func__);
+
+	return MCHP_PWM_SUCCESS;
 }
 
-/**
+/*
  * Initializes the TC for PWM by performing the following steps:
  * 1. Resets the TC registers.
  * 2. Sets the TC mode.
@@ -734,318 +602,211 @@ static int32_t tc_set_wave_type(const void *pwm_reg, const uint32_t max_bit_widt
  * 5. Sets the period to 0.
  * 6. Enables the TC.
  */
-static int tc_init(const pwm_mchp_config_t *const mchp_pwm_cfg)
+static int tc_init(const struct pwm_mchp_config *const mchp_pwm_cfg)
 {
 	const void *pwm_reg = mchp_pwm_cfg->regs;
 	const uint32_t max_bit_width = mchp_pwm_cfg->max_bit_width;
-	int ret = MCHP_PWM_SUCCESS;
+	int ret;
 
-	do {
-		ret = tc_reset_regs(pwm_reg, max_bit_width);
-		if (ret != MCHP_PWM_SUCCESS) {
-			break;
-		}
+	ret = tc_reset_regs(pwm_reg, max_bit_width);
+	if (ret != MCHP_PWM_SUCCESS) {
+		return ret;
+	}
 
-		tc_sync_wait(pwm_reg, max_bit_width);
-		ret = tc_set_mode(pwm_reg, max_bit_width);
-		if (ret != MCHP_PWM_SUCCESS) {
-			break;
-		}
+	ret = tc_set_mode(pwm_reg, max_bit_width);
+	if (ret != MCHP_PWM_SUCCESS) {
+		return ret;
+	}
 
-		ret = tc_set_prescaler(pwm_reg, max_bit_width, mchp_pwm_cfg->prescaler);
-		if (ret != MCHP_PWM_SUCCESS) {
-			break;
-		}
+	ret = tc_set_prescaler(pwm_reg, max_bit_width, mchp_pwm_cfg->prescaler);
+	if (ret != MCHP_PWM_SUCCESS) {
+		return ret;
+	}
 
-		ret = tc_set_wave_type(pwm_reg, max_bit_width, TC_WAVE_WAVEGEN_NPWM);
-		if (ret != MCHP_PWM_SUCCESS) {
-			break;
-		}
+	ret = tc_set_wave_type(pwm_reg, max_bit_width, TC_WAVE_WAVEGEN_NPWM);
+	if (ret != MCHP_PWM_SUCCESS) {
+		return ret;
+	}
 
-		ret = tc_set_period(pwm_reg, max_bit_width, 0);
-		if (ret != MCHP_PWM_SUCCESS) {
-			break;
-		}
+	ret = tc_set_period(pwm_reg, max_bit_width, 0);
+	if (ret != MCHP_PWM_SUCCESS) {
+		return ret;
+	}
 
-		ret = tc_enable(pwm_reg, max_bit_width, true);
-		if (ret != MCHP_PWM_SUCCESS) {
-			break;
-		}
+	ret = tc_enable(pwm_reg, max_bit_width, true);
+	if (ret != MCHP_PWM_SUCCESS) {
+		return ret;
+	}
 
-	} while (0);
-
-	return ret;
+	return MCHP_PWM_SUCCESS;
 }
-/***********************************
- * Zephyr APIs
- ***********************************/
-/**
- * @brief Set the PWM cycles for a specific channel.
- *
- * This function sets the PWM period and pulse width for a specified channel. It also handles the
- * polarity inversion if required.
- *
- * @param pwm_dev Pointer to the PWM device structure.
- * @param channel PWM channel number.
- * @param period PWM period in cycles.
- * @param pulse PWM pulse width in cycles.
- * @param flags PWM flags (e.g., polarity inversion).
- *
- * @return 0 on success, -EINVAL if the channel is invalid or the period/pulse is out of range.
- */
+
 static int pwm_mchp_set_cycles(const struct device *pwm_dev, uint32_t channel, uint32_t period,
 			       uint32_t pulse, pwm_flags_t flags)
 {
 
-	const pwm_mchp_config_t *const mchp_pwm_cfg = pwm_dev->config;
+	const struct pwm_mchp_config *const mchp_pwm_cfg = pwm_dev->config;
 
-	pwm_mchp_data_t *mchp_pwm_data = pwm_dev->data;
+	struct pwm_mchp_data *mchp_pwm_data = pwm_dev->data;
 	const void *pwm_reg = mchp_pwm_cfg->regs;
 	const uint32_t max_bit_width = mchp_pwm_cfg->max_bit_width;
-	int ret_val = 0;
-	uint32_t top = ((uint32_t)(1 << (max_bit_width)) - 1);
+	uint64_t top = BIT64(max_bit_width) - 1;
+	int ret_val;
 
-	MCHP_PWM_DATA_LOCK(&mchp_pwm_data->lock);
-	do {
-		bool invert_flag_set = ((flags & PWM_POLARITY_INVERTED) != 0);
-		bool not_inverted = tc_get_invert_status(pwm_reg, max_bit_width, channel);
+	k_mutex_lock(&mchp_pwm_data->lock, MCHP_PWM_LOCK_TIMEOUT);
+	bool invert_flag_set = ((flags & PWM_POLARITY_INVERTED) != 0);
+	bool not_inverted = tc_get_invert_status(pwm_reg, max_bit_width, channel);
 
-		if ((invert_flag_set == true) && (not_inverted == true)) {
-			ret_val = tc_set_invert(pwm_reg, max_bit_width, channel);
-			if (ret_val < 0) {
-				LOG_ERR("PWM peripheral busy");
-				ret_val = -EBUSY;
-				break;
-			}
-		}
-
-		if (channel >= mchp_pwm_cfg->channels) {
-			LOG_ERR("channel %d is invalid", channel);
-			ret_val = -EINVAL;
-			break;
-		}
-
-		if ((period > top) || (pulse > top)) {
-			LOG_ERR("period or pulse is out of range");
-			ret_val = -EINVAL;
-			break;
-		}
-		ret_val = tc_set_pulse_buf(pwm_reg, max_bit_width, channel, pulse);
+	if ((invert_flag_set == true) && (not_inverted == true)) {
+		ret_val = tc_set_invert(pwm_reg, max_bit_width, channel);
 		if (ret_val < 0) {
 			LOG_ERR("PWM peripheral busy");
-			ret_val = -EBUSY;
-			break;
+			return -EBUSY;
 		}
-		ret_val = tc_set_period_buf(pwm_reg, max_bit_width, period);
-		if (ret_val < 0) {
-			LOG_ERR("PWM peripheral busy");
-			ret_val = -EBUSY;
-			break;
-		}
-	} while (0);
-	MCHP_PWM_DATA_UNLOCK(&mchp_pwm_data->lock);
+	}
+
+	if (channel >= mchp_pwm_cfg->channels) {
+		LOG_ERR("channel %d is invalid", channel);
+		return -EINVAL;
+	}
+
+	if ((period > top) || (pulse > top)) {
+		LOG_ERR("period or pulse is out of range");
+		return -EINVAL;
+	}
+
+	ret_val = tc_set_pulse_buf(pwm_reg, max_bit_width, channel, pulse);
+	if (ret_val < 0) {
+		LOG_ERR("PWM peripheral busy");
+		return -EBUSY;
+	}
+	ret_val = tc_set_period_buf(pwm_reg, max_bit_width, period);
+	if (ret_val < 0) {
+		LOG_ERR("PWM peripheral busy");
+		return -EBUSY;
+	}
+	k_mutex_unlock(&mchp_pwm_data->lock);
 
 	return ret_val;
 }
 
-/**
- * @brief Get the number of PWM cycles per second for a specific channel.
- *
- * This function retrieves the frequency of the PWM signal in cycles per second for a specified
- * channel.
- *
- * @param pwm_dev Pointer to the PWM device structure.
- * @param channel PWM channel number.
- * @param cycles Pointer to store the number of cycles per second.
- *
- * @return 0 on success, -EINVAL if the channel is invalid.
- */
 static int pwm_mchp_get_cycles_per_sec(const struct device *pwm_dev, uint32_t channel,
 				       uint64_t *cycles)
 {
-	const pwm_mchp_config_t *const mchp_pwm_cfg = pwm_dev->config;
-	pwm_mchp_data_t *mchp_pwm_data = pwm_dev->data;
+	const struct pwm_mchp_config *const mchp_pwm_cfg = pwm_dev->config;
+	struct pwm_mchp_data *mchp_pwm_data = pwm_dev->data;
 	uint32_t periph_clk_freq = 0;
-	int ret_val = 0;
+	int ret_val;
 
-	MCHP_PWM_DATA_LOCK(&mchp_pwm_data->lock);
-	do {
-		if (channel >= (mchp_pwm_cfg->channels)) {
-			LOG_ERR("channel %d is invalid", channel);
-			ret_val = -EINVAL;
-			break;
-		}
-		/* clang-format off */
-		clock_control_get_rate(
-			mchp_pwm_cfg->pwm_clock.clock_dev,
-			mchp_pwm_cfg->pwm_clock.host_gclk,
-			&periph_clk_freq);
-		/* clang-format on */
-		*cycles = periph_clk_freq / mchp_pwm_cfg->prescaler;
-	} while (0);
-	MCHP_PWM_DATA_UNLOCK(&mchp_pwm_data->lock);
+	if (channel >= (mchp_pwm_cfg->channels)) {
+		LOG_ERR("channel %d is invalid", channel);
+		return -EINVAL;
+	}
+	k_mutex_lock(&mchp_pwm_data->lock, MCHP_PWM_LOCK_TIMEOUT);
 
-	return ret_val;
+	ret_val = clock_control_get_rate(mchp_pwm_cfg->pwm_clock.clock_dev,
+					 mchp_pwm_cfg->pwm_clock.host_gclk, &periph_clk_freq);
+	if (ret_val < 0) {
+		LOG_ERR("clock get rate failed");
+		return ret_val;
+	}
+
+	*cycles = periph_clk_freq / mchp_pwm_cfg->prescaler;
+
+	k_mutex_unlock(&mchp_pwm_data->lock);
+
+	return MCHP_PWM_SUCCESS;
 }
 
-/******************************************************************************
- * @brief Zephyr driver instance creation
- *****************************************************************************/
-
-/**
- * @brief PWM driver API structure for the Microchip PWM device.
- *
- * This structure defines the API functions for the Microchip PWM driver, including setting PWM
- * cycles, getting the number of cycles per second, and optionally configuring, enabling, and
- * disabling PWM capture.
- */
-static DEVICE_API(pwm, pwm_mchp_api) = {
-	.set_cycles = pwm_mchp_set_cycles,
-	.get_cycles_per_sec = pwm_mchp_get_cycles_per_sec,
-#ifdef CONFIG_PWM_CAPTURE
-	.configure_capture = pwm_mchp_configure_capture,
-	.enable_capture = pwm_mchp_enable_capture,
-	.disable_capture = pwm_mchp_disable_capture,
-#endif /* CONFIG_PWM_CAPTURE */
-};
-
-/**
- * @brief Initialize the Microchip PWM device.
- *
- * This function initializes the Microchip PWM device by applying the pin control configuration and
- * initializing PWM peripheral with the specified prescaler.
- *
- * @param pwm_dev Pointer to the PWM device structure.
- *
- * @return 0 on success, negative error code on failure.
- */
 static int pwm_mchp_init(const struct device *pwm_dev)
 {
 	int ret_val;
-	const pwm_mchp_config_t *const mchp_pwm_cfg = pwm_dev->config;
-	pwm_mchp_data_t *mchp_pwm_data = pwm_dev->data;
+	const struct pwm_mchp_config *const mchp_pwm_cfg = pwm_dev->config;
+	struct pwm_mchp_data *mchp_pwm_data = pwm_dev->data;
 
-	MCHP_PWM_DATA_LOCK_INIT(&mchp_pwm_data->lock);
-	do {
-		ret_val = clock_control_on(mchp_pwm_cfg->pwm_clock.clock_dev,
-					   mchp_pwm_cfg->pwm_clock.host_gclk);
-		if ((ret_val < 0) && (ret_val != -EALREADY)) {
-			LOG_ERR("Failed to enable the host_gclk for PWM: %d", ret_val);
-			break;
-		}
-		ret_val = clock_control_on(mchp_pwm_cfg->pwm_clock.clock_dev,
-					   mchp_pwm_cfg->pwm_clock.host_mclk);
-		if ((ret_val < 0) && (ret_val != -EALREADY)) {
-			LOG_ERR("Failed to enable the host_mclk for PWM: %d", ret_val);
-			break;
-		}
-		/* If the mode is 32 bit the turn on the clock of the client peripheral as well.
-		 * If the client clock is not provided in the device tree that means it is not
-		 * supported for that particular instance. The MCLK of the client peripheral is to
-		 * be turned on in case 32 bit mode is to be enabled
-		 */
-		if (mchp_pwm_cfg->max_bit_width == BIT_MODE_32) {
-			if (mchp_pwm_cfg->pwm_clock.client_mclk != NULL) {
+	k_mutex_init(&mchp_pwm_data->lock);
 
-				ret_val = clock_control_on(mchp_pwm_cfg->pwm_clock.clock_dev,
-							   (mchp_pwm_cfg->pwm_clock.client_mclk));
-				if ((ret_val < 0) && (ret_val != -EALREADY)) {
-					LOG_ERR("Failed to enable the client_mclk: %d", ret_val);
-					break;
-				}
-			} else {
-				LOG_ERR("Peripheral does not support 32 bit mode");
-				ret_val = -ENOTSUP;
-				break;
+	ret_val = clock_control_on(mchp_pwm_cfg->pwm_clock.clock_dev,
+				   mchp_pwm_cfg->pwm_clock.host_gclk);
+	if ((ret_val < 0) && (ret_val != -EALREADY)) {
+		LOG_ERR("Failed to enable the host_gclk for PWM: %d", ret_val);
+		return ret_val;
+	}
+	ret_val = clock_control_on(mchp_pwm_cfg->pwm_clock.clock_dev,
+				   mchp_pwm_cfg->pwm_clock.host_mclk);
+	if ((ret_val < 0) && (ret_val != -EALREADY)) {
+		LOG_ERR("Failed to enable the host_mclk for PWM: %d", ret_val);
+		return ret_val;
+	}
+	/* If the mode is 32 bit the turn on the clock of the client peripheral as well.
+	 * If the client clock is not provided in the device tree that means it is not
+	 * supported for that particular instance. The MCLK of the client peripheral is to
+	 * be turned on in case 32 bit mode is to be enabled
+	 */
+	if (mchp_pwm_cfg->max_bit_width == BIT_MODE_32) {
+		if (mchp_pwm_cfg->pwm_clock.client_mclk != NULL) {
+
+			ret_val = clock_control_on(mchp_pwm_cfg->pwm_clock.clock_dev,
+						   (mchp_pwm_cfg->pwm_clock.client_mclk));
+			if ((ret_val < 0) && (ret_val != -EALREADY)) {
+				LOG_ERR("Failed to enable the client_mclk: %d", ret_val);
+				return ret_val;
 			}
+		} else {
+			LOG_ERR("Peripheral does not support 32 bit mode");
+			return -ENOTSUP;
 		}
+	}
 
-		ret_val = pinctrl_apply_state(mchp_pwm_cfg->pinctrl_config, PINCTRL_STATE_DEFAULT);
-		if (ret_val < 0) {
-			LOG_ERR("pincontrol apply state failed: %d", ret_val);
-			break;
-		}
-		ret_val = tc_init(mchp_pwm_cfg);
-	} while (0);
+	ret_val = pinctrl_apply_state(mchp_pwm_cfg->pinctrl_config, PINCTRL_STATE_DEFAULT);
+	if (ret_val < 0) {
+		LOG_ERR("pincontrol apply state failed: %d", ret_val);
+		return ret_val;
+	}
+	ret_val = tc_init(mchp_pwm_cfg);
 	ret_val = (ret_val == -EALREADY) ? 0 : ret_val;
 
 	return ret_val;
 }
 
-/**
- * @brief Macro to define the PWM data structure for a specific instance.
- *
- * This macro defines the PWM data structure for a specific instance of the Microchip PWM device.
- *
- * @param n Instance number.
- */
-#define PWM_MCHP_DATA_DEFN(n) static pwm_mchp_data_t pwm_mchp_data_##n
+static DEVICE_API(pwm, pwm_mchp_api) = {
+	.set_cycles = pwm_mchp_set_cycles,
+	.get_cycles_per_sec = pwm_mchp_get_cycles_per_sec,
+};
+
+#define PWM_MCHP_DATA_DEFN(n) static struct pwm_mchp_data pwm_mchp_data_##n
+
 /* clang-format off */
 #define GET_THE_CLIENT_MCLOCK_IF_AVAILABLE(n)						\
 	COND_CODE_1(DT_INST_CLOCKS_HAS_NAME(n, client_mclk),				\
 	((void *)(DT_INST_CLOCKS_CELL_BY_NAME(n, client_mclk, subsystem))),		\
 	NULL)
-/* clang-format on */
-/**
- * @brief Macro to assign clock configurations for the Microchip PWM device.
- *
- * This macro assigns the clock configurations for the PWM device, including the
- * host core synchronous clock, client core synchronous clock (conditionally), and
- * peripheral asynchronous clock (conditionally).
- *
- * @param n Device tree node number.
- *
- * @note This macro conditionally includes client core synchronous clock handling
- *       and peripheral asynchronous clock configurations based on the presence
- *       of relevant device tree properties.
- */
 
-/* clang-format off */
-#define PWM_MCHP_CLOCK_ASSIGN(n)								  \
-	.pwm_clock.clock_dev = DEVICE_DT_GET(DT_NODELABEL(clock)),				  \
+#define PWM_MCHP_CLOCK_ASSIGN(n)							\
+	.pwm_clock.clock_dev = DEVICE_DT_GET(DT_NODELABEL(clock)),			\
 	.pwm_clock.host_mclk = (void *)(DT_INST_CLOCKS_CELL_BY_NAME(n, mclk, subsystem)),\
-	.pwm_clock.host_gclk = (void *)DT_INST_CLOCKS_CELL_BY_NAME(n, gclk, subsystem),    \
+	.pwm_clock.host_gclk = (void *)DT_INST_CLOCKS_CELL_BY_NAME(n, gclk, subsystem),	\
 	.pwm_clock.client_mclk = GET_THE_CLIENT_MCLOCK_IF_AVAILABLE(n)
-/* clang-format on */
 
-/**
- * @brief Macro to define the PWM configuration structure for a specific instance.
- *
- * This macro defines the PWM configuration structure for a specific instance of the Microchip PWM
- * device.
- *
- * @param n Instance number.
- */
-#define PWM_MCHP_CONFIG_DEFN(n)                                                                    \
-	static const pwm_mchp_config_t pwm_mchp_config_##n = {                                     \
-		.prescaler = DT_INST_PROP(n, prescaler),                                           \
-		.pinctrl_config = PINCTRL_DT_INST_DEV_CONFIG_GET(n),                               \
-		.channels = DT_INST_PROP(n, channels),                                             \
-		.regs = (void *)DT_INST_REG_ADDR(n),                                               \
-		.max_bit_width = DT_INST_PROP(n, max_bit_width),                                   \
+#define PWM_MCHP_CONFIG_DEFN(n)						\
+	static const struct pwm_mchp_config pwm_mchp_config_##n = {     \
+		.prescaler = DT_INST_PROP(n, prescaler),                \
+		.pinctrl_config = PINCTRL_DT_INST_DEV_CONFIG_GET(n),    \
+		.channels = DT_INST_PROP(n, channels),                  \
+		.regs = (void *)DT_INST_REG_ADDR(n),                    \
+		.max_bit_width = DT_INST_PROP(n, max_bit_width),        \
 		PWM_MCHP_CLOCK_ASSIGN(n)}
 
-/**
- * @brief Macro to define the device structure for a specific instance of the PWM device.
- *
- * This macro defines the device structure for a specific instance of the Microchip PWM device.
- * It uses the DEVICE_DT_INST_DEFINE macro to create the device instance with the specified
- * initialization function, data structure, configuration structure, and driver API.
- *
- * @param n Instance number.
- */
-#define PWM_MCHP_DEVICE_DT_DEFN(n)                                                                 \
-	DEVICE_DT_INST_DEFINE(n, pwm_mchp_init, NULL, &pwm_mchp_data_##n, &pwm_mchp_config_##n,    \
+
+#define PWM_MCHP_DEVICE_DT_DEFN(n)								\
+	DEVICE_DT_INST_DEFINE(n, pwm_mchp_init, NULL, &pwm_mchp_data_##n, &pwm_mchp_config_##n,	\
 			      POST_KERNEL, CONFIG_PWM_INIT_PRIORITY, &pwm_mchp_api)
 
-/**
- * Initialize the PWM device with pin control, data, and configuration definitions.
- */
-#define PWM_MCHP_DEVICE_INIT(n)                                                                    \
-	PINCTRL_DT_INST_DEFINE(n);                                                                 \
-	PWM_MCHP_DATA_DEFN(n);                                                                     \
-	PWM_MCHP_CONFIG_DEFN(n);                                                                   \
+#define PWM_MCHP_DEVICE_INIT(n)		\
+	PINCTRL_DT_INST_DEFINE(n);	\
+	PWM_MCHP_DATA_DEFN(n);          \
+	PWM_MCHP_CONFIG_DEFN(n);        \
 	PWM_MCHP_DEVICE_DT_DEFN(n);
 
-/* Run init macro for each pwm-generic node */
+/* clang-format on */
 DT_INST_FOREACH_STATUS_OKAY(PWM_MCHP_DEVICE_INIT)
