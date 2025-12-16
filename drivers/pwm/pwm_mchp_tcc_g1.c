@@ -35,13 +35,6 @@ LOG_MODULE_REGISTER(pwm_mchp_tcc_g1, CONFIG_PWM_LOG_LEVEL);
 #define MCHP_PWM_SUCCESS 0
 
 /**
- * @brief Type definition for the PWM lock.
- *
- * This macro defines the type of the lock used to protect access to the PWM APIs.
- */
-#define MCHP_PWM_LOCK_TYPE struct k_mutex
-
-/**
  * @brief Timeout duration for acquiring the PWM lock.
  *
  * This macro defines the timeout duration for acquiring the PWM lock.
@@ -79,16 +72,13 @@ LOG_MODULE_REGISTER(pwm_mchp_tcc_g1, CONFIG_PWM_LOG_LEVEL);
  */
 #define MCHP_PWM_DATA_UNLOCK(p_lock) k_mutex_unlock(p_lock)
 
+/* Timeout values for WAIT_FOR macro */
+#define TIMEOUT_VALUE_US 1000
+#define DELAY_US         2
+
 /***********************************
  * Typedefs and Enum Declarations
  **********************************/
-typedef enum {
-	BIT_MODE_8 = 8,
-	BIT_MODE_16 = 16,
-	BIT_MODE_24 = 24,
-	BIT_MODE_32 = 32,
-} pwm_counter_modes_t;
-
 typedef enum {
 	PWM_PRESCALE_1 = 1,
 	PWM_PRESCALE_2 = 2,
@@ -118,7 +108,7 @@ typedef enum {
  * @brief Structure to hold PWM data specific to Microchip hardware.
  */
 typedef struct {
-	MCHP_PWM_LOCK_TYPE lock; /* Lock type for PWM configuration */
+	struct k_mutex lock; /* Lock type for PWM configuration */
 } pwm_mchp_data_t;
 
 typedef struct mchp_counter_clock {
@@ -210,8 +200,10 @@ static inline void tcc_enable(void *pwm_reg, bool enable)
  */
 static inline void tcc_sync_wait(void *pwm_reg)
 {
-	while ((PWM_REG(pwm_reg)->TCC_SYNCBUSY) != 0) {
-		LOG_DBG("waiting for syncbsy tcc");
+
+	if (!WAIT_FOR(((PWM_REG(pwm_reg)->TCC_SYNCBUSY) != 0), TIMEOUT_VALUE_US,
+		      k_busy_wait(DELAY_US))) {
+		LOG_ERR("TCC_SYNCBUSY wait timed out");
 	}
 	LOG_DBG("%s invoked", __func__);
 }
@@ -283,11 +275,17 @@ static int pwm_mchp_set_cycles(const struct device *pwm_dev, uint32_t channel, u
 {
 	const pwm_mchp_config_t *const mchp_pwm_cfg = pwm_dev->config;
 	pwm_mchp_data_t *mchp_pwm_data = pwm_dev->data;
-	int ret_val = 0;
-	uint32_t top = ((uint32_t)(1 << mchp_pwm_cfg->max_bit_width) - 1);
+	int ret_val = -EINVAL;
+	uint32_t top = (BIT(mchp_pwm_cfg->max_bit_width) - 1);
 
 	MCHP_PWM_DATA_LOCK(&mchp_pwm_data->lock);
-	do {
+
+	if (channel >= mchp_pwm_cfg->channels) {
+		LOG_ERR("channel %d is invalid", channel);
+	} else if ((period > top) || (pulse > top)) {
+		LOG_ERR("period or pulse is out of range");
+	} else {
+
 		bool invert_flag_set = ((flags & PWM_POLARITY_INVERTED) != 0);
 		bool not_inverted = tcc_get_invert_status(mchp_pwm_cfg->regs, channel);
 
@@ -295,22 +293,11 @@ static int pwm_mchp_set_cycles(const struct device *pwm_dev, uint32_t channel, u
 			tcc_set_invert(mchp_pwm_cfg->regs, channel);
 		}
 
-		if (channel >= mchp_pwm_cfg->channels) {
-			LOG_ERR("channel %d is invalid", channel);
-			ret_val = -EINVAL;
-			break;
-		}
-
-		if ((period > top) || (pulse > top)) {
-			LOG_ERR("period or pulse is out of range");
-			ret_val = -EINVAL;
-			break;
-		}
-
 		PWM_REG(mchp_pwm_cfg->regs)->TCC_CCBUF[channel] = TCC_CCBUF_CCBUF(pulse);
 		PWM_REG(mchp_pwm_cfg->regs)->TCC_PER = TCC_PER_PER(period);
+		ret_val = MCHP_PWM_SUCCESS;
+	}
 
-	} while (0);
 	MCHP_PWM_DATA_UNLOCK(&mchp_pwm_data->lock);
 
 	return ret_val;
@@ -334,15 +321,11 @@ static int pwm_mchp_get_cycles_per_sec(const struct device *pwm_dev, uint32_t ch
 	const pwm_mchp_config_t *const mchp_pwm_cfg = pwm_dev->config;
 	pwm_mchp_data_t *mchp_pwm_data = pwm_dev->data;
 	uint32_t periph_clk_freq = 0;
-	int ret_val = 0;
+	int ret_val = -EINVAL;
 
 	MCHP_PWM_DATA_LOCK(&mchp_pwm_data->lock);
-	do {
-		if (channel >= (mchp_pwm_cfg->channels)) {
-			LOG_ERR("channel %d is invalid", channel);
-			ret_val = -EINVAL;
-			break;
-		}
+
+	if (channel < (mchp_pwm_cfg->channels)) {
 		/* clang-format off */
 		clock_control_get_rate(
 			 mchp_pwm_cfg->pwm_clock.clock_dev,
@@ -350,11 +333,16 @@ static int pwm_mchp_get_cycles_per_sec(const struct device *pwm_dev, uint32_t ch
 			&periph_clk_freq);
 		/* clang-format on */
 		*cycles = periph_clk_freq / mchp_pwm_cfg->prescaler;
-	} while (0);
+		ret_val = MCHP_PWM_SUCCESS;
+	} else {
+		LOG_ERR("channel %d is invalid", channel);
+	}
+
 	MCHP_PWM_DATA_UNLOCK(&mchp_pwm_data->lock);
 
 	return ret_val;
 }
+
 /******************************************************************************
  * @brief Zephyr driver instance creation
  *****************************************************************************/
@@ -369,11 +357,6 @@ static int pwm_mchp_get_cycles_per_sec(const struct device *pwm_dev, uint32_t ch
 static DEVICE_API(pwm, pwm_mchp_api) = {
 	.set_cycles = pwm_mchp_set_cycles,
 	.get_cycles_per_sec = pwm_mchp_get_cycles_per_sec,
-#ifdef CONFIG_PWM_CAPTURE
-	.configure_capture = pwm_mchp_configure_capture,
-	.enable_capture = pwm_mchp_enable_capture,
-	.disable_capture = pwm_mchp_disable_capture,
-#endif /* CONFIG_PWM_CAPTURE */
 };
 
 /**

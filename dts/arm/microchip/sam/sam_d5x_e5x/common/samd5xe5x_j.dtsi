@@ -15,6 +15,7 @@
 			clock-names = "mclk", "gclk";
 			max-bit-width = <16>;
 			channels = <2>;
+			status = "disabled";
 		};
 
 		tc4: tc@42001400 {
@@ -48,6 +49,7 @@
 			clock-names = "mclk", "gclk";
 			max-bit-width = <16>;
 			channels = <2>;
+			status = "disabled";
 		};
 	};
 };

@@ -1,12 +1,14 @@
 # Copyright (c) 2025 Microchip Technology Inc.
 # SPDX-License-Identifier: Apache-2.0
 
+title: Microchip TCC G1 timer counter peripheral.
+
 description: |
   Microchip TCC G1 timer counter peripheral.
 
   This peripheral is used for generating PWM signals.
   This compatible string is to be used for the following peripherals:
-    - tcc-u2213 (3.1.0)
+    - module name="TCC" id="U2213" version="3.1.0"
 
 compatible: "microchip,tcc-g1"
 

@@ -382,8 +382,8 @@
 };
 
 &tcc0 {
-	status = "okay";
 	compatible = "microchip,tcc-g1-pwm";
+	status = "okay";
 	#pwm-cells = <3>;
 	pinctrl-0 = <&tcc0_pwm_default>;
 	pinctrl-names = "default";

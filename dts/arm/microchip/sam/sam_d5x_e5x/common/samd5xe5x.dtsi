@@ -283,6 +283,7 @@
 			clock-names = "mclk", "gclk";
 			max-bit-width = <24>;
 			channels = <6>;
+			status = "disabled";
 		};
 
 		tcc1: tcc@41018000 {
@@ -294,6 +295,7 @@
 			clock-names = "mclk", "gclk";
 			max-bit-width = <24>;
 			channels = <4>;
+			status = "disabled";
 		};
 
 		tc2: tc@4101a000 {
@@ -331,6 +333,7 @@
 			clock-names = "mclk", "gclk";
 			max-bit-width = <16>;
 			channels = <3>;
+			status = "disabled";
 		};
 
 		ac: ac@42002000 {
