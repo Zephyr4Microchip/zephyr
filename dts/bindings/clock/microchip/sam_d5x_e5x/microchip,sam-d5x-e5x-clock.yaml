@@ -1,12 +1,14 @@
 # Copyright (c) 2025 Microchip Technology Inc.
 # SPDX-License-Identifier: Apache-2.0
 
+title: Microchip SAM_D5x_E5x SOC family clock
+
+description: |
+  Microchip SAM_D5x_E5x SOC family clock (OSCCTRL, OSC32KCTRL, GCLK, MCLK)
+
 include:
   - name: base.yaml
   - name: pinctrl-device.yaml
-
-description: |
-  Binding for Microchip SAM_D5x_E5x SOC family clock (OSCCTRL, OSC32KCTRL, GCLK, MCLK)
 
 compatible: "microchip,sam-d5x-e5x-clock"
 
@@ -20,5 +22,5 @@ properties:
       Driver waits in clock on API to check if the clock is actually on,
       so that the waiting time is not indefinite.
 
-# flash-wait-states need not be changed for this device, since automatic wait state generation
+# flash wait states need not be changed for this device, since automatic wait state generation
 # is enabled by default.

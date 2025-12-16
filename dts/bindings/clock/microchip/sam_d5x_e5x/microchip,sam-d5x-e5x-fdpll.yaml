@@ -1,10 +1,13 @@
 # Copyright (c) 2025 Microchip Technology Inc.
 # SPDX-License-Identifier: Apache-2.0
 
-include: [base.yaml]
+title: SAM_D5x_E5x FDPLL clock
 
 description: |
-  Digital Phase Locked Loop (FDPLL200Mn) configuration.
+  Digital Phase Locked Loop (FDPLL), 96 MHz to 200 MHz output frequency from a 32 kHz to 3.2 MHz
+  reference clock.
+
+include: [base.yaml]
 
 compatible: "microchip,sam-d5x-e5x-fdpll"
 
@@ -77,6 +80,7 @@ child-binding:
       default: 0
       description: |
         DCO Filter Enable
+        0: to disable, 1: to enable
 
     fdpll-dco-filter-select:
       type: string
@@ -101,6 +105,7 @@ child-binding:
       default: 0
       description: |
         Lock Bypass
+        0: to disable, 1: to enable
 
     fdpll-src:
       type: string
@@ -132,6 +137,7 @@ child-binding:
       default: 0
       description: |
         Wake Up Fast
+        0: to disable, 1: to enable
 
     fdpll-pi-filter-type:
       type: string

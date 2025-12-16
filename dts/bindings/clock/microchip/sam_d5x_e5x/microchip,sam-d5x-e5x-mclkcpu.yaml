@@ -1,10 +1,12 @@
 # Copyright (c) 2025 Microchip Technology Inc.
 # SPDX-License-Identifier: Apache-2.0
 
-include: [base.yaml]
+title: SAM_D5x_E5x Main clock for CPU
 
 description: |
-  Main Clock (MCLK) configuration for CPU clock.
+  Main Clock Controller provides synchronous system clocks to the CPU.
+
+include: [base.yaml]
 
 compatible: "microchip,sam-d5x-e5x-mclkcpu"
 

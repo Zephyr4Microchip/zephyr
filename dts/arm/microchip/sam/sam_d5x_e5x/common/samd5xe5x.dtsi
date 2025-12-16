@@ -47,7 +47,10 @@
 			      <0x40001400 0x20>, <0x40001c00 0x140>;
 			reg-names = "mclk", "oscctrl",
 				    "osc32kctrl", "gclk";
-			interrupts = <1 0>, <2 0>, <3 0>, <4 0>, <5 0>, <6 0>, <7 0>;
+			interrupts = <1 0>, <2 0>, <3 0>, <4 0>,
+				     <5 0>, <6 0>, <7 0>;
+			interrupt-names = "mclk", "xosc0", "xosc1", "dfll",
+					  "fdpll0", "fdpll1", "xosc32k";
 
 			xosc: xosc {
 				compatible = "microchip,sam-d5x-e5x-xosc";

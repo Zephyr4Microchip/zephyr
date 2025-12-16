@@ -1,10 +1,12 @@
 # Copyright (c) 2025 Microchip Technology Inc.
 # SPDX-License-Identifier: Apache-2.0
 
-include: [base.yaml]
+title: SAM_D5x_E5x Internal Oscillator (OSC48M)
 
 description: |
   Digital Frequency-Locked Loop (DFLL48M) configuration.
+
+include: [base.yaml]
 
 compatible: "microchip,sam-d5x-e5x-dfll"
 
@@ -44,6 +46,7 @@ properties:
     default: 1
     description: |
       Oscillator Enable
+      0: to disable, 1: to enable
 
   dfll-wait-lock-en:
     type: int
@@ -53,6 +56,7 @@ properties:
     default: 0
     description: |
       If enabled, clock available only after DFLL is locked (Fine lock)
+      0: to disable, 1: to enable
 
   dfll-bypass-coarse-lock-en:
     type: int
@@ -62,6 +66,7 @@ properties:
     default: 0
     description: |
       To bypass coarse lock procedure
+      0: to disable, 1: to enable
 
   dfll-quick-lock-dis:
     type: int
@@ -71,6 +76,7 @@ properties:
     default: 0
     description: |
       Disable quick lock
+      1: to disable, 0: to enable
 
   dfll-chill-cycle-dis:
     type: int
@@ -80,6 +86,13 @@ properties:
     default: 0
     description: |
       Disable chill cycle
+      1: to disable, 0: to enable
+
+      The time from selecting a new CLK_DFLL48M frequency until this frequency is output
+      by the DFLL48M can be up to several microseconds. If the value of dfll-multiply-factor
+      is small, this can lead to instability in the DFLL48M locking mechanism, which can prevent
+      the DFLL48M from achieving locks. To avoid this, a chill cycle, during which the CLK_DFLL48M
+      frequency is not measured, can be enabled. Enabling chill cycles might double the lock time.
 
   dfll-usb-recovery-en:
     type: int
@@ -89,6 +102,7 @@ properties:
     default: 0
     description: |
       Enable USB Clock Recovery Mode
+      0: to disable, 1: to enable
 
   dfll-lose-lock-en:
     type: int
@@ -99,6 +113,8 @@ properties:
     description: |
       If enabled, locks will be lost after waking up from sleep modes,
       if the DFLL clock has been stopped
+      0: Locks will not be lost after waking up from sleep modes
+      1: Locks will be lost after waking up from sleep modes
 
   dfll-stable-freq-en:
     type: int

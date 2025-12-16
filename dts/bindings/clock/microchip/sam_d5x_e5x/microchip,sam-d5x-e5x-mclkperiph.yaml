@@ -1,12 +1,15 @@
 # Copyright (c) 2025 Microchip Technology Inc.
 # SPDX-License-Identifier: Apache-2.0
 
-include: [base.yaml]
+title: SAM_D5x_E5x MCLK (Main Clock) peripheral
 
 description: |
-  peripheral channel gclk clock configuration.
+  Main Clock Controller provides synchronous system clocks to the modules
+  connected to the AHBx and the APBx buses.
 
-compatible: "microchip,sam-d5x-e5x-gclkperiph"
+include: [base.yaml]
+
+compatible: "microchip,sam-d5x-e5x-mclkperiph"
 
 properties:
   "#clock-cells":
@@ -16,7 +19,7 @@ properties:
       The subsystem cell is to identify a clock controller sub-system.
 
       The subsystem can be referred from include\zephyr\dt-bindings\clock\mchp_sam_d5x_e5x_clock.h,
-      under the GCLKPERIPH_TYPE section of ids.
+      under the MCLKPERIPH_TYPE section of ids.
       All clock control API use this value to specify the clock on which the API operates.
       Since subsystem is opaque to the user, it can be accessed from the devicetree node and used.
 
@@ -29,31 +32,12 @@ child-binding:
       type: int
       required: true
       description: Clock subsystem
-
-    gclkperiph-src:
-      type: string
-      enum:
-        - "gclk0"
-        - "gclk1"
-        - "gclk2"
-        - "gclk3"
-        - "gclk4"
-        - "gclk5"
-        - "gclk6"
-        - "gclk7"
-        - "gclk8"
-        - "gclk9"
-        - "gclk10"
-        - "gclk11"
-      default: "gclk0"
-      description: |
-        Generator to be used as the source of a peripheral clock
-
-    gclkperiph-en:
+    mclk-en:
       type: int
       enum:
         - 0
         - 1
-      default: 0
+      required: true
       description: |
-        Enable a peripheral channel
+        Enable mclk to the peripheral
+        0: to disable, 1: to enable
