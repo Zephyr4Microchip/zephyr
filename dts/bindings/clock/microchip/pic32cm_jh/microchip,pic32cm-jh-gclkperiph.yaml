@@ -58,3 +58,4 @@ child-binding:
       default: 0
       description: |
         Enable a peripheral channel
+        0: to disable, 1: to enable

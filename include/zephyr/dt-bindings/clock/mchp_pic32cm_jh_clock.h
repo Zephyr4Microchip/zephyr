@@ -50,7 +50,7 @@
  * @param type clock subsystem type
  * @param mclkbus select from the AHBx and the APBx buses
  * @param mclkmaskbit select the module connected to AHBx or APBx bus (0 to 31)
- * @param gclkperiph gclk peripheral channel number m in PCHTRLm (0 to 47)
+ * @param gclkperiph gclk peripheral channel number m in PCHTRLm (0 to 42)
  * @param inst instance number of the specified clock type
  */
 #define MCHP_CLOCK_DERIVE_ID(type, mclkbus, mclkmaskbit, gclkperiph, inst)                         \

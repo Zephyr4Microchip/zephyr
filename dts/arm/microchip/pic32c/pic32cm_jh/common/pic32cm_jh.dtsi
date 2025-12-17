@@ -73,7 +73,6 @@
 
 			gclkgen: gclkgen {
 				compatible = "microchip,pic32cm-jh-gclkgen";
-
 			};
 
 			gclkperiph: gclkperiph {

@@ -42,6 +42,7 @@ properties:
     default: 0
     description: |
       Amplitude gain will be automatically adjusted during Crystal Oscillator operation
+      0: to disable, 1: to enable
 
   xosc-on-demand-en:
     type: int
@@ -81,6 +82,7 @@ properties:
     default: 0
     description: |
       Clock Failure Detector Enable
+      0: to disable, 1: to enable
 
   xosc-xtal-en:
     type: int
@@ -101,9 +103,10 @@ properties:
     default: 0
     description: |
       Oscillator Enable
+      0: to disable, 1: to enable
 
   xosc-frequency:
     type: int
-    default: 12000000
+    default: 0
     description: |
       Crystal/External clock frequency for XOSC Controller

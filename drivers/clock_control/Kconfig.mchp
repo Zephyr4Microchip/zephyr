@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 config CLOCK_CONTROL_MCHP_COMMON
-	bool  "Microchip clock controller"
+	bool
 	help
 	  Common options for Microchip clock control drivers.
 

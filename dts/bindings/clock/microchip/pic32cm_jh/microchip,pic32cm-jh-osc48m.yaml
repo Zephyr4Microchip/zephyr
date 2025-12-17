@@ -46,6 +46,7 @@ properties:
     default: 1
     description: |
       Oscillator Enable
+      0: to disable, 1: to enable
 
   osc48m-post-divider-freq:
     type: string

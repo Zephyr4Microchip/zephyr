@@ -36,6 +36,7 @@ child-binding:
         Keep the Generator running in Standby as long as it is configured to output to a dedicated
         GCLK_IOn pin. If output is not configured to a pin, this field has no effect and the
         generator will only be running if a peripheral requires the clock.
+        0: to disable, 1: to enable
 
     gclkgen-div-select:
       type: string
@@ -57,6 +58,7 @@ child-binding:
       description: |
         Generator clock output to the corresponding pin, if that pin is not configured as input
         source.
+        0: to disable, 1: to enable
 
     gclkgen-pin-output-off-val:
       type: string
@@ -76,6 +78,7 @@ child-binding:
       default: 0
       description: |
         Improve the duty cycle of the Generator output to 50/50 for odd division factors
+        0: to disable, 1: to enable
 
     gclkgen-en:
       type: int
@@ -85,6 +88,7 @@ child-binding:
       default: 0
       description: |
         Enable gclk generator
+        0: to disable, 1: to enable
 
     gclkgen-src:
       type: string

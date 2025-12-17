@@ -31,11 +31,15 @@ child-binding:
     subsystem:
       type: int
       required: true
-      description: Clock subsystem
+      description: |
+        Clock subsystem
+
     mclk-en:
       type: int
       enum:
         - 0
         - 1
       required: true
-      description: Enable mclk to the peripheral
+      description: |
+        Enable mclk to the peripheral
+        0: to disable, 1: to enable

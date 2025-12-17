@@ -59,6 +59,7 @@ properties:
     default: 0
     description: |
       1kHz Output Enable
+      0: to disable, 1: to enable
 
   osc32k-32khz-en:
     type: int
@@ -68,6 +69,7 @@ properties:
     default: 0
     description: |
       32kHz output is enable
+      0: to disable, 1: to enable
 
   osc32k-en:
     type: int
@@ -77,3 +79,4 @@ properties:
     default: 0
     description: |
       Oscillator Enable
+      0: to disable, 1: to enable

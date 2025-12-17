@@ -4,7 +4,8 @@
 title: PIC32CM_JH FDPLL clock
 
 description: |
-  Digital Phase Locked Loop (FDPLL), 48 MHz to 96 MHz output frequency from a 32 kHz to 2 MHz reference clock.
+  Digital Phase Locked Loop (FDPLL), 48 MHz to 96 MHz output frequency from a 32 kHz to 2 MHz
+  reference clock.
 
 include: [base.yaml]
 
@@ -46,6 +47,7 @@ properties:
     default: 0
     description: |
       Oscillator Enable
+      0: to disable, 1: to enable
 
   fdpll-divider-ratio-frac:
     type: int
@@ -73,6 +75,7 @@ properties:
     default: 0
     description: |
       Lock Bypass
+      0: to disable, 1: to enable
 
   fdpll-src:
     type: string
@@ -100,6 +103,7 @@ properties:
     default: 0
     description: |
       Wake Up Fast
+      0: to disable, 1: to enable
 
   fdpll-low-power-en:
     type: int
@@ -109,6 +113,7 @@ properties:
     default: 0
     description: |
       When enabled, Time to Digital Converter is disabled (increase the output jitter).
+      0: to disable, 1: to enable
 
   fdpll-pi-filter-type:
     type: string

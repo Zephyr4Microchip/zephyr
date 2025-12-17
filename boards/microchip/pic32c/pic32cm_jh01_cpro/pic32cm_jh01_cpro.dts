@@ -120,7 +120,7 @@
 		compatible = "microchip,pic32cm-jh-gclkperiph";
 		#clock-cells = <1>;
 
-		sercom2 {
+		sercom4 {
 			subsystem = <CLOCK_MCHP_GCLKPERIPH_ID_SERCOM4_CORE>;
 			gclkperiph-src = "gclk0";
 			gclkperiph-en = <1>;
