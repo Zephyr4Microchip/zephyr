@@ -10,10 +10,8 @@
 #include <zephyr/irq.h>
 #include <zephyr/logging/log.h>
 #include <zephyr/drivers/i2c.h>
-#ifdef CONFIG_I2C_MCHP_DMA_DRIVEN
 #include <zephyr/drivers/dma.h>
 #include <mchp_dt_helper.h>
-#endif /*CONFIG_I2C_MCHP_DMA_DRIVEN*/
 #include <zephyr/drivers/pinctrl.h>
 #include <zephyr/drivers/clock_control/mchp_clock_control.h>
 
@@ -103,6 +101,9 @@ struct i2c_mchp_dev_data {
 	struct i2c_target_callbacks target_callbacks;
 	uint8_t rx_tx_data;
 #endif /*CONFIG_I2C_TARGET*/
+#ifdef CONFIG_I2C_MCHP_DMA_DRIVEN
+	const struct i2c_mchp_dev_config *cfg;
+#endif /*CONFIG_I2C_MCHP_DMA_DRIVEN*/
 	bool firstReadAfterAddrMatch;
 };
 
@@ -527,11 +528,15 @@ static bool i2c_is_terminate_on_error(const struct device *dev)
 		return false;
 	}
 
+	LOG_ERR("I2C error on %s: status=0x%x", dev->name, data->current_msg.status);
+
 	i2c_controller_status_clear(dev, data->current_msg.status);
 	i2c_controller_int_disable(dev, SERCOM_I2CM_INTENSET_Msk);
 	i2c_controller_transfer_stop(dev);
 #ifdef CONFIG_I2C_CALLBACK
-	data->i2c_async_callback(dev, (int)data->current_msg.status, data->user_data);
+	if (data->i2c_async_callback != NULL) {
+		data->i2c_async_callback(dev, (int)data->current_msg.status, data->user_data);
+	}
 #else
 	k_sem_give(&data->i2c_sync_sem);
 #endif /*CONFIG_I2C_CALLBACK*/
@@ -591,9 +596,12 @@ static void i2c_restart(const struct device *dev)
 		retval = i2c_start_dma(dev, is_read);
 	}
 
-	/* If DMA failed at either step, notify callback */
-	if ((retval != I2C_MCHP_SUCCESS) && (data->i2c_async_callback != NULL)) {
-		data->i2c_async_callback(dev, retval, data->user_data);
+	if (retval != I2C_MCHP_SUCCESS) {
+		LOG_ERR("I2C restart DMA failed on %s: error=%d", dev->name, retval);
+
+		if (data->i2c_async_callback != NULL) {
+			data->i2c_async_callback(dev, retval, data->user_data);
+		}
 	}
 #else
 	i2c_controller_addr_write(dev, addr_reg);
@@ -844,10 +852,14 @@ static void i2c_handle_controller_error(const struct device *dev)
 {
 	struct i2c_mchp_dev_data *data = dev->data;
 
+	LOG_ERR("I2C controller error on %s: status=0x%08X", dev->name, data->current_msg.status);
+
 	i2c_controller_transfer_stop(dev);
 	i2c_controller_int_disable(dev, SERCOM_I2CM_INTENSET_Msk);
 #ifdef CONFIG_I2C_CALLBACK
-	data->i2c_async_callback(dev, (int)data->current_msg.status, data->user_data);
+	if (data->i2c_async_callback != NULL) {
+		data->i2c_async_callback(dev, (int)data->current_msg.status, data->user_data);
+	}
 #else
 	k_sem_give(&data->i2c_sync_sem);
 #endif /*CONFIG_I2C_CALLBACK*/
@@ -870,8 +882,10 @@ static void i2c_handle_controller_write_mode(const struct device *dev, bool cont
 			i2c_restart(dev);
 		} else {
 #ifdef CONFIG_I2C_CALLBACK
-			data->i2c_async_callback(dev, (int)data->current_msg.status,
-						 data->user_data);
+			if (data->i2c_async_callback != NULL) {
+				data->i2c_async_callback(dev, (int)data->current_msg.status,
+							 data->user_data);
+			}
 #else
 			k_sem_give(&data->i2c_sync_sem);
 #endif /*CONFIG_I2C_CALLBACK*/
@@ -917,8 +931,10 @@ static void i2c_handle_controller_read_mode(const struct device *dev, bool conti
 			i2c_restart(dev);
 		} else {
 #ifdef CONFIG_I2C_CALLBACK
-			data->i2c_async_callback(dev, (int)data->current_msg.status,
-						 data->user_data);
+			if (data->i2c_async_callback != NULL) {
+				data->i2c_async_callback(dev, (int)data->current_msg.status,
+							 data->user_data);
+			}
 #else
 			k_sem_give(&data->i2c_sync_sem);
 #endif /*CONFIG_I2C_CALLBACK*/
@@ -1146,8 +1162,8 @@ static int i2c_mchp_target_unregister(const struct device *dev,
 #ifdef CONFIG_I2C_MCHP_DMA_DRIVEN
 static void i2c_dma_write_done(const struct device *dma_dev, void *arg, uint32_t id, int error_code)
 {
-	const struct device *dev = arg;
-	struct i2c_mchp_dev_data *data = dev->data;
+	struct i2c_mchp_dev_data *data = (struct i2c_mchp_dev_data *)arg;
+	const struct device *dev = data->dev;
 	const struct i2c_mchp_dev_config *cfg = dev->config;
 	bool continue_next = false;
 
@@ -1203,10 +1219,15 @@ static void i2c_dma_write_done(const struct device *dma_dev, void *arg, uint32_t
 		if (i2c_dma_write_config(dev) == 0) {
 			int retval = dma_start(cfg->i2c_dma.dma_dev, cfg->i2c_dma.tx_dma_channel);
 
-			if ((retval != 0) && (data->i2c_async_callback != NULL)) {
-				data->i2c_async_callback(dev, retval, data->user_data);
+			if (retval != 0) {
+				LOG_ERR("DMA write start failed on %s: %d", dev->name, retval);
+
+				if (data->i2c_async_callback != NULL) {
+					data->i2c_async_callback(dev, retval, data->user_data);
+				}
 			}
 		} else {
+			LOG_ERR("DMA write config failed on %s", dev->name);
 			if (data->i2c_async_callback != NULL) {
 				data->i2c_async_callback(dev, -EIO, data->user_data);
 			}
@@ -1223,8 +1244,8 @@ static void i2c_dma_write_done(const struct device *dma_dev, void *arg, uint32_t
 
 static void i2c_dma_read_done(const struct device *dma_dev, void *arg, uint32_t id, int error_code)
 {
-	const struct device *dev = arg;
-	struct i2c_mchp_dev_data *data = dev->data;
+	struct i2c_mchp_dev_data *data = (struct i2c_mchp_dev_data *)arg;
+	const struct device *dev = data->dev;
 	const struct i2c_mchp_dev_config *cfg = dev->config;
 	bool continue_next = false;
 
@@ -1277,15 +1298,20 @@ static void i2c_dma_read_done(const struct device *dma_dev, void *arg, uint32_t 
 
 		irq_unlock(key);
 
-		if (i2c_dma_read_config(dev) == 0) {
+		if (i2c_dma_read_config(dev) == I2C_MCHP_SUCCESS) {
 
 			int retval = dma_start(cfg->i2c_dma.dma_dev, cfg->i2c_dma.rx_dma_channel);
 
-			if ((retval != 0) && (data->i2c_async_callback != NULL)) {
-				data->i2c_async_callback(dev, retval, data->user_data);
+			if (retval != I2C_MCHP_SUCCESS) {
+				LOG_ERR("DMA read start failed on %s: %d", dev->name, retval);
+
+				if (data->i2c_async_callback != NULL) {
+					data->i2c_async_callback(dev, retval, data->user_data);
+				}
 			}
 
 		} else {
+			LOG_ERR("DMA read config failed on %s", dev->name);
 			if (data->i2c_async_callback != NULL) {
 				data->i2c_async_callback(dev, -EIO, data->user_data);
 			}
@@ -1311,7 +1337,7 @@ static int i2c_dma_write_config(const struct device *dev)
 	dma_cfg.channel_direction = MEMORY_TO_PERIPHERAL;
 	dma_cfg.source_data_size = 1;
 	dma_cfg.dest_data_size = 1;
-	dma_cfg.user_data = (void *)dev;
+	dma_cfg.user_data = data;
 	dma_cfg.dma_callback = i2c_dma_write_done;
 	dma_cfg.block_count = 1;
 	dma_cfg.head_block = &dma_blk;
@@ -1325,7 +1351,9 @@ static int i2c_dma_write_config(const struct device *dev)
 	retval = dma_config(cfg->i2c_dma.dma_dev, cfg->i2c_dma.tx_dma_channel, &dma_cfg);
 	if (retval != I2C_MCHP_SUCCESS) {
 		LOG_ERR("Write DMA configure on %s failed: %d", dev->name, retval);
-		data->i2c_async_callback(dev, retval, data->user_data);
+		if (data->i2c_async_callback != NULL) {
+			data->i2c_async_callback(dev, retval, data->user_data);
+		}
 	}
 
 	return retval;
@@ -1342,7 +1370,7 @@ static int i2c_dma_read_config(const struct device *dev)
 	dma_cfg.channel_direction = PERIPHERAL_TO_MEMORY;
 	dma_cfg.source_data_size = 1;
 	dma_cfg.dest_data_size = 1;
-	dma_cfg.user_data = (void *)dev;
+	dma_cfg.user_data = data;
 	dma_cfg.dma_callback = i2c_dma_read_done;
 	dma_cfg.block_count = 1;
 	dma_cfg.head_block = &dma_blk;
@@ -1356,7 +1384,9 @@ static int i2c_dma_read_config(const struct device *dev)
 	retval = dma_config(cfg->i2c_dma.dma_dev, cfg->i2c_dma.rx_dma_channel, &dma_cfg);
 	if (retval != I2C_MCHP_SUCCESS) {
 		LOG_ERR("Read DMA configure on %s failed: %d", dev->name, retval);
-		data->i2c_async_callback(dev, retval, data->user_data);
+		if (data->i2c_async_callback != NULL) {
+			data->i2c_async_callback(dev, retval, data->user_data);
+		}
 	}
 
 	return retval;
@@ -1417,8 +1447,12 @@ static int i2c_mchp_transfer_cb(const struct device *dev, struct i2c_msg *msgs, 
 		retval = i2c_start_dma(dev, is_read);
 	}
 
-	if ((retval != I2C_MCHP_SUCCESS) && (data->i2c_async_callback != NULL)) {
-		data->i2c_async_callback(dev, retval, data->user_data);
+	if (retval != I2C_MCHP_SUCCESS) {
+		LOG_ERR("I2C DMA start failed on %s: error=%d", dev->name, retval);
+
+		if (data->i2c_async_callback != NULL) {
+			data->i2c_async_callback(dev, retval, user_data);
+		}
 	}
 #else
 	i2c_controller_addr_write(dev, addr_reg);
@@ -1431,7 +1465,7 @@ static int i2c_mchp_transfer_cb(const struct device *dev, struct i2c_msg *msgs, 
 }
 #endif /*CONFIG_I2C_CALLBACK*/
 
-#if !defined(CONFIG_I2C_MCHP_INTERRUPT_DRIVEN)
+#ifndef CONFIG_I2C_MCHP_INTERRUPT_DRIVEN
 static bool i2c_is_nack(const struct device *dev)
 {
 	bool retval;
@@ -1773,6 +1807,9 @@ static int i2c_mchp_init(const struct device *dev)
 	}
 
 #ifdef CONFIG_I2C_MCHP_DMA_DRIVEN
+	data->dev = dev;
+	data->cfg = cfg;
+
 	if ((cfg->i2c_dma.tx_dma_channel == 0xFFU) || (cfg->i2c_dma.rx_dma_channel == 0xFFU)) {
 		LOG_ERR("Invalid DMA configuration: TX or RX DMA channel is disabled (0xFF)");
 		return -EINVAL;
@@ -1851,6 +1888,10 @@ static DEVICE_API(i2c, i2c_mchp_api) = {
 	.i2c_clock.gclk_sys = (void *)(DT_INST_CLOCKS_CELL_BY_NAME(n, gclk, subsystem)),
 
 #if CONFIG_I2C_MCHP_DMA_DRIVEN
+#define I2C_MCHP_DMA_CHECK(n)                                                                      \
+	BUILD_ASSERT(DT_INST_NODE_HAS_PROP(n, dmas),                                               \
+		     "DMA is enabled for I2C instance " #n                                         \
+		     " but 'dmas' property is missing in the devicetree.")
 #define I2C_MCHP_DMA_CHANNELS(n)                                                                   \
 	.i2c_dma.dma_dev = DEVICE_DT_GET(MCHP_DT_INST_DMA_CTLR(n, tx)),                            \
 	.i2c_dma.tx_dma_request = MCHP_DT_INST_DMA_TRIGSRC(n, tx),                                 \
@@ -1858,6 +1899,7 @@ static DEVICE_API(i2c, i2c_mchp_api) = {
 	.i2c_dma.rx_dma_request = MCHP_DT_INST_DMA_TRIGSRC(n, rx),                                 \
 	.i2c_dma.rx_dma_channel = MCHP_DT_INST_DMA_CHANNEL(n, rx),
 #else
+#define I2C_MCHP_DMA_CHECK(n)
 #define I2C_MCHP_DMA_CHANNELS(n)
 #endif /*CONFIG_I2C_MCHP_DMA_DRIVEN*/
 
@@ -1877,6 +1919,7 @@ static DEVICE_API(i2c, i2c_mchp_api) = {
 		I2C_MCHP_REG_DEFN(n) I2C_MCHP_CLOCK_DEFN(n) I2C_MCHP_DMA_CHANNELS(n)}
 
 #define I2C_MCHP_DEVICE_INIT(n)                                                                    \
+	I2C_MCHP_DMA_CHECK(n);                                                                     \
 	PINCTRL_DT_INST_DEFINE(n);                                                                 \
 	static void i2c_mchp_irq_config_##n(const struct device *dev);                             \
 	I2C_MCHP_CONFIG_DEFN(n);                                                                   \
