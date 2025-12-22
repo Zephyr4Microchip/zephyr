@@ -4,8 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-/* Device-tree nodes specific to 208-pin package variants */
-
 #include <microchip/pic32c/pic32cz_ca/common/pic32cz_ca.dtsi>
 
 &pinctrl {

@@ -143,9 +143,9 @@ child-binding:
           - "slow12"
         description: |
           Pin speed. The default value of slew-rate is the SoC power-on-reset
-          value. Slew rate control can be used to improve signal integrity 
+          value. Slew rate control can be used to improve signal integrity
           for high-speed signals
-            fast: Slew rate control disabled (fast)
-            slow4: Slew rate control enabled (4x slower)
+            fast: Slew rate control disabled (fast).
+            slow4: Slew rate control enabled (4x slower).
             slow8: Slew rate control enabled (8x slower).
             slow12: Slew rate control enabled (12x slower).

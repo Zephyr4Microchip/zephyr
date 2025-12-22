@@ -133,15 +133,16 @@ static void pinctrl_set_flags(const pinctrl_soc_pin_t *pin)
 		} else {
 			pRegister->PORT_DIR &= ~(1 << pin_num);
 		}
-
-#ifdef CONFIG_SOC_FAMILY_MICROCHIP_PIC32CZ_CA
-		uint8_t slewrate_val = 0U;
-
+#ifdef CONFIG_PIN_OPEN_DRAIN
 		if ((pin->pinflag & MCHP_PINCTRL_OPENDRAIN) != 0) {
 			pRegister->PORT_PINCFG[pin_num] |= PORT_PINCFG_ODRAIN(1);
 		} else {
 			pRegister->PORT_PINCFG[pin_num] &= ~PORT_PINCFG_ODRAIN(1);
 		}
+#endif /* CONFIG_PIN_OPEN_DRAIN */
+
+#ifdef CONFIG_PIN_SLEW_RATE
+		uint8_t slewrate_val = 0U;
 
 		if ((pin->pinflag & MCHP_PINCTRL_SLEWRATE) != 0) {
 			/* Extract Slew Rate Value from pinflag and update the register */
@@ -151,15 +152,16 @@ static void pinctrl_set_flags(const pinctrl_soc_pin_t *pin)
 		pRegister->PORT_PINCFG[pin_num] =
 			(pRegister->PORT_PINCFG[pin_num] & ~PORT_PINCFG_SLEWLIM_Msk) |
 			PORT_PINCFG_SLEWLIM(slewrate_val);
-#else /* CONFIG_SOC_FAMILY_MICROCHIP_PIC32CZ_CA */
+#endif /* CONFIG_PIN_SLEW_RATE */
 
+#ifdef CONFIG_PIN_DRIVE_STRENGTH
 		/* if drive strength is enabled, set the corresponding bit in PORT_PINCFG reg */
 		if ((pin->pinflag & MCHP_PINCTRL_DRIVESTRENGTH) != 0) {
 			pRegister->PORT_PINCFG[pin_num] |= PORT_PINCFG_DRVSTR(1);
 		} else {
 			pRegister->PORT_PINCFG[pin_num] &= ~PORT_PINCFG_DRVSTR(1);
 		}
-#endif
+#endif /* CONFIG_PIN_DRIVE_STRENGTH */
 	}
 }
 
