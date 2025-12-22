@@ -51,7 +51,8 @@ LOG_MODULE_REGISTER(intc_mchp_eic_g1, CONFIG_INTC_LOG_LEVEL);
 
 /* Port B */
 /* The special pins need an offset when calculating the eic line */
-#define PORTB_SPECIAL_PINS (BIT(26) | BIT(27) | BIT(28) | BIT(29))
+#define PORTB_SPECIAL_PINS        (BIT(26) | BIT(27) | BIT(28) | BIT(29))
+#define PORTB_SPECIAL_PINS_OFFSET 2
 
 /* Port C */
 #define PORTC_UNSUPPORTED_PINS (BIT(8) | BIT(9) | BIT(14) | BIT(29))
@@ -70,6 +71,12 @@ LOG_MODULE_REGISTER(intc_mchp_eic_g1, CONFIG_INTC_LOG_LEVEL);
 #define PORTD_SPECIAL_PINS_1_OFFSET 5
 #define PORTD_SPECIAL_PINS_2_OFFSET 6
 
+#define EIC_LINES_PER_PORT 16
+
+/* This macro is used for finding out where the config value is to be entered for an EIC line */
+#define EIC_CONFIG_OFFSET        3
+#define BIT_MASK_3BITS           7
+#define EIC_CONFIG_BITS_PER_LINE 4
 /***********************************
  * Typedefs and Enum Declarations
  ***********************************/
@@ -163,7 +170,7 @@ typedef struct eic_mchp_dev_data {
  */
 uint8_t find_eic_line_from_pin(int port, int pin)
 {
-	uint8_t eic_line = pin % 16;
+	uint8_t eic_line = pin % EIC_LINES_PER_PORT;
 	uint32_t pin_mask = BIT(pin);
 
 	switch (port) {
@@ -174,7 +181,7 @@ uint8_t find_eic_line_from_pin(int port, int pin)
 		break;
 	case MCHP_PORT_ID1:
 		if ((PORTB_SPECIAL_PINS & pin_mask) != 0) {
-			eic_line += 2;
+			eic_line += PORTB_SPECIAL_PINS_OFFSET;
 		}
 		break;
 	case MCHP_PORT_ID2:
@@ -380,16 +387,44 @@ int eic_mchp_config_interrupt(eic_config_params_t *eic_pin_config)
 		/* - The bit position for respective eic line in the config
 		 * register is calculated and written into the respective config
 		 * register
-		 * - The `eic_line>>3` will find out which config register(0 OR 1)
+		 * - The `eic_line>>EIC_CONFIG_OFFSET` will find out which config register(0 OR 1)
 		 * to write the trigger type to.
-		 * - `eic_line & 7` is required to find the offset of the eic line
+		 * - `eic_line & BIT_MASK_3BITS` is required to find the offset of the eic line
 		 * inside the config register
 		 */
-		eic_cfg->regs->EIC_CONFIG[(eic_line >> 3)] &=
-			~(EIC_CONFIG_EIC_LINE_MSK << (4 * (eic_line & 7)));
-
-		eic_cfg->regs->EIC_CONFIG[(eic_line >> 3)] |= (eic_pin_config->trig_type)
-							      << (4 * (eic_line & 7));
+		if ((eic_line >> EIC_CONFIG_OFFSET) == 0) {
+#ifdef CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_SG
+			eic_cfg->regs->EIC_CONFIG0 &=
+				~(EIC_CONFIG_EIC_LINE_MSK
+				  << (EIC_CONFIG_BITS_PER_LINE * (eic_line & BIT_MASK_3BITS)));
+			eic_cfg->regs->EIC_CONFIG0 |=
+				(eic_pin_config->trig_type)
+				<< (EIC_CONFIG_BITS_PER_LINE * (eic_line & BIT_MASK_3BITS));
+#else
+			eic_cfg->regs->EIC_CONFIG[0] &=
+				~(EIC_CONFIG_EIC_LINE_MSK
+				  << (EIC_CONFIG_BITS_PER_LINE * (eic_line & BIT_MASK_3BITS)));
+			eic_cfg->regs->EIC_CONFIG[0] |=
+				(eic_pin_config->trig_type)
+				<< (EIC_CONFIG_BITS_PER_LINE * (eic_line & BIT_MASK_3BITS));
+#endif
+		} else {
+#ifdef CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_SG
+			eic_cfg->regs->EIC_CONFIG1 &=
+				~(EIC_CONFIG_EIC_LINE_MSK
+				  << (EIC_CONFIG_BITS_PER_LINE * (eic_line & BIT_MASK_3BITS)));
+			eic_cfg->regs->EIC_CONFIG1 |=
+				(eic_pin_config->trig_type)
+				<< (EIC_CONFIG_BITS_PER_LINE * (eic_line & BIT_MASK_3BITS));
+#else
+			eic_cfg->regs->EIC_CONFIG[1] &=
+				~(EIC_CONFIG_EIC_LINE_MSK
+				  << (EIC_CONFIG_BITS_PER_LINE * (eic_line & BIT_MASK_3BITS)));
+			eic_cfg->regs->EIC_CONFIG[1] |=
+				(eic_pin_config->trig_type)
+				<< (EIC_CONFIG_BITS_PER_LINE * (eic_line & BIT_MASK_3BITS));
+#endif
+		}
 
 		/* Set the debouncing feature of the eic line if required */
 		if (eic_pin_config->debounce != 0) {
