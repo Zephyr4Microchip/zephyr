@@ -51,6 +51,8 @@ struct counter_alarm_cfg alarm_cfg;
 #define TIMER DT_NODELABEL(stimer0)
 #elif defined(CONFIG_COUNTER_INFINEON_CAT1)
 #define TIMER DT_NODELABEL(counter0_0)
+#elif defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_SG)
+#define TIMER DT_ALIAS(counter)
 #elif defined(CONFIG_COUNTER_AMBIQ)
 #ifdef TIMER
 #undef TIMER
