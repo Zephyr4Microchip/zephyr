@@ -33,6 +33,7 @@
 
 	leds {
 		compatible = "gpio-leds";
+
 		led0: led_0 {
 			gpios = <&portc 18 GPIO_ACTIVE_LOW>;
 			label = "Yellow LED";
@@ -41,6 +42,7 @@
 
 	pwmleds {
 		compatible = "pwm-leds";
+
 		pwm_led0: pwm_led_0 {
 			status = "okay";
 			pwms = <&tcc0 2 PWM_MSEC(20) 0>;
@@ -49,6 +51,7 @@
 
 	buttons {
 		compatible = "gpio-keys";
+
 		button0: button_0 {
 			gpios = <&portb 31 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>;
 			label = "SW0";
