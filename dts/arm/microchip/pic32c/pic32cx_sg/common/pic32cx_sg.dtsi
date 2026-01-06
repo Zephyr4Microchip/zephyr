@@ -99,7 +99,6 @@
 		rstc: rstc@40000c00 {
 			compatible = "microchip,rstc-g1-reset";
 			reg = <0x40000c00 0x400>;
-			status = "disabled";
 		};
 
 		rtc: rtc@40002400 {
