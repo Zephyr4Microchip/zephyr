@@ -15,7 +15,7 @@ LOG_MODULE_REGISTER(test);
 #elif DT_HAS_COMPAT_STATUS_OKAY(silabs_series_clock)
 #include "silabs_device_subsys.h"
 #elif DT_HAS_COMPAT_STATUS_OKAY(microchip_sam_d5x_e5x_clock)
-#include "mchp_v1_subsys.h"
+#include "mchp_device_subsys.h"
 #else
 #error "Unsupported board"
 #endif
