@@ -11,7 +11,9 @@
 #include <zephyr/drivers/dma.h>
 #include <zephyr/drivers/pinctrl.h>
 #include <zephyr/drivers/clock_control/mchp_clock_control.h>
+#if CONFIG_SPI_MCHP_DMA_DRIVEN
 #include <mchp_dt_helper.h>
+#endif /* CONFIG_SPI_MCHP_DMA_DRIVEN */
 
 #define DT_DRV_COMPAT microchip_sercom_g1_spi
 
@@ -250,10 +252,17 @@ static inline void spi_master_config_pinout(const struct mchp_spi_reg_config *sp
 static inline void spi_mode_loopback(const struct mchp_spi_reg_config *spi_reg_cfg)
 {
 	/* Clear the DIPO and DOPO bit fields and set them to PAD0 */
+#ifdef CONFIG_SOC_FAMILY_MICROCHIP_PIC32CM_JH
+	spi_reg_cfg->regs->SPIM.SERCOM_CTRLA =
+		(spi_reg_cfg->regs->SPIM.SERCOM_CTRLA &
+		 ~(SERCOM_SPIM_CTRLA_DIPO_Msk | SERCOM_SPIM_CTRLA_DOPO_Msk)) |
+		(SERCOM_SPIM_CTRLA_DIPO_PAD0 | SERCOM_SPIM_CTRLA_DOPO_0x0);
+#else
 	spi_reg_cfg->regs->SPIM.SERCOM_CTRLA =
 		(spi_reg_cfg->regs->SPIM.SERCOM_CTRLA &
 		 ~(SERCOM_SPIM_CTRLA_DIPO_Msk | SERCOM_SPIM_CTRLA_DOPO_Msk)) |
 		(SERCOM_SPIM_CTRLA_DIPO_PAD0 | SERCOM_SPIM_CTRLA_DOPO_PAD0);
+#endif /* CONFIG_SOC_FAMILY_MICROCHIP_PIC32CM_JH */
 }
 
 /*Enable the Receiver in SPI peripheral*/
@@ -317,12 +326,14 @@ static void spi_set_baudrate(const struct mchp_spi_reg_config *spi_reg_cfg,
 	}
 }
 
+#ifdef CONFIG_SPI_MCHP_INTER_CHARACTER_SPACE
 /*Set the Inter character dpacing*/
 static inline void spi_set_icspace(const struct mchp_spi_reg_config *spi_reg_cfg)
 {
 	spi_reg_cfg->regs->SPIM.SERCOM_CTRLC |=
 		SERCOM_SPIM_CTRLC_ICSPACE(CONFIG_SPI_MCHP_INTER_CHARACTER_SPACE);
 }
+#endif /* CONFIG_SPI_MCHP_INTER_CHARACTER_SPACE */
 
 /*Write Data into DATA register*/
 static inline void spi_write_data(const struct mchp_spi_reg_config *spi_reg_cfg, uint8_t data)
@@ -654,7 +665,9 @@ static int spi_mchp_configure(const struct device *dev, const struct spi_config 
 
 	if (SPI_OP_MODE_GET(config->operation) == SPI_OP_MODE_MASTER) {
 
+#ifdef CONFIG_SPI_MCHP_INTER_CHARACTER_SPACE
 		spi_set_icspace(spi_reg_cfg);
+#endif /* CONFIG_SPI_MCHP_INTER_CHARACTER_SPACE */
 
 		clock_control_get_rate(cfg->spi_clock.clock_dev, cfg->spi_clock.gclk_sys,
 				       &clock_rate);
