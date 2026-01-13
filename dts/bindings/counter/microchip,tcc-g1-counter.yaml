@@ -1,14 +1,18 @@
 # Copyright (c) 2025 Microchip Technology Inc.
 # SPDX-License-Identifier: Apache-2.0
+title: Microchip TCC G1 counter peripheral.
 
 description: |
-  Microchip TCC counter driver.
+  Microchip TCC G1 counter peripheral.
 
-  This driver is used for configuring and anaging TCC
-  (Timer Counter Control) peripheral in Microchip microcontrollers. This peripherals
-  support counting events, measuring time intervals, and generating periodic interrupts.
-  The supported devices :
-    - tcc-u2213
+  This driver is used for configuring and managing TCC
+  (Timer/Counter for Control Applications) peripheral in Microchip microcontrollers.
+  This peripherals support counting events, measuring time intervals, and generating
+  periodic interrupts.
+  The supported peripheral IP versions :
+   - TCC id="U2213" version="3.1.0"
+  The supported families are:
+   - SAM_E5X_D5X
 
 compatible: "microchip,tcc-g1-counter"
 
