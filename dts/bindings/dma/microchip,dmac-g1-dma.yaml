@@ -1,8 +1,10 @@
 # Copyright (c) 2025 Microchip Technology Inc.
 # SPDX-License-Identifier: Apache-2.0
 
+title: Microchip G1 DMA Controller
+
 description: |
-  Microchip G1 DMA peripheral binding file.
+  Microchip G1 DMA driver.
 
   Group G1 DMA driver supports following hardware peripherals:
     - module name="DMAC" id="U2503" version="1.0.1"
