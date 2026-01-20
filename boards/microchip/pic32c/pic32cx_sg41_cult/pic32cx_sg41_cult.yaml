@@ -13,6 +13,7 @@ supported:
   - clock_control
   - counter
   - dma
+  - entropy
   - flash
   - gpio
   - hwinfo
