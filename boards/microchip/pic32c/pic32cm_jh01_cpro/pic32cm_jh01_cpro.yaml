@@ -12,6 +12,7 @@ ram: 64
 supported:
   - clock_control
   - gpio
+  - i2c
   - pinctrl
   - reset
   - uart
