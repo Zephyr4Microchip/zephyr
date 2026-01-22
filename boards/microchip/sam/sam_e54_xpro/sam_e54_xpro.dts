@@ -298,17 +298,16 @@
 	compatible = "microchip,sercom-g1-uart";
 	#address-cells = <1>;
 	#size-cells = <0>;
-
 	current-speed = <115200>;
 	data-bits = <8>;
 	parity = "none";
 	stop-bits = "1";
-
 	rxpo = <1>;
 	txpo = <0>;
-
 	pinctrl-0 = <&sercom0_uart_default>;
 	pinctrl-names = "default";
+	dmas = <&dmac 3 4>, <&dmac 4 5>;
+	dma-names = "rx", "tx";
 	status = "okay";
 };
 
@@ -316,17 +315,16 @@
 	compatible = "microchip,sercom-g1-uart";
 	#address-cells = <1>;
 	#size-cells = <0>;
-
 	current-speed = <115200>;
 	data-bits = <8>;
 	parity = "none";
 	stop-bits = "1";
-
 	rxpo = <1>;
 	txpo = <0>;
-
 	pinctrl-0 = <&sercom1_uart_default>;
 	pinctrl-names = "default";
+	dmas = <&dmac 5 6>, <&dmac 6 7>;
+	dma-names = "rx", "tx";
 	status = "okay";
 };
 
@@ -351,17 +349,16 @@
 	compatible = "microchip,sercom-g1-uart";
 	#address-cells = <1>;
 	#size-cells = <0>;
-
 	current-speed = <115200>;
 	data-bits = <8>;
 	parity = "none";
 	stop-bits = "1";
-
 	rxpo = <1>;
 	txpo = <0>;
-
 	pinctrl-0 = <&sercom5_uart_default>;
 	pinctrl-names = "default";
+	dmas = <&dmac 7 0xE>, <&dmac 8 0xF>;
+	dma-names = "rx", "tx";
 	status = "okay";
 };
 
