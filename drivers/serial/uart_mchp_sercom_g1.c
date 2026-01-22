@@ -2590,6 +2590,13 @@ static DEVICE_API(uart, uart_mchp_driver_api) = {
 #endif /* CONFIG_UART_INTERRUPT_DRIVEN || CONFIG_UART_MCHP_ASYNC */
 
 #ifdef CONFIG_UART_MCHP_ASYNC
+#define UART_MCHP_ASSERT_DMA_CONFIG(n)                                                             \
+	BUILD_ASSERT(DT_INST_NODE_HAS_PROP(n, dmas),                                               \
+		     "UART instance " STRINGIFY(n) " requires dmas when async is enabled");
+DT_INST_FOREACH_STATUS_OKAY(UART_MCHP_ASSERT_DMA_CONFIG)
+#endif /* CONFIG_UART_MCHP_ASYNC */
+
+#ifdef CONFIG_UART_MCHP_ASYNC
 #define UART_MCHP_DMA_CHANNELS(n)                                                                  \
 	.uart_dma.dma_dev = DEVICE_DT_GET(MCHP_DT_INST_DMA_CTLR(n, tx)),                           \
 	.uart_dma.tx_dma_request = MCHP_DT_INST_DMA_TRIGSRC(n, tx),                                \
