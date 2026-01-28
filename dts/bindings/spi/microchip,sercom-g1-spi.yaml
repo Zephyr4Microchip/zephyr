@@ -1,10 +1,10 @@
-# Copyright (c) 2025 Microchip Technology Inc.
+# Copyright (c) 2026 Microchip Technology Inc.
 # SPDX-License-Identifier: Apache-2.0
 
 description: |
-  Microchip SERCOM SPI driver bindings
+  Microchip SERCOM SPI
 
-  Group g1 SERCOM SPI driver supports following hardware peripherals:
+  Group G1 SERCOM SPI includes the following hardware peripherals:
     - module name="SERCOM" id="U2201" version="5.0.0"
 
 compatible: "microchip,sercom-g1-spi"

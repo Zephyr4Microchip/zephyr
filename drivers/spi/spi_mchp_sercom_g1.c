@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Microchip Technology Inc.
+ * Copyright (c) 2026 Microchip Technology Inc.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -23,7 +23,6 @@ LOG_MODULE_REGISTER(spi_mchp_sercom_g1);
 #define SPI_MCHP_MAX_XFER_SIZE  65535
 #define SUPPORTED_SPI_WORD_SIZE 8
 #define SPI_PIN_CNT             4
-#define SPI_MCHP_SUCCESS        0
 #define TIMEOUT_VALUE_US        1000
 #define DELAY_US                2
 
@@ -50,25 +49,28 @@ struct spi_mchp_dev_config {
 	struct mchp_spi_reg_config reg_cfg;
 	const struct pinctrl_dev_config *pcfg;
 
-#if CONFIG_SPI_MCHP_DMA_DRIVEN
+#if CONFIG_SPI_MCHP_DMA_DRIVEN_ASYNC
 	struct mchp_spi_dma spi_dma;
-#endif /* CONFIG_SPI_MCHP_DMA_DRIVEN */
+#endif /* CONFIG_SPI_MCHP_DMA_DRIVEN_ASYNC */
 
 #if defined(CONFIG_SPI_ASYNC) || defined(CONFIG_SPI_MCHP_INTERRUPT_DRIVEN)
 	void (*irq_config_func)(const struct device *dev);
 #endif /* CONFIG_SPI_ASYNC) || CONFIG_SPI_MCHP_INTERRUPT_DRIVEN */
+
 	struct mchp_spi_clock spi_clock;
 };
 
 struct spi_mchp_dev_data {
 	struct spi_context ctx;
+
 #if defined(CONFIG_SPI_ASYNC) || defined(CONFIG_SPI_MCHP_INTERRUPT_DRIVEN)
 	uint8_t dummysize;
 #endif /* CONFIG_SPI_ASYNC) || CONFIG_SPI_MCHP_INTERRUPT_DRIVEN */
-#if CONFIG_SPI_MCHP_DMA_DRIVEN
+
+#if CONFIG_SPI_MCHP_DMA_DRIVEN_ASYNC
 	const struct device *dev;
 	uint32_t dma_segment_len;
-#endif /* CONFIG_SPI_MCHP_DMA_DRIVEN */
+#endif /* CONFIG_SPI_MCHP_DMA_DRIVEN_ASYNC */
 };
 
 /*Wait for synchronization*/
@@ -221,7 +223,7 @@ static inline int spi_half_duplex_mode(const struct mchp_spi_reg_config *spi_reg
  */
 static inline int spi_full_duplex_mode(const struct mchp_spi_reg_config *spi_reg_cfg)
 {
-	return SPI_MCHP_SUCCESS;
+	return 0;
 }
 
 /*Set the pads for the SPI Transmission*/
@@ -558,6 +560,57 @@ spi_slave_enable_data_empty_interrupt(const struct mchp_spi_reg_config *spi_reg_
 	spi_reg_cfg->regs->SPIS.SERCOM_INTENSET = SERCOM_SPIS_INTENSET_DRE_Msk;
 }
 
+static int spi_configure_pinout(const struct mchp_spi_reg_config *spi_reg_cfg,
+				const struct spi_config *config)
+{
+	if ((config->operation & SPI_MODE_LOOP) != 0U) {
+		if (SPI_OP_MODE_GET(config->operation) == SPI_OP_MODE_SLAVE) {
+			LOG_ERR("For slave Loopback mode is not supported");
+
+			return -ENOTSUP;
+		}
+		spi_mode_loopback(spi_reg_cfg);
+	} else {
+		if (SPI_OP_MODE_GET(config->operation) != SPI_OP_MODE_MASTER) {
+			spi_slave_config_pinout(spi_reg_cfg);
+		} else {
+			spi_master_config_pinout(spi_reg_cfg);
+		}
+	}
+
+	return 0;
+}
+
+static void spi_configure_cpol(const struct mchp_spi_reg_config *spi_reg_cfg,
+			       const struct spi_config *config)
+{
+	if ((config->operation & SPI_MODE_CPOL) != 0U) {
+		spi_cpol_idle_high(spi_reg_cfg, config->operation);
+	} else {
+		spi_cpol_idle_low(spi_reg_cfg, config->operation);
+	}
+}
+
+static void spi_configure_cpha(const struct mchp_spi_reg_config *spi_reg_cfg,
+			       const struct spi_config *config)
+{
+	if ((config->operation & SPI_MODE_CPHA) != 0U) {
+		spi_cpha_trail_edge(spi_reg_cfg, config->operation);
+	} else {
+		spi_cpha_lead_edge(spi_reg_cfg, config->operation);
+	}
+}
+
+static void spi_configure_bit_order(const struct mchp_spi_reg_config *spi_reg_cfg,
+				    const struct spi_config *config)
+{
+	if ((config->operation & SPI_TRANSFER_LSB) != 0U) {
+		spi_lsb_first(spi_reg_cfg, config->operation);
+	} else {
+		spi_msb_first(spi_reg_cfg, config->operation);
+	}
+}
+
 static int spi_mchp_configure(const struct device *dev, const struct spi_config *config)
 {
 	const struct spi_mchp_dev_config *cfg = dev->config;
@@ -565,18 +618,21 @@ static int spi_mchp_configure(const struct device *dev, const struct spi_config 
 	struct spi_mchp_dev_data *const data = dev->data;
 	int retval;
 	uint32_t clock_rate;
+	bool has_cs = false;
 
 	spi_disable(spi_reg_cfg);
 
 	if (spi_context_configured(&data->ctx, config) == true) {
 		spi_enable(spi_reg_cfg, config->operation);
-		return SPI_MCHP_SUCCESS;
+
+		return 0;
 	}
 
 	/* Select the Character Size */
 	if (SPI_WORD_SIZE_GET(config->operation) != SUPPORTED_SPI_WORD_SIZE) {
 		LOG_ERR("Unsupported SPI word size: %d bits. Only 8-bit transfers are supported.",
 			SPI_WORD_SIZE_GET(config->operation));
+
 		return -ENOTSUP;
 	}
 	spi_8bit_ch_size(spi_reg_cfg, config->operation);
@@ -600,10 +656,8 @@ static int spi_mchp_configure(const struct device *dev, const struct spi_config 
 
 		spi_set_icspace(spi_reg_cfg);
 
-		clock_control_get_rate(
-			((const struct spi_mchp_dev_config *)(dev->config))->spi_clock.clock_dev,
-			(((struct spi_mchp_dev_config *)(dev->config))->spi_clock.gclk_sys),
-			&clock_rate);
+		clock_control_get_rate(cfg->spi_clock.clock_dev, cfg->spi_clock.gclk_sys,
+				       &clock_rate);
 
 		if ((config->frequency != 0) && (clock_rate >= (2 * config->frequency))) {
 			spi_set_baudrate(spi_reg_cfg, config, clock_rate);
@@ -613,7 +667,11 @@ static int spi_mchp_configure(const struct device *dev, const struct spi_config 
 
 		spi_master_mode(spi_reg_cfg);
 
-		if (data->ctx.num_cs_gpios != 0) {
+#if !DT_SPI_CTX_HAS_NO_CS_GPIOS
+		has_cs = (data->ctx.num_cs_gpios != 0);
+#endif
+
+		if (has_cs) {
 			retval = spi_context_cs_configure_all(&data->ctx);
 			if (retval < 0) {
 				return retval;
@@ -627,44 +685,19 @@ static int spi_mchp_configure(const struct device *dev, const struct spi_config 
 
 	if ((config->operation & SPI_LINES_MASK) != SPI_LINES_SINGLE) {
 		LOG_ERR("Only single line mode is supported");
+
 		return -ENOTSUP;
 	}
 
 	/*Set the Data out and Pin out Configuration*/
-	if ((config->operation & SPI_MODE_LOOP) != 0U) {
-
-		if (SPI_OP_MODE_GET(config->operation) == SPI_OP_MODE_SLAVE) {
-			LOG_ERR("For slave Loopback mode is not supported");
-			return -ENOTSUP;
-		}
-		/* Set MISO and MOSI on the same pad */
-		spi_mode_loopback(spi_reg_cfg);
-	} else {
-		/* Set the Pads */
-		if (SPI_OP_MODE_GET(config->operation) != SPI_OP_MODE_MASTER) {
-			spi_slave_config_pinout(spi_reg_cfg);
-		} else {
-			spi_master_config_pinout(spi_reg_cfg);
-		}
+	retval = spi_configure_pinout(spi_reg_cfg, config);
+	if (retval < 0) {
+		return retval;
 	}
 
-	if (((config->operation & SPI_MODE_CPOL)) != 0U) {
-		spi_cpol_idle_high(spi_reg_cfg, config->operation);
-	} else {
-		spi_cpol_idle_low(spi_reg_cfg, config->operation);
-	}
-
-	if (((config->operation & SPI_MODE_CPHA)) != 0U) {
-		spi_cpha_trail_edge(spi_reg_cfg, config->operation);
-	} else {
-		spi_cpha_lead_edge(spi_reg_cfg, config->operation);
-	}
-
-	if ((config->operation & SPI_TRANSFER_LSB) != 0U) {
-		spi_lsb_first(spi_reg_cfg, config->operation);
-	} else {
-		spi_msb_first(spi_reg_cfg, config->operation);
-	}
+	spi_configure_cpol(spi_reg_cfg, config);
+	spi_configure_cpha(spi_reg_cfg, config);
+	spi_configure_bit_order(spi_reg_cfg, config);
 
 	if ((config->operation & SPI_HALF_DUPLEX) != 0U) {
 		retval = spi_half_duplex_mode(spi_reg_cfg);
@@ -683,33 +716,35 @@ static int spi_mchp_configure(const struct device *dev, const struct spi_config 
 #if defined(CONFIG_SPI_ASYNC) || defined(CONFIG_SPI_MCHP_INTERRUPT_DRIVEN)
 	cfg->irq_config_func(dev);
 #endif /* CONFIG_SPI_ASYNC || CONFIG_SPI_MCHP_INTERRUPT_DRIVEN */
-#if CONFIG_SPI_MCHP_DMA_DRIVEN
+
+#if CONFIG_SPI_MCHP_DMA_DRIVEN_ASYNC
 	if (device_is_ready(cfg->spi_dma.dma_dev) != true) {
 		return -ENODEV;
 	}
 	data->dev = dev;
-#endif /* CONFIG_SPI_MCHP_DMA_DRIVEN */
+#endif /* CONFIG_SPI_MCHP_DMA_DRIVEN_ASYNC */
 
 	data->ctx.config = config;
 
-	return SPI_MCHP_SUCCESS;
+	return 0;
 }
 
 static int spi_mchp_check_buf_len(const struct spi_buf_set *buf_set)
 {
 	if ((buf_set == NULL) || (buf_set->buffers == NULL)) {
-		return SPI_MCHP_SUCCESS;
+		return 0;
 	}
 
 	for (size_t i = 0; i < buf_set->count; i++) {
 		if (buf_set->buffers[i].len > SPI_MCHP_MAX_XFER_SIZE) {
 			LOG_ERR("SPI buffer length (%u) exceeds max allowed (%u)",
 				buf_set->buffers[i].len, SPI_MCHP_MAX_XFER_SIZE);
+
 			return -EINVAL;
 		}
 	}
 
-	return SPI_MCHP_SUCCESS;
+	return 0;
 }
 
 #ifndef CONFIG_SPI_MCHP_INTERRUPT_DRIVEN
@@ -725,11 +760,12 @@ static int spi_mchp_finish(const struct mchp_spi_reg_config *spi_reg_cfg)
 		     k_busy_wait(DELAY_US)) == false) {
 
 		LOG_ERR("SPI TX complete timeout");
+
 		return -ETIMEDOUT;
 	}
 	spi_clr_data(spi_reg_cfg);
 
-	return SPI_MCHP_SUCCESS;
+	return 0;
 }
 
 static int spi_mchp_poll_in(const struct mchp_spi_reg_config *spi_reg_cfg,
@@ -740,7 +776,7 @@ static int spi_mchp_poll_in(const struct mchp_spi_reg_config *spi_reg_cfg,
 
 	/* Check if there is data to transmit */
 	if (spi_context_tx_buf_on(&data->ctx) == true) {
-		tx_data = *(uint8_t *)(data->ctx.tx_buf);
+		tx_data = *data->ctx.tx_buf;
 	} else {
 		tx_data = 0U;
 	}
@@ -749,6 +785,7 @@ static int spi_mchp_poll_in(const struct mchp_spi_reg_config *spi_reg_cfg,
 	if (WAIT_FOR((spi_is_data_empty(spi_reg_cfg) == true), TIMEOUT_VALUE_US,
 		     k_busy_wait(DELAY_US)) == false) {
 		LOG_ERR("SPI data empty timeout");
+
 		return -ETIMEDOUT;
 	}
 
@@ -769,7 +806,8 @@ static int spi_mchp_poll_in(const struct mchp_spi_reg_config *spi_reg_cfg,
 	}
 
 	spi_context_update_rx(&data->ctx, 1, 1);
-	return SPI_MCHP_SUCCESS;
+
+	return 0;
 }
 
 static int spi_mchp_fast_tx(const struct mchp_spi_reg_config *spi_reg_cfg,
@@ -793,6 +831,7 @@ static int spi_mchp_fast_tx(const struct mchp_spi_reg_config *spi_reg_cfg,
 		if (WAIT_FOR((spi_is_data_empty(spi_reg_cfg) == true), TIMEOUT_VALUE_US,
 			     k_busy_wait(DELAY_US)) == false) {
 			LOG_ERR("SPI data empty timeout");
+
 			return -ETIMEDOUT;
 		}
 
@@ -801,6 +840,7 @@ static int spi_mchp_fast_tx(const struct mchp_spi_reg_config *spi_reg_cfg,
 	}
 
 	retval = spi_mchp_finish(spi_reg_cfg);
+
 	return retval;
 }
 
@@ -982,7 +1022,7 @@ static int spi_mchp_transceive_interrupt(const struct device *dev, const struct 
 
 	/* Prepare first byte for transmission */
 	if (spi_context_tx_buf_on(&data->ctx) == true) {
-		tx_data = *(uint8_t *)(data->ctx.tx_buf);
+		tx_data = *data->ctx.tx_buf;
 	} else {
 		tx_data = 0U;
 	}
@@ -1008,7 +1048,8 @@ static int spi_mchp_transceive_interrupt(const struct device *dev, const struct 
 #if defined(CONFIG_SPI_MCHP_INTERRUPT_DRIVEN)
 	spi_context_wait_for_completion(&data->ctx);
 #endif /* CONFIG_SPI_MCHP_INTERRUPT_DRIVEN */
-	return SPI_MCHP_SUCCESS;
+
+	return 0;
 }
 
 #if CONFIG_SPI_SLAVE
@@ -1026,7 +1067,7 @@ static void spi_mchp_slave_write(const struct device *dev)
 		write_ready = spi_context_tx_buf_on(&data->ctx);
 		write_ready = write_ready && (spi_slave_is_data_empty(spi_reg_cfg) == true);
 		while (write_ready == true) {
-			tx_data = *(uint8_t *)(data->ctx.tx_buf);
+			tx_data = *data->ctx.tx_buf;
 			spi_slave_write_data(spi_reg_cfg, tx_data);
 
 			/* Write data byte to the SPI data register */
@@ -1065,9 +1106,11 @@ static int spi_mchp_slave_transceive_interrupt(const struct device *dev,
 	spi_enable_rxc_interrupt(spi_reg_cfg, config->operation);
 
 	spi_slave_select_line_enable(spi_reg_cfg);
+
 #if defined(CONFIG_SPI_MCHP_INTERRUPT_DRIVEN)
 	ret = spi_context_wait_for_completion(&data->ctx);
 #endif /* CONFIG_SPI_MCHP_INTERRUPT_DRIVEN */
+
 	return ret;
 }
 
@@ -1100,6 +1143,7 @@ static int spi_mchp_transceive_sync(const struct device *dev, const struct spi_c
 	ret = spi_mchp_configure(dev, config);
 	if (ret != 0) {
 		spi_context_release(&data->ctx, ret);
+
 		return ret;
 	}
 
@@ -1134,6 +1178,7 @@ static int spi_mchp_transceive_sync(const struct device *dev, const struct spi_c
 #if CONFIG_SPI_SLAVE
 	if (SPI_OP_MODE_GET(config->operation) == SPI_OP_MODE_SLAVE) {
 		spi_context_release(&data->ctx, ret);
+
 		return -ENOTSUP;
 	}
 #endif /* CONFIG_SPI_SLAVE */
@@ -1149,7 +1194,7 @@ static int spi_mchp_transceive_sync(const struct device *dev, const struct spi_c
 }
 
 #if CONFIG_SPI_ASYNC
-#if CONFIG_SPI_MCHP_DMA_DRIVEN
+#if CONFIG_SPI_MCHP_DMA_DRIVEN_ASYNC
 static void spi_mchp_dma_rx_done(const struct device *dma_dev, void *arg, uint32_t id,
 				 int error_code);
 
@@ -1297,7 +1342,7 @@ static int spi_mchp_dma_setup_buffers(const struct device *dev)
 		return retval;
 	}
 
-	return SPI_MCHP_SUCCESS;
+	return 0;
 }
 
 static void spi_mchp_dma_rx_done(const struct device *dma_dev, void *arg, uint32_t id,
@@ -1322,6 +1367,7 @@ static void spi_mchp_dma_rx_done(const struct device *dma_dev, void *arg, uint32
 		}
 		/* Transmission complete */
 		spi_context_complete(&data->ctx, dev, 0);
+
 		return;
 	}
 
@@ -1335,10 +1381,11 @@ static void spi_mchp_dma_rx_done(const struct device *dma_dev, void *arg, uint32
 			spi_context_cs_control(&data->ctx, false);
 		}
 		spi_context_complete(&data->ctx, dev, retval);
+
 		return;
 	}
 }
-#endif /* CONFIG_SPI_MCHP_DMA_DRIVEN */
+#endif /* CONFIG_SPI_MCHP_DMA_DRIVEN_ASYNC */
 
 static int spi_mchp_transceive_async(const struct device *dev, const struct spi_config *config,
 				     const struct spi_buf_set *tx_bufs,
@@ -1360,22 +1407,24 @@ static int spi_mchp_transceive_async(const struct device *dev, const struct spi_
 	}
 
 	ARG_UNUSED(cfg);
+
 /*
  * Transmit clocks the output, and we use receive to
  * determine when the transmit is done, so we
  * always need both TX and RX DMA channels.
  */
-#if CONFIG_SPI_MCHP_DMA_DRIVEN
+#if CONFIG_SPI_MCHP_DMA_DRIVEN_ASYNC
 	if (cfg->spi_dma.tx_dma_channel == 0xFF || cfg->spi_dma.rx_dma_channel == 0xFF) {
 		return -ENOTSUP;
 	}
-#endif /* CONFIG_SPI_MCHP_DMA_DRIVEN */
+#endif /* CONFIG_SPI_MCHP_DMA_DRIVEN_ASYNC */
 
 	spi_context_lock(&data->ctx, true, spi_callback, userdata, config);
 
 	retval = spi_mchp_configure(dev, config);
 	if (retval != 0) {
 		spi_context_release(&data->ctx, retval);
+
 		return retval;
 	}
 
@@ -1386,7 +1435,7 @@ static int spi_mchp_transceive_async(const struct device *dev, const struct spi_
 	spi_context_buffers_setup(&data->ctx, tx_bufs, rx_bufs, 1);
 
 /* Prepare and start DMA transfers */
-#if CONFIG_SPI_MCHP_DMA_DRIVEN
+#if CONFIG_SPI_MCHP_DMA_DRIVEN_ASYNC
 	spi_mchp_dma_select_segment(dev);
 	retval = spi_mchp_dma_setup_buffers(dev);
 #else
@@ -1398,14 +1447,14 @@ static int spi_mchp_transceive_async(const struct device *dev, const struct spi_
 		retval = spi_mchp_slave_transceive_interrupt(dev, config, tx_bufs, rx_bufs);
 	}
 #endif /* CONFIG_SPI_SLAVE */
-#endif /* CONFIG_SPI_MCHP_DMA_DRIVEN */
+#endif /* CONFIG_SPI_MCHP_DMA_DRIVEN_ASYNC */
 
 	if (retval != 0) {
 		/* Stop DMA transfers in case of failure */
-#if CONFIG_SPI_MCHP_DMA_DRIVEN
+#if CONFIG_SPI_MCHP_DMA_DRIVEN_ASYNC
 		dma_stop(cfg->spi_dma.dma_dev, cfg->spi_dma.tx_dma_channel);
 		dma_stop(cfg->spi_dma.dma_dev, cfg->spi_dma.rx_dma_channel);
-#endif /* CONFIG_SPI_MCHP_DMA_DRIVEN */
+#endif /* CONFIG_SPI_MCHP_DMA_DRIVEN_ASYNC */
 
 		if (SPI_OP_MODE_GET(config->operation) == SPI_OP_MODE_MASTER) {
 			spi_context_cs_control(&data->ctx, false);
@@ -1424,11 +1473,86 @@ static int spi_mchp_release(const struct device *dev, const struct spi_config *c
 
 	spi_context_unlock_unconditionally(&data->ctx);
 
-	return SPI_MCHP_SUCCESS;
+	return 0;
 }
 
 #if defined(CONFIG_SPI_ASYNC) || defined(CONFIG_SPI_MCHP_INTERRUPT_DRIVEN)
-static void spi_mchp_isr(const struct device *dev)
+#if (CONFIG_SPI_SLAVE)
+static void spi_mchp_isr_slave(const struct device *dev)
+{
+	struct spi_mchp_dev_data *data = dev->data;
+	const struct spi_mchp_dev_config *cfg = dev->config;
+	const struct mchp_spi_reg_config *spi_reg_cfg = &cfg->reg_cfg;
+	uint8_t intFlag = spi_reg_cfg->regs->SPIS.SERCOM_INTFLAG;
+	static bool transaction_complete;
+	uint8_t tx_data = 0U;
+	uint8_t rx_data = 0U;
+
+	/* Reset transaction_complete if there is data to send or receive */
+	if ((spi_context_tx_buf_on(&data->ctx) == true) ||
+	    (spi_context_rx_buf_on(&data->ctx) == true)) {
+		transaction_complete = false;
+	}
+
+	/* Check if data empty bit is set*/
+	if (spi_slave_is_data_empty(spi_reg_cfg) == true) {
+		tx_data = *data->ctx.tx_buf;
+		if (spi_slave_is_tx_comp(spi_reg_cfg) == true) {
+			intFlag = (uint8_t)SERCOM_SPIS_INTFLAG_TXC_Msk;
+		}
+		spi_slave_write_data(spi_reg_cfg, tx_data);
+		if (spi_context_tx_on(&data->ctx) == true) {
+			spi_context_update_tx(&data->ctx, 1, 1);
+		} else {
+			/* Disable DRE interrupt. The last byte sent by the master will be
+			 * shifted out automatically
+			 */
+			spi_slave_disable_dre_int(spi_reg_cfg);
+		}
+	}
+
+	/* Check if slave select bit is set*/
+	if (spi_slave_select_line(spi_reg_cfg) == true) {
+		spi_slave_clr_slave_select_line(spi_reg_cfg);
+		spi_slave_enable_txc_interrupt(spi_reg_cfg);
+	}
+
+	/* Check if buffer overflow error bit is set*/
+	if ((spi_reg_cfg->regs->SPIS.SERCOM_STATUS & SERCOM_SPIS_STATUS_BUFOVF_Msk) ==
+	    SERCOM_SPIS_STATUS_BUFOVF_Msk) {
+		spi_slave_clr_buf_overflow(spi_reg_cfg);
+		spi_slave_clr_data(spi_reg_cfg);
+		spi_slave_clr_error_int_flag(spi_reg_cfg);
+	}
+
+	/* Check if data is available in the receive buffer */
+	if (spi_slave_is_rx_comp(spi_reg_cfg) == true) {
+		rx_data = spi_slave_read_data(spi_reg_cfg);
+		if (spi_context_rx_buf_on(&data->ctx) == true) {
+			*data->ctx.rx_buf = rx_data;
+			spi_context_update_rx(&data->ctx, 1, 1);
+		}
+	}
+
+	/* If TX complete, finish transaction if all done */
+	if ((intFlag & SERCOM_SPIS_INTFLAG_TXC_Msk) == SERCOM_SPIS_INTFLAG_TXC_Msk) {
+		intFlag = 0;
+		spi_slave_clr_tx_comp_flag(spi_reg_cfg);
+		if ((spi_context_rx_on(&data->ctx) == false) &&
+		    (spi_context_tx_on(&data->ctx) == false)) {
+			spi_slave_disable_interrupts(spi_reg_cfg);
+			spi_slave_clr_interrupts(spi_reg_cfg);
+			/* Release the semaphore to unblock waiting threads */
+			if (transaction_complete == false) {
+				spi_context_complete(&data->ctx, dev, 0);
+				transaction_complete = true;
+			}
+		}
+	}
+}
+#endif /* CONFIG_SPI_SLAVE */
+
+static void spi_mchp_isr_master(const struct device *dev)
 {
 	struct spi_mchp_dev_data *data = dev->data;
 	const struct spi_mchp_dev_config *cfg = dev->config;
@@ -1438,127 +1562,75 @@ static void spi_mchp_isr(const struct device *dev)
 	uint8_t tx_data = 0U;
 	uint8_t rx_data = 0U;
 
-#if (CONFIG_SPI_SLAVE)
-	uint8_t intFlag = spi_reg_cfg->regs->SPIS.SERCOM_INTFLAG;
-	static bool transaction_complete;
+	/* Check if the transmit buffer is empty and send the next byte */
+	if (spi_reg_cfg->regs->SPIM.SERCOM_INTENSET == 0) {
+		return;
+	}
+	/* Check if data is available in the receive buffer */
+	if (spi_is_rx_comp(spi_reg_cfg) == true) {
+		if (spi_context_rx_buf_on(&data->ctx) == true) {
+			rx_data = spi_read_data(spi_reg_cfg);
+			*data->ctx.rx_buf = rx_data;
+			spi_context_update_rx(&data->ctx, 1, 1);
+		}
+	}
+	/* If data register is empty, send next byte or dummy */
+	if (spi_is_data_empty(spi_reg_cfg) == true) {
+		spi_disable_data_empty_interrupt(spi_reg_cfg);
+		if (spi_context_tx_on(&data->ctx) == true) {
+			tx_data = *data->ctx.tx_buf;
+			spi_write_data(spi_reg_cfg, tx_data);
+			spi_context_update_tx(&data->ctx, 1, 1);
+		} else if (data->dummysize > 0) {
+			spi_write_data(spi_reg_cfg, dummy_data);
+			data->dummysize--;
+		} else {
+			/* Do Nothing */
+		}
+
+		if ((data->dummysize == 0) && (spi_context_tx_on(&data->ctx) == false)) {
+			last_byte = true;
+		} else if (spi_context_rx_on(&data->ctx) == false) {
+			spi_enable_data_empty_interrupt(spi_reg_cfg);
+			spi_disable_rxc_interrupt(spi_reg_cfg);
+		} else {
+			/* Do Nothing */
+		}
+	}
+	/* If TX complete and last byte, finish transaction */
+	if ((spi_is_tx_comp(spi_reg_cfg) == true) && (last_byte == true)) {
+		if (spi_context_rx_on(&data->ctx) == false) {
+			spi_disable_rxc_interrupt(spi_reg_cfg);
+			spi_disable_txc_interrupt(spi_reg_cfg);
+			spi_disable_data_empty_interrupt(spi_reg_cfg);
+			last_byte = false;
+			if (spi_context_is_slave(&data->ctx) == false) {
+				/* Control chip select for SPI slave mode */
+				spi_context_cs_control(&data->ctx, false);
+			}
+			/* Release the semaphore to unblock waiting threads */
+			spi_context_complete(&data->ctx, dev, 0);
+		}
+	}
+	/* Enable TX complete interrupt if last byte */
+	if (last_byte == true) {
+		spi_enable_txc_interrupt(spi_reg_cfg);
+	}
+}
+
+static void spi_mchp_isr(const struct device *dev)
+{
+#if CONFIG_SPI_SLAVE
+	struct spi_mchp_dev_data *data = dev->data;
 
 	if (spi_context_is_slave(&data->ctx) == true) {
-		if ((spi_context_tx_buf_on(&data->ctx) == true) ||
-		    (spi_context_rx_buf_on(&data->ctx) == true)) {
-			transaction_complete = false;
-		}
+		spi_mchp_isr_slave(dev);
 
-		/* Check if data empty bit is set*/
-		if (spi_slave_is_data_empty(spi_reg_cfg) == true) {
-			tx_data = *(uint8_t *)(data->ctx.tx_buf);
-			if (spi_slave_is_tx_comp(spi_reg_cfg) == true) {
-				intFlag = (uint8_t)SERCOM_SPIS_INTFLAG_TXC_Msk;
-			}
-			spi_slave_write_data(spi_reg_cfg, tx_data);
-			if (spi_context_tx_on(&data->ctx) == true) {
-				spi_context_update_tx(&data->ctx, 1, 1);
-			} else {
-				/* Disable DRE interrupt. The last byte sent by the master will be
-				 * shifted out automatically
-				 */
-				spi_slave_disable_dre_int(spi_reg_cfg);
-			}
-		}
-
-		/* Check if slave select bit is set*/
-		if (spi_slave_select_line(spi_reg_cfg) == true) {
-			spi_slave_clr_slave_select_line(spi_reg_cfg);
-			spi_slave_enable_txc_interrupt(spi_reg_cfg);
-		}
-
-		/* Check if buffer overflow error bit is set*/
-		if ((spi_reg_cfg->regs->SPIS.SERCOM_STATUS & SERCOM_SPIS_STATUS_BUFOVF_Msk) ==
-		    SERCOM_SPIS_STATUS_BUFOVF_Msk) {
-			spi_slave_clr_buf_overflow(spi_reg_cfg);
-
-			spi_slave_clr_data(spi_reg_cfg);
-
-			spi_slave_clr_error_int_flag(spi_reg_cfg);
-		}
-
-		/* Check if data is available in the receive buffer */
-		if (spi_slave_is_rx_comp(spi_reg_cfg) == true) {
-			rx_data = spi_slave_read_data(spi_reg_cfg);
-			if (spi_context_rx_buf_on(&data->ctx) == true) {
-				*(uint8_t *)(data->ctx.rx_buf) = rx_data;
-				spi_context_update_rx(&data->ctx, 1, 1);
-			}
-		}
-
-		if ((intFlag & SERCOM_SPIS_INTFLAG_TXC_Msk) == SERCOM_SPIS_INTFLAG_TXC_Msk) {
-			intFlag = 0;
-			spi_slave_clr_tx_comp_flag(spi_reg_cfg);
-			if ((spi_context_rx_on(&data->ctx) == false) &&
-			    (spi_context_tx_on(&data->ctx) == false)) {
-				spi_slave_disable_interrupts(spi_reg_cfg);
-				spi_slave_clr_interrupts(spi_reg_cfg);
-				/* Release the semaphore to unblock waiting threads */
-				if (transaction_complete == false) {
-					spi_context_complete(&data->ctx, dev, 0);
-					transaction_complete = true;
-				}
-			}
-		}
+		return;
 	}
 #endif /* CONFIG_SPI_SLAVE */
 
-	if (spi_context_is_slave(&data->ctx) == false) {
-		/* Check if the transmit buffer is empty and send the next byte */
-		if (spi_reg_cfg->regs->SPIM.SERCOM_INTENSET != 0) {
-			/* Check if data is available in the receive buffer */
-			if (spi_is_rx_comp(spi_reg_cfg) == true) {
-				if (spi_context_rx_buf_on(&data->ctx) == true) {
-					rx_data = spi_read_data(spi_reg_cfg);
-					*(uint8_t *)(data->ctx.rx_buf) = rx_data;
-					spi_context_update_rx(&data->ctx, 1, 1);
-				}
-			}
-			if (spi_is_data_empty(spi_reg_cfg) == true) {
-				spi_disable_data_empty_interrupt(spi_reg_cfg);
-				if (spi_context_tx_on(&data->ctx) == true) {
-					tx_data = *(uint8_t *)(data->ctx.tx_buf);
-					spi_write_data(spi_reg_cfg, tx_data);
-					spi_context_update_tx(&data->ctx, 1, 1);
-				} else if (data->dummysize > 0) {
-					spi_write_data(spi_reg_cfg, dummy_data);
-					data->dummysize--;
-				} else {
-					/* Do Nothing */
-				}
-				if ((data->dummysize == 0) &&
-				    (spi_context_tx_on(&data->ctx) == false)) {
-					last_byte = true;
-				} else if (spi_context_rx_on(&data->ctx) == false) {
-					spi_enable_data_empty_interrupt(spi_reg_cfg);
-					spi_disable_rxc_interrupt(spi_reg_cfg);
-				} else {
-					/* Do Nothing */
-				}
-			}
-			if ((spi_is_tx_comp(spi_reg_cfg) == true) && (last_byte == true)) {
-				if (spi_context_rx_on(&data->ctx) == false) {
-					spi_disable_rxc_interrupt(spi_reg_cfg);
-					spi_disable_txc_interrupt(spi_reg_cfg);
-					spi_disable_data_empty_interrupt(spi_reg_cfg);
-					last_byte = false;
-					if (spi_context_is_slave(&data->ctx) == false) {
-						/* Control chip select for SPI slave mode */
-						spi_context_cs_control(&data->ctx, false);
-					}
-					/* Release the semaphore to unblock waiting threads */
-					spi_context_complete(&data->ctx, dev, 0);
-				}
-			}
-			if (last_byte == true) {
-				spi_enable_txc_interrupt(spi_reg_cfg);
-			}
-		}
-	}
+	spi_mchp_isr_master(dev);
 }
 #endif /* CONFIG_SPI_ASYNC || CONFIG_SPI_MCHP_INTERRUPT_DRIVEN */
 
@@ -1572,12 +1644,14 @@ static int spi_mchp_init(const struct device *dev)
 	retval = clock_control_on(cfg->spi_clock.clock_dev, cfg->spi_clock.gclk_sys);
 	if ((retval < 0) && (retval != -EALREADY)) {
 		LOG_ERR("Failed to enable the gclk_sys for SPI: %d", retval);
+
 		return retval;
 	}
 
 	retval = clock_control_on(cfg->spi_clock.clock_dev, cfg->spi_clock.mclk_sys);
 	if ((retval < 0) && (retval != -EALREADY)) {
 		LOG_ERR("Failed to enable the mclk_sys for SPI: %d", retval);
+
 		return retval;
 	}
 
@@ -1587,22 +1661,26 @@ static int spi_mchp_init(const struct device *dev)
 	retval = pinctrl_apply_state(cfg->pcfg, PINCTRL_STATE_DEFAULT);
 	if (retval < 0) {
 		LOG_ERR("pinctrl_apply_state Failed for SPI: %d", retval);
+
 		return retval;
 	}
 
 	spi_context_unlock_unconditionally(&data->ctx);
 
-	return SPI_MCHP_SUCCESS;
+	return 0;
 }
 
 static DEVICE_API(spi, spi_mchp_api) = {
 	.transceive = spi_mchp_transceive_sync,
+
 #if CONFIG_SPI_ASYNC
 	.transceive_async = spi_mchp_transceive_async,
 #endif /*CONFIG_SPI_ASYNC*/
+
 #if CONFIG_SPI_RTIO
 	.iodev_submit = spi_rtio_iodev_default_submit,
 #endif /*CONFIG_SPI_RTIO*/
+
 	.release = spi_mchp_release,
 };
 
@@ -1655,7 +1733,7 @@ static DEVICE_API(spi, spi_mchp_api) = {
 #define SPI_MCHP_IRQ_HANDLER_FUNC(n)
 #endif /* CONFIG_SPI_MCHP_INTERRUPT_DRIVEN || CONFIG_SPI_ASYNC */
 
-#if CONFIG_SPI_MCHP_DMA_DRIVEN
+#if CONFIG_SPI_MCHP_DMA_DRIVEN_ASYNC
 #define SPI_MCHP_DMA_CHANNELS(n)                                                                   \
 	.spi_dma.dma_dev = DEVICE_DT_GET(MCHP_DT_INST_DMA_CTLR(n, tx)),                            \
 	.spi_dma.tx_dma_request = MCHP_DT_INST_DMA_TRIGSRC(n, tx),                                 \
@@ -1664,7 +1742,7 @@ static DEVICE_API(spi, spi_mchp_api) = {
 	.spi_dma.rx_dma_channel = MCHP_DT_INST_DMA_CHANNEL(n, rx),
 #else
 #define SPI_MCHP_DMA_CHANNELS(n)
-#endif /* CONFIG_SPI_MCHP_DMA_DRIVEN */
+#endif /* CONFIG_SPI_MCHP_DMA_DRIVEN_ASYNC */
 
 #define SPI_MCHP_CONFIG_DEFN(n)                                                                    \
 	static const struct spi_mchp_dev_config spi_mchp_config_##n = {                            \
