@@ -5,8 +5,8 @@
 
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
+#include <zephyr/toolchain.h>
 
-#ifndef _ASMLANGUAGE
 #include <xc.h>
 #ifdef __cplusplus
 extern "C" {
@@ -22,7 +22,7 @@ volatile uint32_t reason, address;
 #define STACK_ERROR_MASK   0x10
 #define GENERAL_TRAP_MASK 0x8000000Fu
 
-void __attribute__((weak)) TRAPS_halt_on_error(void);
+void __weak TRAPS_halt_on_error(void);
 void EXCEPTION_HANDLER _BusErrorTrap(void);
 void EXCEPTION_HANDLER _AddressErrorTrap(void);
 void EXCEPTION_HANDLER _IllegalInstructionTrap(void);
@@ -129,5 +129,3 @@ void EXCEPTION_HANDLER _GeneralTrap(void)
 #ifdef __cplusplus
 }
 #endif
-
-#endif /* _ASMLANGUAGE */

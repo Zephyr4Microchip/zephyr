@@ -8,7 +8,6 @@
 #include <zephyr/kernel.h>
 #include <zephyr/sys/util.h>
 #include <zephyr/drivers/pinctrl.h>
-#include <soc.h>
 #include <math.h>
 #include <zephyr/sys/printk.h>
 #include "uart_mchp_dspic33_g1.h"

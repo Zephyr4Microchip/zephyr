@@ -17,9 +17,7 @@ void z_prep_c(void);
 
 void z_prep_c(void)
 {
-#if defined(CONFIG_SOC_PREP_HOOK)
 	soc_prep_hook();
-#endif
 	z_cstart();
 	CODE_UNREACHABLE;
 }

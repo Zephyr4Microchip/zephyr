@@ -34,8 +34,6 @@
 	aliases {
 		soc = &soc;
 	};
-
-
 	soc: soc {
 		compatible = "microchip,p33ak128mc106-soc";
 		#address-cells = <1>;
@@ -71,7 +69,7 @@
 			interrupt-parent = <&intc0>;
 			interrupts = <48 1>;
 			label = "TIMER_1";
-			status = "okay";
+			status = "disabled";
 		};
 
 		uart0: uart@1700 {
@@ -84,7 +82,7 @@
 			current-speed = <115200>;
 			pinctrl-0 = <&uart0_tx_default &uart0_rx_default>;
 			pinctrl-names = "default";
-			status = "okay";
+			status = "disabled";
 		};
 
 		uart1: uart@1740 {
@@ -97,7 +95,7 @@
 			current-speed = <115200>;
 			pinctrl-0 = <&uart1_tx_default &uart1_rx_default>;
 			pinctrl-names = "default";
-			status = "okay";
+			status = "disabled";
 		};
 
 		uart2: uart@1780 {
@@ -110,7 +108,7 @@
 			current-speed = <115200>;
 			pinctrl-0 = <&uart2_tx_default &uart2_rx_default>;
 			pinctrl-names = "default";
-			status = "okay";
+			status = "disabled";
 		};
 
 		pinctrl: pin-controller@200 {
