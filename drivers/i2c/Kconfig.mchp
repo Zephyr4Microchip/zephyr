@@ -42,6 +42,16 @@ config I2C_MCHP_TARGET
 	help
 	  This enables target device support for the I2C peripheral.
 
+config I2C_MCHP_TARGET_MULTI_ADDR
+	bool "Multi-address target support for Microchip I2C devices"
+	default n
+	depends on I2C_MCHP_TARGET
+	help
+	  Enable dual-address target mode for Microchip I2C SERCOM devices.
+	  When enabled, the driver can register two target addresses and
+	  route transactions based on the matched address. Both addresses
+	  must be 7-bit when using dual-address mode.
+
 config I2C_TARGET_BUFFER_MODE
 	bool "Target Buffer Mode support for Microchip I2C devices"
 	default n
