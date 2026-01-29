@@ -18,7 +18,7 @@ for real-time control applications requiring signal processing capabilities.
 dsPIC33A on Zephyr
 ******************
 .. image:: ./images/block_diagram.png
-   :align: center          
+   :align: center
 
 The dsPIC33A port provides:
 

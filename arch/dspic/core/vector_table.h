@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2015 Wind River Systems, Inc.
+ * Copyright (c) 2025, Microchip Technology Inc.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -39,4 +39,4 @@ extern void *_vector_table[CONFIG_NUM_IRQS];
 
 #endif /* _ASMLANGUAGE */
 
-#endif /* ZEPHYR_ARCH_ARM_CORE_AARCH32_CORTEX_M_VECTOR_TABLE_H_ */
+#endif /* ZEPHYR_ARCH_DSPIC_VECTOR_TABLE_H_ */

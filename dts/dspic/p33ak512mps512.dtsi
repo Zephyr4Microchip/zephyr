@@ -83,7 +83,7 @@
 			current-speed = <115200>;
 			pinctrl-0 = <&uart0_tx_default &uart0_rx_default>;
 			pinctrl-names = "default";
-			status = "okay";
+			status = "disabled";
 		};
 
 		uart1: uart@1740 {
@@ -96,7 +96,7 @@
 			current-speed = <115200>;
 			pinctrl-0 = <&uart1_tx_default &uart1_rx_default>;
 			pinctrl-names = "default";
-			status = "okay";
+			status = "disabled";
 		};
 
 		uart2: uart@1780 {
@@ -109,7 +109,7 @@
 			current-speed = <115200>;
 			pinctrl-0 = <&uart2_tx_default &uart2_rx_default>;
 			pinctrl-names = "default";
-			status = "okay";
+			status = "disabled";
 		};
 
 		pinctrl: pin-controller@200 {
@@ -118,14 +118,13 @@
 			#address-cells = <1>;
 			#size-cells = <1>;
 			status = "okay";
-		
 
 			gpioa: gpio@200 {
-			compatible = "microchip,dspic-gpio";
-			reg = <0x200 0x14>;
-			gpio-controller;
-			#gpio-cells = <2>;
-			status = "okay";
+				compatible = "microchip,dspic-gpio";
+				reg = <0x200 0x14>;
+				gpio-controller;
+				#gpio-cells = <2>;
+				status = "okay";
 			};
 
 			gpiob: gpio@214 {

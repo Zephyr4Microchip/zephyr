@@ -126,7 +126,7 @@ static inline int popcount(unsigned int x)
 #endif
 
 #ifndef __weak
-#define __weak __attribute__((__weak__))
+#define __weak __attribute__((weak))
 #endif
 
 #define _NODATA_SECTION(segment) __attribute__((section(#segment)))
