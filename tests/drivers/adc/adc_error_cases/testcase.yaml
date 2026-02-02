@@ -14,3 +14,5 @@ tests:
       - nrf54h20dk/nrf54h20/cpuapp
       - ophelia4ev/nrf54l15/cpuapp
       - sam_e54_xpro
+      - pic32cx_sg41_cult
+      - pic32cx_sg61_cult
