@@ -23,6 +23,8 @@
 #error "Library does not support the specified device."
 #endif
 
+#include "pic32cx_sg.h"
+
 #endif /* _ASMLANGUAGE */
 
 #endif /* SOC_MICROCHIP_PIC32CX_SG41_H_ */

@@ -35,6 +35,8 @@
 #error "Library does not support the specified device."
 #endif
 
+#include "pic32cm_jh.h"
+
 #endif /* _ASMLANGUAGE */
 
 #endif /* SOC_MICROCHIP_PIC32CM_JH01_SOC_H_ */
