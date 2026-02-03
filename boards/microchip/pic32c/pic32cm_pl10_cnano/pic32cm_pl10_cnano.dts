@@ -6,6 +6,7 @@
 
 /dts-v1/;
 #include <microchip/pic32c/pic32cm_pl/pic32cm_pl10/pic32cm6408pl10048.dtsi>
+#include "pic32cm_pl10_cnano-pinctrl.dtsi"
 #include <zephyr/dt-bindings/input/input-event-codes.h>
 
 / {
@@ -15,6 +16,8 @@
 	chosen {
 		zephyr,sram = &sram0;
 		zephyr,flash = &flash0;
+		zephyr,console = &sercom1;
+		zephyr,shell-uart = &sercom1;
 	};
 
 	aliases {
@@ -89,4 +92,22 @@
 			gclkperiph-en = <1>;
 		};
 	};
+};
+
+&sercom1 {
+	status = "okay";
+	compatible = "microchip,sercom-g1-uart";
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	current-speed = <115200>;
+	data-bits = <8>;
+	parity = "none";
+	stop-bits = "1";
+
+	rxpo = <1>;
+	txpo = <0>;
+
+	pinctrl-0 = <&sercom1_uart_default>;
+	pinctrl-names = "default";
 };
