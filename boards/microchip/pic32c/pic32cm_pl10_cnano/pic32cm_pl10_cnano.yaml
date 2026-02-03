@@ -9,6 +9,5 @@ toolchain:
   - zephyr
 flash: 64
 ram: 8
-supported:
-
+#supported:
 vendor: microchip
