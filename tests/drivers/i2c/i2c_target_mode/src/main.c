@@ -7,13 +7,23 @@
 #include <zephyr/ztest.h>
 #include <zephyr/drivers/i2c.h>
 
+#ifdef CONFIG_I2C_TARGET_BUFFER_MODE
+
+#define TEST_DATA_LEN 64
+static uint8_t write_data[TEST_DATA_LEN] =
+	"Hello from target buffer mode! This is a devtest for I2C buffer";
+static uint8_t read_data[TEST_DATA_LEN];
+
+#else
+
 #define TEST_DATA_LEN 8
+static uint8_t write_data[TEST_DATA_LEN] = {0x10, 0x20, 0x30, 0x40, 0x50, 0x60, 0x70, 0x80};
+static uint8_t read_data[TEST_DATA_LEN];
+
+#endif /* CONFIG_I2C_TARGET_BUFFER_MODE */
 
 static const struct device *i2c_target = DEVICE_DT_GET(DT_NODELABEL(dut));
 static const struct device *i2c_controller = DEVICE_DT_GET(DT_NODELABEL(dut_aux));
-
-static uint8_t write_data[TEST_DATA_LEN] = {0x10, 0x20, 0x30, 0x40, 0x50, 0x60, 0x70, 0x80};
-static uint8_t read_data[TEST_DATA_LEN];
 
 int ret;
 
@@ -59,17 +69,46 @@ int sample_target_stop_cb(struct i2c_target_config *config)
 	return 0;
 }
 
+/* Buffer-Mode Callbacks (Enabled with CONFIG_I2C_TARGET_BUFFER_MODE) */
+#ifdef CONFIG_I2C_TARGET_BUFFER_MODE
+
+static void sample_target_buf_write_received_cb(struct i2c_target_config *config, uint8_t *ptr,
+						uint32_t len)
+{
+	printk("Target (BUFFER MODE): received %u bytes:\n", len);
+	for (uint32_t i = 0; i < len; i++) {
+		printk("%c", ptr[i]);
+		target_read_data[i] = ptr[i];
+	}
+	printk("\n");
+}
+
+static int sample_target_buf_read_requested_cb(struct i2c_target_config *config, uint8_t **ptr,
+					       uint32_t *len)
+{
+	*ptr = write_data;
+	*len = strlen(write_data);
+	return 0;
+}
+#endif /* CONFIG_I2C_TARGET_BUFFER_MODE */
+
 static struct i2c_target_callbacks sample_target_callbacks = {
 	.write_requested = sample_target_write_requested_cb,
 	.write_received = sample_target_write_received_cb,
 	.read_requested = sample_target_read_requested_cb,
 	.read_processed = sample_target_read_processed_cb,
 	.stop = sample_target_stop_cb,
+#ifdef CONFIG_I2C_TARGET_BUFFER_MODE
+	.buf_write_received = sample_target_buf_write_received_cb,
+	.buf_read_requested = sample_target_buf_read_requested_cb,
+#endif /* CONFIG_I2C_TARGET_BUFFER_MODE */
 };
 
 struct i2c_msg tx_msg = {.buf = write_data, .len = TEST_DATA_LEN, .flags = I2C_MSG_WRITE};
 
 struct i2c_msg rx_msg = {.buf = read_data, .len = TEST_DATA_LEN, .flags = I2C_MSG_READ};
+
+#ifndef CONFIG_I2C_TARGET_BUFFER_MODE
 
 ZTEST(i2c_target_mode, test_target_mode)
 {
@@ -98,6 +137,40 @@ ZTEST(i2c_target_mode, test_target_mode)
 			      write_data[i], target_read_data[i]);
 	}
 }
+
+#endif /* CONFIG_I2C_TARGET_BUFFER_MODE */
+
+#ifdef CONFIG_I2C_TARGET_BUFFER_MODE
+
+ZTEST(i2c_target_mode, test_target_buffer_mode)
+{
+	struct i2c_target_config target_cfg = {
+		.address = 0x54UL,
+		.callbacks = &sample_target_callbacks,
+	};
+
+	ret = i2c_target_register(i2c_target, &target_cfg);
+	zassert_equal(ret, 0, "TARGET registration failed: %d", ret);
+
+	ret = i2c_transfer(i2c_controller, &tx_msg, 1, target_cfg.address);
+	zassert_equal(ret, 0, "Target write failed: %d", ret);
+
+	k_msleep(10);
+
+	ret = i2c_transfer(i2c_controller, &rx_msg, 1, target_cfg.address);
+	zassert_equal(ret, 0, "Target read failed: %d", ret);
+
+	ret = i2c_target_unregister(i2c_target, &target_cfg);
+	zassert_equal(ret, 0, "TARGET unregistration failed: %d", ret);
+
+	for (int i = 0; i < TEST_DATA_LEN; i++) {
+		zassert_equal(target_read_data[i], write_data[i],
+			      "Data mismatch at index %d: expected 0x%02X, got 0x%02X", i,
+			      write_data[i], target_read_data[i]);
+	}
+}
+
+#endif /* CONFIG_I2C_TARGET_BUFFER_MODE */
 
 void *i2c_test_setup(void)
 {

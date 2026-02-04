@@ -15,3 +15,8 @@ tests:
       - sam_e54_xpro
     extra_configs:
       - CONFIG_I2C_MCHP_INTERRUPT_DRIVEN=n
+  drivers.i2c.i2c_target_buffer_mode:
+    platform_allow:
+      - sam_e54_xpro
+    extra_configs:
+      - CONFIG_I2C_TARGET_BUFFER_MODE=y
