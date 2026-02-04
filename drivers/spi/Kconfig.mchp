@@ -18,6 +18,7 @@ config SPI_MCHP_INTER_CHARACTER_SPACE
 	default 0
 	range 0 63
 	depends on SPI_MCHP_SERCOM_G1
+	depends on !SOC_FAMILY_MICROCHIP_PIC32CM_JH
 	help
 	  Number of clock cycles to delay between characters on SPI bus.
 

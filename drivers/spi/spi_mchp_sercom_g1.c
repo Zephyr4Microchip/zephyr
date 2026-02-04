@@ -1079,24 +1079,22 @@ static void spi_mchp_slave_write(const struct device *dev)
 	if (spi_context_tx_buf_on(&data->ctx) == true) {
 		write_ready = spi_context_tx_buf_on(&data->ctx);
 		write_ready = write_ready && (spi_slave_is_data_empty(spi_reg_cfg) == true);
-		while (write_ready == true) {
+		if (write_ready == true) {
 			tx_data = *data->ctx.tx_buf;
 			spi_slave_write_data(spi_reg_cfg, tx_data);
 
 			/* Write data byte to the SPI data register */
 			spi_context_update_tx(&data->ctx, 1, 1);
-			write_ready = spi_context_tx_buf_on(&data->ctx);
-			write_ready = write_ready && (spi_slave_is_data_empty(spi_reg_cfg) == true);
 		}
 	} else {
 		write_ready = (spi_slave_is_data_empty(spi_reg_cfg));
-		while (write_ready == true) {
-			tx_data = dummy_data;
-			spi_slave_write_data(spi_reg_cfg, tx_data);
-			write_ready = (spi_slave_is_data_empty(spi_reg_cfg));
+		if (write_ready == true) {
+			spi_slave_write_data(spi_reg_cfg, dummy_data);
 		}
 	}
+#ifndef CONFIG_SOC_FAMILY_MICROCHIP_PIC32CM_JH
 	spi_slave_enable_data_empty_interrupt(spi_reg_cfg);
+#endif /* CONFIG_SOC_FAMILY_MICROCHIP_PIC32CM_JH */
 }
 
 static int spi_mchp_slave_transceive_interrupt(const struct device *dev,
@@ -1508,20 +1506,18 @@ static void spi_mchp_isr_slave(const struct device *dev)
 	}
 
 	/* Check if data empty bit is set*/
-	if (spi_slave_is_data_empty(spi_reg_cfg) == true) {
-		tx_data = *data->ctx.tx_buf;
+	if (spi_slave_is_data_empty(spi_reg_cfg)) {
+		if (spi_context_tx_on(&data->ctx)) {
+			tx_data = *data->ctx.tx_buf;
+			spi_context_update_tx(&data->ctx, 1, 1);
+		} else {
+			tx_data = 0x00;
+			spi_slave_disable_dre_int(spi_reg_cfg);
+		}
 		if (spi_slave_is_tx_comp(spi_reg_cfg) == true) {
 			intFlag = (uint8_t)SERCOM_SPIS_INTFLAG_TXC_Msk;
 		}
 		spi_slave_write_data(spi_reg_cfg, tx_data);
-		if (spi_context_tx_on(&data->ctx) == true) {
-			spi_context_update_tx(&data->ctx, 1, 1);
-		} else {
-			/* Disable DRE interrupt. The last byte sent by the master will be
-			 * shifted out automatically
-			 */
-			spi_slave_disable_dre_int(spi_reg_cfg);
-		}
 	}
 
 	/* Check if slave select bit is set*/
