@@ -184,7 +184,12 @@
 #define ADC_CHANNEL_ID 0
 #endif
 
-#elif defined(CONFIG_BOARD_SAM_E54_XPRO)
+/* clang-format off */
+#elif defined(CONFIG_BOARD_SAM_E54_XPRO) || \
+	defined(CONFIG_BOARD_PIC32CX_SG41_CULT) || \
+	defined(CONFIG_BOARD_PIC32CX_SG61_CULT)
+/* clang-format on */
+
 /*  DAC0 internally connected to ADC channel 30 */
 #define DAC_DEVICE_NODE DT_NODELABEL(dac)
 #define DAC_RESOLUTION  12

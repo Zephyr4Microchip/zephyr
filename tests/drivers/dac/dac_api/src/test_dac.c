@@ -83,7 +83,9 @@
 	defined(CONFIG_BOARD_GD32F450Z_EVAL) || \
 	defined(CONFIG_BOARD_GD32F470I_EVAL) || \
 	defined(CONFIG_BOARD_YD_ESP32) || \
-	defined(CONFIG_BOARD_SAM_E54_XPRO)
+	defined(CONFIG_BOARD_SAM_E54_XPRO) || \
+	defined(CONFIG_BOARD_PIC32CX_SG41_CULT) || \
+	defined(CONFIG_BOARD_PIC32CX_SG61_CULT)
 /* clang-format on */
 
 #define DAC_DEVICE_NODE		DT_NODELABEL(dac)
