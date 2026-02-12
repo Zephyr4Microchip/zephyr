@@ -33,12 +33,15 @@
 
 &dac {
 	status = "okay";
-	refsel = "vddana";
-	dac0:dac0{
-		channel = <0>;
+	refsel = "vdd_ana";
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	dac0: channel@0 {
+		reg = <0>;
 		rate = <100>;
-		data_adj = "right";
-		refresh = <30>;
-		sampling_ratio = <1>;
+		data-adj = "right";
+		refresh-period = <30>;
+		sampling-ratio = <1>;
 	};
 };
