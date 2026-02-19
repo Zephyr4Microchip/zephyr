@@ -216,10 +216,10 @@ static int8_t adc_validate_channel_params(enum adc_gain gain, enum adc_reference
 #if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_SG)
 	if ((input_positive == MCHP_ADC_INPUT_POS_RSV_0) ||
 	    (input_positive == MCHP_ADC_INPUT_POS_RSV_1)) {
-		LOG_ERR("Invalid input positive for PIC32CXSG: %d\n", input_positive);
+		LOG_ERR("Invalid input positive for PIC32CXSG: %d", input_positive);
 		return -EINVAL;
 	}
-#endif
+#endif /* CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_SG */
 
 	/* Validate input_negative (0–7) */
 	if (input_negative > MCHP_ADC_INPUT_NEG_MAX) {
@@ -328,10 +328,10 @@ static int8_t adc_set_input_positive(adc_registers_t *adc_reg, uint8_t input_pos
 #if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_SG)
 	if ((input_positive == MCHP_ADC_INPUT_POS_RSV_0) ||
 	    (input_positive == MCHP_ADC_INPUT_POS_RSV_1)) {
-		LOG_ERR("Invalid input positive for PIC32CXSG: %d\n", input_positive);
+		LOG_ERR("Invalid input positive for PIC32CXSG: %d", input_positive);
 		return -EINVAL;
 	}
-#endif
+#endif /* CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_SG */
 
 	/* Set the MUXPOS field in ADC_INPUTCTRL register */
 	adc_reg->ADC_INPUTCTRL = ADC_INPUTCTRL_MUXPOS(input_positive);
@@ -395,7 +395,7 @@ static int8_t adc_set_input_negative(adc_registers_t *adc_reg, uint8_t input_neg
 		adc_reg->ADC_INPUTCTRL |= ADC_INPUTCTRL_MUXNEG(ADC_INPUTCTRL_MUXNEG_GND_Val);
 #elif defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_SG)
 		adc_reg->ADC_INPUTCTRL |= ADC_INPUTCTRL_MUXNEG(ADC_INPUTCTRL_MUXNEG_AVSS_Val);
-#endif
+#endif /* CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_SG */
 	}
 
 	return 0;

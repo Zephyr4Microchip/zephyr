@@ -48,7 +48,7 @@ tests:
       - pic32cx_sg61_cult
     extra_args:
       - DTC_OVERLAY_FILE="boards/sam_e54_xpro_ref.overlay"
-      - platform:pic32cx_sg41_cult/pic32cx1025sg41128:"DTC_OVERLAY_FILE="boards/pic32cx_sg41_cult_ref.overlay"
-      - platform:pic32cx_sg61_cult/pic32cx1025sg61128:"DTC_OVERLAY_FILE="boards/pic32cx_sg61_cult_ref.overlay"
+      - platform:pic32cx_sg41_cult/pic32cx1025sg41128:"DTC_OVERLAY_FILE=boards/pic32cx_sg41_cult_ref.overlay"
+      - platform:pic32cx_sg61_cult/pic32cx1025sg61128:"DTC_OVERLAY_FILE=boards/pic32cx_sg61_cult_ref.overlay"
     integration_platforms:
       - frdm_kl25z
