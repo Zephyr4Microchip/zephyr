@@ -302,7 +302,15 @@
 };
 
 &dac {
+	#address-cells = <1>;
+	#size-cells = <0>;
 	pinctrl-0 = <&dac_default>;
 	pinctrl-names = "default";
+	refsel = "int_ref";
 	status = "okay";
+
+	dac0: channel@0 {
+		reg = <0>;
+		rate = <1000>;
+	};
 };
