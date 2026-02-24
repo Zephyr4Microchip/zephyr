@@ -111,3 +111,7 @@
 	pinctrl-0 = <&sercom1_uart_default>;
 	pinctrl-names = "default";
 };
+
+&dmac {
+	status = "okay";
+};
