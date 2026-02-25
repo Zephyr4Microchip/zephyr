@@ -11,9 +11,9 @@
 #include <zephyr/drivers/dma.h>
 #include <zephyr/drivers/pinctrl.h>
 #include <zephyr/drivers/clock_control/mchp_clock_control.h>
-#if CONFIG_SPI_MCHP_DMA_DRIVEN
+#if CONFIG_SPI_MCHP_DMA_DRIVEN_ASYNC
 #include <mchp_dt_helper.h>
-#endif /* CONFIG_SPI_MCHP_DMA_DRIVEN */
+#endif /* CONFIG_SPI_MCHP_DMA_DRIVEN_ASYNC */
 
 #define DT_DRV_COMPAT microchip_sercom_g1_spi
 
@@ -27,6 +27,8 @@ LOG_MODULE_REGISTER(spi_mchp_sercom_g1);
 #define SPI_PIN_CNT             4
 #define TIMEOUT_VALUE_US        1000
 #define DELAY_US                2
+#define TIMEOUT_CYCLES          (TIMEOUT_VALUE_US * (CONFIG_SYS_CLOCK_HW_CYCLES_PER_SEC / 1000000))
+#define SPI_RETRY_LIMIT     ((CONFIG_SYS_CLOCK_HW_CYCLES_PER_SEC / 1000000) * TIMEOUT_VALUE_US / 6)
 
 struct mchp_spi_reg_config {
 	sercom_registers_t *regs;
@@ -66,7 +68,7 @@ struct spi_mchp_dev_data {
 	struct spi_context ctx;
 
 #if defined(CONFIG_SPI_ASYNC) || defined(CONFIG_SPI_MCHP_INTERRUPT_DRIVEN)
-	uint8_t dummysize;
+	uint16_t dummysize;
 #endif /* CONFIG_SPI_ASYNC) || CONFIG_SPI_MCHP_INTERRUPT_DRIVEN */
 
 #if CONFIG_SPI_MCHP_DMA_DRIVEN_ASYNC
@@ -766,26 +768,12 @@ static bool spi_mchp_transfer_in_progress(struct spi_mchp_dev_data *data)
 	return spi_context_tx_on(&data->ctx) || spi_context_rx_on(&data->ctx);
 }
 
-static int spi_mchp_finish(const struct mchp_spi_reg_config *spi_reg_cfg)
-{
-	/* Wait until transmit complete */
-	if (WAIT_FOR((spi_is_tx_comp(spi_reg_cfg) == true), TIMEOUT_VALUE_US,
-		     k_busy_wait(DELAY_US)) == false) {
-
-		LOG_ERR("SPI TX complete timeout");
-
-		return -ETIMEDOUT;
-	}
-	spi_clr_data(spi_reg_cfg);
-
-	return 0;
-}
-
 static int spi_mchp_poll_in(const struct mchp_spi_reg_config *spi_reg_cfg,
 			    struct spi_mchp_dev_data *data)
 {
 	uint8_t tx_data;
 	uint8_t rx_data;
+	uint32_t retry_count;
 
 	/* Check if there is data to transmit */
 	if (spi_context_tx_buf_on(&data->ctx) == true) {
@@ -794,22 +782,25 @@ static int spi_mchp_poll_in(const struct mchp_spi_reg_config *spi_reg_cfg,
 		tx_data = 0U;
 	}
 
+	retry_count = SPI_RETRY_LIMIT;
 	/* wait until the SPI data is empty */
-	if (WAIT_FOR((spi_is_data_empty(spi_reg_cfg) == true), TIMEOUT_VALUE_US,
-		     k_busy_wait(DELAY_US)) == false) {
-		LOG_ERR("SPI data empty timeout");
-
-		return -ETIMEDOUT;
+	while (spi_is_data_empty(spi_reg_cfg) != true) {
+		if (--retry_count == 0) {
+			return -ETIMEDOUT;
+		}
 	}
 
 	spi_write_data(spi_reg_cfg, tx_data);
 
 	spi_context_update_tx(&data->ctx, 1, 1);
 
+	retry_count = SPI_RETRY_LIMIT;
 	/* Wait for the reception to complete */
 	while (spi_is_rx_comp(spi_reg_cfg) != true) {
-		/* Wait for completion */
-	};
+		if (--retry_count == 0) {
+			return -ETIMEDOUT;
+		}
+	}
 
 	rx_data = spi_read_data(spi_reg_cfg);
 
@@ -823,201 +814,6 @@ static int spi_mchp_poll_in(const struct mchp_spi_reg_config *spi_reg_cfg,
 	return 0;
 }
 
-static int spi_mchp_fast_tx(const struct mchp_spi_reg_config *spi_reg_cfg,
-			    const struct spi_buf *tx_buf)
-{
-	const uint8_t *tx_data_ptr = tx_buf->buf;
-	uint8_t tx_data;
-	size_t len = tx_buf->len;
-	uint8_t dummy_data = 0U;
-	int retval;
-
-	/* Transmit each byte in the buffer */
-	while (len != 0) {
-		if (tx_buf->buf != NULL) {
-			tx_data = *tx_data_ptr++;
-		} else {
-			tx_data = dummy_data;
-		}
-
-		/* Wait until the tramist is complete */
-		if (WAIT_FOR((spi_is_data_empty(spi_reg_cfg) == true), TIMEOUT_VALUE_US,
-			     k_busy_wait(DELAY_US)) == false) {
-			LOG_ERR("SPI data empty timeout");
-
-			return -ETIMEDOUT;
-		}
-
-		spi_write_data(spi_reg_cfg, tx_data);
-		len--;
-	}
-
-	retval = spi_mchp_finish(spi_reg_cfg);
-
-	return retval;
-}
-
-static int spi_mchp_fast_rx(const struct mchp_spi_reg_config *spi_reg_cfg,
-			    const struct spi_buf *rx_buf)
-{
-	uint8_t *rx_data_ptr = rx_buf->buf;
-	size_t len = rx_buf->len;
-	uint8_t dummy_data = 0U;
-	int retval;
-
-	if (len == 0) {
-		return -EINVAL;
-	}
-
-	while (len != 0) {
-
-		/* Write a dummy data to receive data */
-		spi_write_data(spi_reg_cfg, dummy_data);
-		len--;
-
-		/* Wait for completion, and read */
-		while (spi_is_rx_comp(spi_reg_cfg) != true) {
-			/* Wait for completion */
-		};
-
-		if (rx_buf->buf != NULL) {
-			*rx_data_ptr = spi_read_data(spi_reg_cfg);
-			rx_data_ptr++;
-		} else {
-			(void)spi_read_data(spi_reg_cfg);
-		}
-	}
-
-	retval = spi_mchp_finish(spi_reg_cfg);
-
-	return retval;
-}
-
-static int spi_mchp_fast_txrx(const struct mchp_spi_reg_config *spi_reg_cfg,
-			      const struct spi_buf *tx_buf, const struct spi_buf *rx_buf)
-{
-	const uint8_t *tx_data_ptr = tx_buf->buf;
-	uint8_t *rx_data_ptr = rx_buf->buf;
-	size_t len = rx_buf->len;
-	uint8_t dummy_data = 0U;
-	int retval;
-
-	if (len == 0) {
-		return -EINVAL;
-	}
-
-	while (len > 0) {
-		/* Send the next byte */
-		if (tx_data_ptr != NULL) {
-			spi_write_data(spi_reg_cfg, *tx_data_ptr);
-			tx_data_ptr++;
-		} else {
-			spi_write_data(spi_reg_cfg, dummy_data);
-		}
-
-		/* Wait for completion */
-		while (spi_is_rx_comp(spi_reg_cfg) != true) {
-			/* Wait for completion */
-		};
-
-		/* Read received data */
-		if (rx_data_ptr != NULL) {
-			*rx_data_ptr = spi_read_data(spi_reg_cfg);
-			rx_data_ptr++;
-		} else {
-			(void)spi_read_data(spi_reg_cfg);
-		}
-		len--;
-	}
-
-	retval = spi_mchp_finish(spi_reg_cfg);
-
-	return retval;
-}
-
-static int spi_mchp_fast_transceive(const struct device *dev, const struct spi_config *config,
-				    const struct spi_buf_set *tx_bufs,
-				    const struct spi_buf_set *rx_bufs)
-{
-	const struct spi_mchp_dev_config *cfg = dev->config;
-	const struct mchp_spi_reg_config *spi_reg_cfg = &cfg->reg_cfg;
-	size_t tx_count = 0;
-	size_t rx_count = 0;
-	const struct spi_buf *tx_data_ptr = NULL;
-	const struct spi_buf *rx_data_ptr = NULL;
-	int retval;
-
-	if (tx_bufs != NULL) {
-		tx_data_ptr = tx_bufs->buffers;
-		tx_count = tx_bufs->count;
-	}
-
-	if (rx_bufs != NULL) {
-		rx_data_ptr = rx_bufs->buffers;
-		rx_count = rx_bufs->count;
-	} else {
-		rx_data_ptr = NULL;
-	}
-
-	while ((tx_count != 0) && (rx_count != 0)) {
-		/* This function is called only if the count is equal*/
-		retval = spi_mchp_fast_txrx(spi_reg_cfg, tx_data_ptr, rx_data_ptr);
-
-		tx_data_ptr++;
-		tx_count--;
-		rx_data_ptr++;
-		rx_count--;
-	}
-
-	/* Handle remaining transmit buffers */
-	while (tx_count > 0) {
-		retval = spi_mchp_fast_tx(spi_reg_cfg, tx_data_ptr);
-		tx_data_ptr++;
-		tx_count--;
-	}
-
-	/* Handle remaining receive buffers */
-	while (rx_count > 0) {
-		retval = spi_mchp_fast_rx(spi_reg_cfg, rx_data_ptr);
-		rx_data_ptr++;
-		rx_count--;
-	}
-
-	return retval;
-}
-
-static bool spi_mchp_is_same_len(const struct spi_buf_set *tx_bufs,
-				 const struct spi_buf_set *rx_bufs)
-{
-	const struct spi_buf *tx_data_ptr = NULL;
-	const struct spi_buf *rx_data_ptr = NULL;
-	size_t tx_count = 0;
-	size_t rx_count = 0;
-
-	if (tx_bufs != NULL) {
-		tx_data_ptr = tx_bufs->buffers;
-		tx_count = tx_bufs->count;
-	}
-
-	if (rx_bufs != NULL) {
-		rx_data_ptr = rx_bufs->buffers;
-		rx_count = rx_bufs->count;
-	}
-
-	while (tx_count != 0 && rx_count != 0) {
-		/* Compare the length of each corresponding TX and RX buffer */
-		if (tx_data_ptr->len != rx_data_ptr->len) {
-			return false;
-		}
-
-		tx_data_ptr++;
-		tx_count--;
-		rx_data_ptr++;
-		rx_count--;
-	}
-
-	return true;
-}
 #endif /* CONFIG_SPI_MCHP_INTERRUPT_DRIVEN*/
 
 #if defined(CONFIG_SPI_MCHP_INTERRUPT_DRIVEN) || (CONFIG_SPI_MCHP_INTERRUPT_DRIVEN_ASYNC)
@@ -1058,10 +854,6 @@ static int spi_mchp_transceive_interrupt(const struct device *dev, const struct 
 		spi_enable_data_empty_interrupt(spi_reg_cfg);
 	}
 
-#if defined(CONFIG_SPI_MCHP_INTERRUPT_DRIVEN)
-	spi_context_wait_for_completion(&data->ctx);
-#endif /* CONFIG_SPI_MCHP_INTERRUPT_DRIVEN */
-
 	return 0;
 }
 
@@ -1092,9 +884,7 @@ static void spi_mchp_slave_write(const struct device *dev)
 			spi_slave_write_data(spi_reg_cfg, dummy_data);
 		}
 	}
-#ifndef CONFIG_SOC_FAMILY_MICROCHIP_PIC32CM_JH
 	spi_slave_enable_data_empty_interrupt(spi_reg_cfg);
-#endif /* CONFIG_SOC_FAMILY_MICROCHIP_PIC32CM_JH */
 }
 
 static int spi_mchp_slave_transceive_interrupt(const struct device *dev,
@@ -1117,10 +907,6 @@ static int spi_mchp_slave_transceive_interrupt(const struct device *dev,
 	spi_enable_rxc_interrupt(spi_reg_cfg, config->operation);
 
 	spi_slave_select_line_enable(spi_reg_cfg);
-
-#if defined(CONFIG_SPI_MCHP_INTERRUPT_DRIVEN)
-	ret = spi_context_wait_for_completion(&data->ctx);
-#endif /* CONFIG_SPI_MCHP_INTERRUPT_DRIVEN */
 
 	return ret;
 }
@@ -1171,19 +957,16 @@ static int spi_mchp_transceive_sync(const struct device *dev, const struct spi_c
 	if (SPI_OP_MODE_GET(config->operation) == SPI_OP_MODE_MASTER) {
 		ret = spi_mchp_transceive_interrupt(dev, config, tx_bufs, rx_bufs);
 	}
-#else
+	ret = spi_context_wait_for_completion(&data->ctx);
+#elif defined(CONFIG_SPI_MCHP_POLLING_MODE)
 	/* Use optimized fast path if TX and RX buffer lengths match */
 	if (SPI_OP_MODE_GET(config->operation) == SPI_OP_MODE_MASTER) {
-		if (spi_mchp_is_same_len(tx_bufs, rx_bufs) == true) {
-			spi_mchp_fast_transceive(dev, config, tx_bufs, rx_bufs);
-		} else {
-			/* Setup SPI buffers and process using polling */
-			spi_context_buffers_setup(&data->ctx, tx_bufs, rx_bufs, 1);
+		/* Setup SPI buffers and process using polling */
+		spi_context_buffers_setup(&data->ctx, tx_bufs, rx_bufs, 1);
 
-			do {
-				ret = spi_mchp_poll_in(spi_reg_cfg, data);
-			} while (spi_mchp_transfer_in_progress(data) && ret == 0);
-		}
+		do {
+			ret = spi_mchp_poll_in(spi_reg_cfg, data);
+		} while (spi_mchp_transfer_in_progress(data) && ret == 0);
 	}
 
 #if CONFIG_SPI_SLAVE
@@ -1315,7 +1098,7 @@ static bool spi_mchp_dma_select_segment(const struct device *dev)
 
 	/* Ensure the segment length does not exceed the max allowed value
 	 */
-	segment_len = MIN(segment_len, 65535);
+	segment_len = MIN(segment_len, SPI_MCHP_MAX_XFER_SIZE);
 
 	data->dma_segment_len = segment_len;
 
@@ -1495,38 +1278,10 @@ static void spi_mchp_isr_slave(const struct device *dev)
 	const struct spi_mchp_dev_config *cfg = dev->config;
 	const struct mchp_spi_reg_config *spi_reg_cfg = &cfg->reg_cfg;
 	uint8_t intFlag = spi_reg_cfg->regs->SPIS.SERCOM_INTFLAG;
-	static bool transaction_complete;
 	uint8_t tx_data = 0U;
 	uint8_t rx_data = 0U;
 
-	/* Reset transaction_complete if there is data to send or receive */
-	if ((spi_context_tx_buf_on(&data->ctx) == true) ||
-	    (spi_context_rx_buf_on(&data->ctx) == true)) {
-		transaction_complete = false;
-	}
-
-	/* Check if data empty bit is set*/
-	if (spi_slave_is_data_empty(spi_reg_cfg)) {
-		if (spi_context_tx_on(&data->ctx)) {
-			tx_data = *data->ctx.tx_buf;
-			spi_context_update_tx(&data->ctx, 1, 1);
-		} else {
-			tx_data = 0x00;
-			spi_slave_disable_dre_int(spi_reg_cfg);
-		}
-		if (spi_slave_is_tx_comp(spi_reg_cfg) == true) {
-			intFlag = (uint8_t)SERCOM_SPIS_INTFLAG_TXC_Msk;
-		}
-		spi_slave_write_data(spi_reg_cfg, tx_data);
-	}
-
-	/* Check if slave select bit is set*/
-	if (spi_slave_select_line(spi_reg_cfg) == true) {
-		spi_slave_clr_slave_select_line(spi_reg_cfg);
-		spi_slave_enable_txc_interrupt(spi_reg_cfg);
-	}
-
-	/* Check if buffer overflow error bit is set*/
+	/* Handle buffer overflow error */
 	if ((spi_reg_cfg->regs->SPIS.SERCOM_STATUS & SERCOM_SPIS_STATUS_BUFOVF_Msk) ==
 	    SERCOM_SPIS_STATUS_BUFOVF_Msk) {
 		spi_slave_clr_buf_overflow(spi_reg_cfg);
@@ -1534,28 +1289,43 @@ static void spi_mchp_isr_slave(const struct device *dev)
 		spi_slave_clr_error_int_flag(spi_reg_cfg);
 	}
 
-	/* Check if data is available in the receive buffer */
+	/* Handle received data */
 	if (spi_slave_is_rx_comp(spi_reg_cfg) == true) {
 		rx_data = spi_slave_read_data(spi_reg_cfg);
-		if (spi_context_rx_buf_on(&data->ctx) == true) {
+		if (spi_context_rx_buf_on(&data->ctx)) {
 			*data->ctx.rx_buf = rx_data;
 			spi_context_update_rx(&data->ctx, 1, 1);
 		}
 	}
 
-	/* If TX complete, finish transaction if all done */
+	/* Handle transmit data */
+	if (spi_slave_is_data_empty(spi_reg_cfg) == true) {
+		if (spi_context_tx_on(&data->ctx)) {
+			tx_data = *data->ctx.tx_buf;
+			spi_context_update_tx(&data->ctx, 1, 1);
+		} else {
+			tx_data = 0x00;
+			spi_slave_disable_dre_int(spi_reg_cfg);
+		}
+		spi_slave_write_data(spi_reg_cfg, tx_data);
+	}
+
+	/* Handle slave select */
+	if (spi_slave_select_line(spi_reg_cfg) == true) {
+		spi_slave_clr_slave_select_line(spi_reg_cfg);
+		spi_slave_enable_txc_interrupt(spi_reg_cfg);
+	}
+
+	/* Handle transaction complete */
 	if ((intFlag & SERCOM_SPIS_INTFLAG_TXC_Msk) == SERCOM_SPIS_INTFLAG_TXC_Msk) {
-		intFlag = 0;
 		spi_slave_clr_tx_comp_flag(spi_reg_cfg);
+
+		/* If both TX and RX are done, complete the transaction */
 		if ((spi_context_rx_on(&data->ctx) == false) &&
 		    (spi_context_tx_on(&data->ctx) == false)) {
 			spi_slave_disable_interrupts(spi_reg_cfg);
 			spi_slave_clr_interrupts(spi_reg_cfg);
-			/* Release the semaphore to unblock waiting threads */
-			if (transaction_complete == false) {
-				spi_context_complete(&data->ctx, dev, 0);
-				transaction_complete = true;
-			}
+			spi_context_complete(&data->ctx, dev, 0);
 		}
 	}
 }
@@ -1567,15 +1337,14 @@ static void spi_mchp_isr_master(const struct device *dev)
 	const struct spi_mchp_dev_config *cfg = dev->config;
 	const struct mchp_spi_reg_config *spi_reg_cfg = &cfg->reg_cfg;
 	uint8_t dummy_data = 0U;
-	bool last_byte = false;
 	uint8_t tx_data = 0U;
 	uint8_t rx_data = 0U;
 
-	/* Check if the transmit buffer is empty and send the next byte */
 	if (spi_reg_cfg->regs->SPIM.SERCOM_INTENSET == 0) {
 		return;
 	}
-	/* Check if data is available in the receive buffer */
+
+	/* Handle received data */
 	if (spi_is_rx_comp(spi_reg_cfg) == true) {
 		if (spi_context_rx_buf_on(&data->ctx) == true) {
 			rx_data = spi_read_data(spi_reg_cfg);
@@ -1583,9 +1352,11 @@ static void spi_mchp_isr_master(const struct device *dev)
 			spi_context_update_rx(&data->ctx, 1, 1);
 		}
 	}
-	/* If data register is empty, send next byte or dummy */
+
+	/* Handle transmit data or dummy bytes */
 	if (spi_is_data_empty(spi_reg_cfg) == true) {
 		spi_disable_data_empty_interrupt(spi_reg_cfg);
+
 		if (spi_context_tx_on(&data->ctx) == true) {
 			tx_data = *data->ctx.tx_buf;
 			spi_write_data(spi_reg_cfg, tx_data);
@@ -1593,37 +1364,31 @@ static void spi_mchp_isr_master(const struct device *dev)
 		} else if (data->dummysize > 0) {
 			spi_write_data(spi_reg_cfg, dummy_data);
 			data->dummysize--;
-		} else {
-			/* Do Nothing */
 		}
 
+		/* Enable TXC interrupt if this was the last byte to send */
 		if ((data->dummysize == 0) && (spi_context_tx_on(&data->ctx) == false)) {
-			last_byte = true;
+			spi_enable_txc_interrupt(spi_reg_cfg);
 		} else if (spi_context_rx_on(&data->ctx) == false) {
 			spi_enable_data_empty_interrupt(spi_reg_cfg);
 			spi_disable_rxc_interrupt(spi_reg_cfg);
-		} else {
-			/* Do Nothing */
 		}
 	}
-	/* If TX complete and last byte, finish transaction */
-	if ((spi_is_tx_comp(spi_reg_cfg) == true) && (last_byte == true)) {
-		if (spi_context_rx_on(&data->ctx) == false) {
+
+	/* If TX complete and all bytes sent, finish transaction */
+	if (spi_is_tx_comp(spi_reg_cfg) == true) {
+		bool tx_all_done =
+			(data->dummysize == 0) && (spi_context_tx_on(&data->ctx) == false);
+
+		if (tx_all_done == true && (spi_context_rx_on(&data->ctx) == false)) {
 			spi_disable_rxc_interrupt(spi_reg_cfg);
 			spi_disable_txc_interrupt(spi_reg_cfg);
 			spi_disable_data_empty_interrupt(spi_reg_cfg);
-			last_byte = false;
-			if (spi_context_is_slave(&data->ctx) == false) {
-				/* Control chip select for SPI slave mode */
-				spi_context_cs_control(&data->ctx, false);
-			}
-			/* Release the semaphore to unblock waiting threads */
+			spi_context_cs_control(&data->ctx, false);
 			spi_context_complete(&data->ctx, dev, 0);
+		} else if (tx_all_done == true) {
+			spi_disable_txc_interrupt(spi_reg_cfg);
 		}
-	}
-	/* Enable TX complete interrupt if last byte */
-	if (last_byte == true) {
-		spi_enable_txc_interrupt(spi_reg_cfg);
 	}
 }
 
