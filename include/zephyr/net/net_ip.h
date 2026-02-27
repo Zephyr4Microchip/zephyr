@@ -474,7 +474,10 @@ extern const struct in6_addr in6addr_loopback;
 /** Max length of the IPv6 address as a string. Takes into account possible
  * mapped IPv4 addresses.
  */
+ 
+#ifndef INET6_ADDRSTRLEN     /* Microchip matter test */
 #define INET6_ADDRSTRLEN 46
+#endif
 
 /** @cond INTERNAL_HIDDEN */
 
