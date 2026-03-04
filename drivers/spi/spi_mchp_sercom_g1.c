@@ -8,10 +8,10 @@
 #include <zephyr/logging/log.h>
 #include <zephyr/drivers/spi.h>
 #include <zephyr/drivers/spi/rtio.h>
-#include <zephyr/drivers/dma.h>
 #include <zephyr/drivers/pinctrl.h>
 #include <zephyr/drivers/clock_control/mchp_clock_control.h>
 #if CONFIG_SPI_MCHP_DMA_DRIVEN_ASYNC
+#include <zephyr/drivers/dma.h>
 #include <mchp_dt_helper.h>
 #endif /* CONFIG_SPI_MCHP_DMA_DRIVEN_ASYNC */
 
@@ -26,7 +26,7 @@ LOG_MODULE_REGISTER(spi_mchp_sercom_g1);
 #define SUPPORTED_SPI_WORD_SIZE 8
 #define SPI_PIN_CNT             4
 #define TIMEOUT_VALUE_US        1000
-#define DELAY_US                2
+#define DELAY_US                1
 #define TIMEOUT_CYCLES          (TIMEOUT_VALUE_US * (CONFIG_SYS_CLOCK_HW_CYCLES_PER_SEC / 1000000))
 #define SPI_RETRY_LIMIT     ((CONFIG_SYS_CLOCK_HW_CYCLES_PER_SEC / 1000000) * TIMEOUT_VALUE_US / 6)
 
@@ -80,7 +80,8 @@ struct spi_mchp_dev_data {
 /*Wait for synchronization*/
 static inline void spi_wait_sync(const struct mchp_spi_reg_config *spi_reg_cfg, uint32_t sync_flag)
 {
-	if (WAIT_FOR(((spi_reg_cfg->regs->SPIM.SERCOM_SYNCBUSY & sync_flag) == 0), TIMEOUT_VALUE_US,
+	sercom_spi_registers_t *spi = SPI_GET_BASE_ADDR(spi_reg_cfg->regs, SPI_OP_MODE_MASTER);
+	if (WAIT_FOR(((spi->SERCOM_SYNCBUSY & sync_flag) == 0), TIMEOUT_VALUE_US,
 		     k_busy_wait(DELAY_US)) == false) {
 		LOG_ERR("Timeout waiting for SPI SYNCBUSY ENABLE clear");
 	}
@@ -89,218 +90,20 @@ static inline void spi_wait_sync(const struct mchp_spi_reg_config *spi_reg_cfg, 
 /*Enable the SPI peripheral*/
 static void spi_enable(const struct mchp_spi_reg_config *spi_reg_cfg, spi_operation_t op)
 {
-	spi_wait_sync(spi_reg_cfg, SERCOM_SPIM_SYNCBUSY_ENABLE_Msk);
-	if (SPI_OP_MODE_GET(op) == SPI_OP_MODE_MASTER) {
-		spi_reg_cfg->regs->SPIM.SERCOM_CTRLA |= SERCOM_SPIM_CTRLA_ENABLE_Msk;
-	} else {
-		spi_reg_cfg->regs->SPIS.SERCOM_CTRLA |= SERCOM_SPIS_CTRLA_ENABLE_Msk;
-	}
-	spi_wait_sync(spi_reg_cfg, SERCOM_SPIM_SYNCBUSY_ENABLE_Msk);
+	sercom_spi_registers_t *spi =
+		SPI_GET_BASE_ADDR(spi_reg_cfg->regs, SPI_OP_MODE_GET(op) == SPI_OP_MODE_SLAVE);
+	spi_wait_sync(spi_reg_cfg, SERCOM_SPI_SYNCBUSY_ENABLE_Msk);
+	spi->SERCOM_CTRLA |= SERCOM_SPI_CTRLA_ENABLE_Msk;
+	spi_wait_sync(spi_reg_cfg, SERCOM_SPI_SYNCBUSY_ENABLE_Msk);
 }
 
 /*Disable the SPI peripheral*/
 static void spi_disable(const struct mchp_spi_reg_config *spi_reg_cfg)
 {
-	spi_wait_sync(spi_reg_cfg, SERCOM_SPIM_SYNCBUSY_ENABLE_Msk);
-	spi_reg_cfg->regs->SPIM.SERCOM_CTRLA &= ~SERCOM_SPIM_CTRLA_ENABLE_Msk;
-	spi_wait_sync(spi_reg_cfg, SERCOM_SPIM_SYNCBUSY_ENABLE_Msk);
-}
-
-/*Set the SPI Master Mode*/
-static inline void spi_master_mode(const struct mchp_spi_reg_config *spi_reg_cfg)
-{
-	/* Clear the MODE bit field and set it to SPI Master mode */
-	spi_reg_cfg->regs->SPIM.SERCOM_CTRLA =
-		(spi_reg_cfg->regs->SPIM.SERCOM_CTRLA & ~SERCOM_SPIM_CTRLA_MODE_Msk) |
-		SERCOM_SPIM_CTRLA_MODE_SPI_MASTER;
-}
-
-/*Set the SPI Slave Mode*/
-static inline void spi_slave_mode(const struct mchp_spi_reg_config *spi_reg_cfg)
-{
-	/* Clear the MODE bit field and set it to SPI Slave mode */
-	spi_reg_cfg->regs->SPIS.SERCOM_CTRLA =
-		(spi_reg_cfg->regs->SPIS.SERCOM_CTRLA & ~SERCOM_SPIS_CTRLA_MODE_Msk) |
-		SERCOM_SPIS_CTRLA_MODE_SPI_SLAVE;
-}
-
-/*Set the SPI Data Order, MSB first*/
-static void spi_msb_first(const struct mchp_spi_reg_config *spi_reg_cfg, spi_operation_t op)
-{
-	/* Clear the DORD bit field and set it to MSB first */
-	if (SPI_OP_MODE_GET(op) == SPI_OP_MODE_MASTER) {
-		spi_reg_cfg->regs->SPIM.SERCOM_CTRLA =
-			(spi_reg_cfg->regs->SPIM.SERCOM_CTRLA & ~SERCOM_SPIM_CTRLA_DORD_Msk) |
-			SERCOM_SPIM_CTRLA_DORD_MSB;
-	} else {
-		spi_reg_cfg->regs->SPIS.SERCOM_CTRLA =
-			(spi_reg_cfg->regs->SPIS.SERCOM_CTRLA & ~SERCOM_SPIS_CTRLA_DORD_Msk) |
-			SERCOM_SPIS_CTRLA_DORD_MSB;
-	}
-}
-
-/*Set the SPI Data Order,LSB first*/
-static void spi_lsb_first(const struct mchp_spi_reg_config *spi_reg_cfg, spi_operation_t op)
-{
-	/* Clear the DORD bit field and set it to LSB first */
-	if (SPI_OP_MODE_GET(op) == SPI_OP_MODE_MASTER) {
-		spi_reg_cfg->regs->SPIM.SERCOM_CTRLA =
-			(spi_reg_cfg->regs->SPIM.SERCOM_CTRLA & ~SERCOM_SPIM_CTRLA_DORD_Msk) |
-			SERCOM_SPIM_CTRLA_DORD_LSB;
-	} else {
-		spi_reg_cfg->regs->SPIS.SERCOM_CTRLA =
-			(spi_reg_cfg->regs->SPIS.SERCOM_CTRLA & ~SERCOM_SPIS_CTRLA_DORD_Msk) |
-			SERCOM_SPIS_CTRLA_DORD_LSB;
-	}
-}
-
-/*Set the SPI Clock Polarity Idle Low*/
-static void spi_cpol_idle_low(const struct mchp_spi_reg_config *spi_reg_cfg, spi_operation_t op)
-{
-	/* Clear the CPOL bit field and set clock polarity to Idle Low */
-	if (SPI_OP_MODE_GET(op) == SPI_OP_MODE_MASTER) {
-		spi_reg_cfg->regs->SPIM.SERCOM_CTRLA =
-			(spi_reg_cfg->regs->SPIM.SERCOM_CTRLA & ~SERCOM_SPIM_CTRLA_CPOL_Msk) |
-			SERCOM_SPIM_CTRLA_CPOL_IDLE_LOW;
-	} else {
-		spi_reg_cfg->regs->SPIS.SERCOM_CTRLA =
-			(spi_reg_cfg->regs->SPIS.SERCOM_CTRLA & ~SERCOM_SPIS_CTRLA_CPOL_Msk) |
-			SERCOM_SPIS_CTRLA_CPOL_IDLE_LOW;
-	}
-}
-
-/*Set the SPI Clock Polarity Idle High*/
-static void spi_cpol_idle_high(const struct mchp_spi_reg_config *spi_reg_cfg, spi_operation_t op)
-{
-	/* Clear the CPOL bit field and set clock polarity to Idle High */
-	if (SPI_OP_MODE_GET(op) == SPI_OP_MODE_MASTER) {
-		spi_reg_cfg->regs->SPIM.SERCOM_CTRLA =
-			(spi_reg_cfg->regs->SPIM.SERCOM_CTRLA & ~SERCOM_SPIM_CTRLA_CPOL_Msk) |
-			SERCOM_SPIM_CTRLA_CPOL_IDLE_HIGH;
-	} else {
-		spi_reg_cfg->regs->SPIS.SERCOM_CTRLA =
-			(spi_reg_cfg->regs->SPIS.SERCOM_CTRLA & ~SERCOM_SPIS_CTRLA_CPOL_Msk) |
-			SERCOM_SPIS_CTRLA_CPOL_IDLE_HIGH;
-	}
-}
-
-/*Set the SPI Clock Phase leading Edge*/
-static void spi_cpha_lead_edge(const struct mchp_spi_reg_config *spi_reg_cfg, spi_operation_t op)
-{
-	/* Clear the CPHA bit field and set clock phase to Leading Edge */
-	if (SPI_OP_MODE_GET(op) == SPI_OP_MODE_MASTER) {
-		spi_reg_cfg->regs->SPIM.SERCOM_CTRLA =
-			(spi_reg_cfg->regs->SPIM.SERCOM_CTRLA & ~SERCOM_SPIM_CTRLA_CPHA_Msk) |
-			SERCOM_SPIM_CTRLA_CPHA_LEADING_EDGE;
-	} else {
-		spi_reg_cfg->regs->SPIS.SERCOM_CTRLA =
-			(spi_reg_cfg->regs->SPIS.SERCOM_CTRLA & ~SERCOM_SPIS_CTRLA_CPHA_Msk) |
-			SERCOM_SPIS_CTRLA_CPHA_LEADING_EDGE;
-	}
-}
-
-/*Set the SPI Clock Phase Trailing Edge*/
-static void spi_cpha_trail_edge(const struct mchp_spi_reg_config *spi_reg_cfg, spi_operation_t op)
-{
-	/* Clear the CPHA bit field and set clock phase to Trailing Edge */
-	if (SPI_OP_MODE_GET(op) == SPI_OP_MODE_MASTER) {
-		spi_reg_cfg->regs->SPIM.SERCOM_CTRLA =
-			(spi_reg_cfg->regs->SPIM.SERCOM_CTRLA & ~SERCOM_SPIM_CTRLA_CPHA_Msk) |
-			SERCOM_SPIM_CTRLA_CPHA_TRAILING_EDGE;
-	} else {
-		spi_reg_cfg->regs->SPIS.SERCOM_CTRLA =
-			(spi_reg_cfg->regs->SPIS.SERCOM_CTRLA & ~SERCOM_SPIS_CTRLA_CPHA_Msk) |
-			SERCOM_SPIS_CTRLA_CPHA_TRAILING_EDGE;
-	}
-}
-
-/*Set the SPI Half Duplex Mode*/
-static inline int spi_half_duplex_mode(const struct mchp_spi_reg_config *spi_reg_cfg)
-{
-	LOG_ERR("SPI half-duplex mode is not supported");
-
-	return -ENOTSUP;
-}
-
-/*Set the SPI Full Duplex Mode. Since the device is full duplex mode by default this API returns
- *success
- */
-static inline int spi_full_duplex_mode(const struct mchp_spi_reg_config *spi_reg_cfg)
-{
-	return 0;
-}
-
-/*Set the pads for the SPI Transmission*/
-static inline void spi_slave_config_pinout(const struct mchp_spi_reg_config *spi_reg_cfg)
-{
-	/* Clear the DIPO and DOPO bit fields and apply the new pad configuration */
-	spi_reg_cfg->regs->SPIS.SERCOM_CTRLA =
-		(spi_reg_cfg->regs->SPIS.SERCOM_CTRLA &
-		 ~(SERCOM_SPIS_CTRLA_DIPO_Msk | SERCOM_SPIS_CTRLA_DOPO_Msk)) |
-		spi_reg_cfg->pads;
-}
-
-/*Set the pads for the SPI Transmission*/
-static inline void spi_master_config_pinout(const struct mchp_spi_reg_config *spi_reg_cfg)
-{
-	/* Clear the DIPO and DOPO bit fields and apply the new pad configuration */
-	spi_reg_cfg->regs->SPIM.SERCOM_CTRLA =
-		(spi_reg_cfg->regs->SPIM.SERCOM_CTRLA &
-		 ~(SERCOM_SPIM_CTRLA_DIPO_Msk | SERCOM_SPIM_CTRLA_DOPO_Msk)) |
-		spi_reg_cfg->pads;
-}
-
-/*Set the pads for the SPI Transmission for loopback mode*/
-static inline void spi_mode_loopback(const struct mchp_spi_reg_config *spi_reg_cfg)
-{
-	/* Clear the DIPO and DOPO bit fields and set them to PAD0 */
-#ifdef CONFIG_SOC_FAMILY_MICROCHIP_PIC32CM_JH
-	spi_reg_cfg->regs->SPIM.SERCOM_CTRLA =
-		(spi_reg_cfg->regs->SPIM.SERCOM_CTRLA &
-		 ~(SERCOM_SPIM_CTRLA_DIPO_Msk | SERCOM_SPIM_CTRLA_DOPO_Msk)) |
-		(SERCOM_SPIM_CTRLA_DIPO_PAD0 | SERCOM_SPIM_CTRLA_DOPO_0x0);
-#else
-	spi_reg_cfg->regs->SPIM.SERCOM_CTRLA =
-		(spi_reg_cfg->regs->SPIM.SERCOM_CTRLA &
-		 ~(SERCOM_SPIM_CTRLA_DIPO_Msk | SERCOM_SPIM_CTRLA_DOPO_Msk)) |
-		(SERCOM_SPIM_CTRLA_DIPO_PAD0 | SERCOM_SPIM_CTRLA_DOPO_PAD0);
-#endif /* CONFIG_SOC_FAMILY_MICROCHIP_PIC32CM_JH */
-}
-
-/*Enable the Receiver in SPI peripheral*/
-static void spi_rx_enable(const struct mchp_spi_reg_config *spi_reg_cfg, spi_operation_t op)
-{
-	if (SPI_OP_MODE_GET(op) == SPI_OP_MODE_MASTER) {
-		spi_wait_sync(spi_reg_cfg, SERCOM_SPIM_SYNCBUSY_CTRLB_Msk);
-		/* Clear the RXEN bit field and enable Receiver */
-		spi_reg_cfg->regs->SPIM.SERCOM_CTRLB =
-			(spi_reg_cfg->regs->SPIM.SERCOM_CTRLB & ~SERCOM_SPIM_CTRLB_RXEN_Msk) |
-			SERCOM_SPIM_CTRLB_RXEN_Msk;
-		spi_wait_sync(spi_reg_cfg, SERCOM_SPIM_SYNCBUSY_CTRLB_Msk);
-	} else {
-		spi_wait_sync(spi_reg_cfg, SERCOM_SPIS_SYNCBUSY_CTRLB_Msk);
-		/* Clear the RXEN bit field and enable Receiver */
-		spi_reg_cfg->regs->SPIS.SERCOM_CTRLB =
-			(spi_reg_cfg->regs->SPIS.SERCOM_CTRLB & ~SERCOM_SPIS_CTRLB_RXEN_Msk) |
-			SERCOM_SPIS_CTRLB_RXEN_Msk;
-		spi_wait_sync(spi_reg_cfg, SERCOM_SPIS_SYNCBUSY_CTRLB_Msk);
-	}
-}
-
-/*Set the 8 BIT Character Size in SPI peripheral*/
-static void spi_8bit_ch_size(const struct mchp_spi_reg_config *spi_reg_cfg, spi_operation_t op)
-{
-	if (SPI_OP_MODE_GET(op) == SPI_OP_MODE_MASTER) {
-		/* Clear the CHSIZE bit field and set character size to 8-bit */
-		spi_reg_cfg->regs->SPIM.SERCOM_CTRLB =
-			(spi_reg_cfg->regs->SPIM.SERCOM_CTRLB & ~SERCOM_SPIM_CTRLB_CHSIZE_Msk) |
-			SERCOM_SPIM_CTRLB_CHSIZE_8_BIT;
-	} else {
-		/* Clear the CHSIZE bit field and set character size to 8-bit */
-		spi_reg_cfg->regs->SPIS.SERCOM_CTRLB =
-			(spi_reg_cfg->regs->SPIS.SERCOM_CTRLB & ~SERCOM_SPIS_CTRLB_CHSIZE_Msk) |
-			SERCOM_SPIS_CTRLB_CHSIZE_8_BIT;
-	}
+	sercom_spi_registers_t *spi = SPI_GET_BASE_ADDR(spi_reg_cfg->regs, SPI_OP_MODE_MASTER);
+	spi_wait_sync(spi_reg_cfg, SERCOM_SPI_SYNCBUSY_ENABLE_Msk);
+	spi->SERCOM_CTRLA &= ~SERCOM_SPI_CTRLA_ENABLE_Msk;
+	spi_wait_sync(spi_reg_cfg, SERCOM_SPI_SYNCBUSY_ENABLE_Msk);
 }
 
 /*Set the BAUD Rate value for SPI peripheral*/
@@ -312,6 +115,8 @@ static void spi_set_baudrate(const struct mchp_spi_reg_config *spi_reg_cfg,
 	/* Use the requested or next highest possible frequency */
 	uint32_t baud_value = (clk_freq_hz / divisor) - 1;
 
+	sercom_spi_registers_t *spi = SPI_GET_BASE_ADDR(spi_reg_cfg->regs, SPI_OP_MODE_MASTER);
+
 	if ((clk_freq_hz % divisor) >= (divisor / 2U)) {
 		/* Round up the baud_value to ensures SPI clock is as close as possible to
 		 * the requested frequency
@@ -321,11 +126,7 @@ static void spi_set_baudrate(const struct mchp_spi_reg_config *spi_reg_cfg,
 
 	baud_value = CLAMP(baud_value, 0, UINT8_MAX);
 
-	if (SPI_OP_MODE_GET(config->operation) == SPI_OP_MODE_MASTER) {
-		spi_reg_cfg->regs->SPIM.SERCOM_BAUD = baud_value;
-	} else {
-		spi_reg_cfg->regs->SPIS.SERCOM_BAUD = baud_value;
-	}
+	spi->SERCOM_BAUD = baud_value;
 }
 
 #ifdef CONFIG_SPI_MCHP_INTER_CHARACTER_SPACE
@@ -340,255 +141,52 @@ static inline void spi_set_icspace(const struct mchp_spi_reg_config *spi_reg_cfg
 /*Write Data into DATA register*/
 static inline void spi_write_data(const struct mchp_spi_reg_config *spi_reg_cfg, uint8_t data)
 {
-	spi_reg_cfg->regs->SPIM.SERCOM_DATA = data;
+	sercom_spi_registers_t *spi = SPI_GET_BASE_ADDR(spi_reg_cfg->regs, SPI_OP_MODE_MASTER);
+	spi->SERCOM_DATA = data;
 }
 
 /*Read Data from the SPI MASTER DATA register*/
 static inline uint8_t spi_read_data(const struct mchp_spi_reg_config *spi_reg_cfg)
 {
-	return (uint8_t)spi_reg_cfg->regs->SPIM.SERCOM_DATA;
-}
-
-/*Read Data from the SPI SLAVE DATA register*/
-static inline uint8_t spi_slave_read_data(const struct mchp_spi_reg_config *spi_reg_cfg)
-{
-	return (uint8_t)spi_reg_cfg->regs->SPIS.SERCOM_DATA;
-}
-
-/*Return true if receive complete flag is set*/
-static inline bool spi_is_rx_comp(const struct mchp_spi_reg_config *spi_reg_cfg)
-{
-	return (spi_reg_cfg->regs->SPIM.SERCOM_INTFLAG & SERCOM_SPIM_INTFLAG_RXC_Msk) ==
-	       SERCOM_SPIM_INTFLAG_RXC_Msk;
-}
-
-/*Return true if transmit complete flag is set*/
-static inline bool spi_is_tx_comp(const struct mchp_spi_reg_config *spi_reg_cfg)
-{
-	return ((spi_reg_cfg->regs->SPIM.SERCOM_INTFLAG & SERCOM_SPIM_INTFLAG_TXC_Msk) ==
-		SERCOM_SPIM_INTFLAG_TXC_Msk);
-}
-
-/*Clear the DATA register*/
-static inline void spi_clr_data(const struct mchp_spi_reg_config *spi_reg_cfg)
-{
-	/*Clear the DATA register until the RXC flag is cleared*/
-	if (WAIT_FOR(((spi_reg_cfg->regs->SPIM.SERCOM_INTFLAG & SERCOM_SPIM_INTFLAG_RXC_Msk) == 0),
-		     TIMEOUT_VALUE_US,
-		     ((void)spi_reg_cfg->regs->SPIM.SERCOM_DATA, k_busy_wait(DELAY_US))) == false) {
-		LOG_ERR("Timeout while clearing RXC");
-	}
-}
-
-/*Return true if data register empty flag is set*/
-static inline bool spi_is_data_empty(const struct mchp_spi_reg_config *spi_reg_cfg)
-{
-	return (spi_reg_cfg->regs->SPIM.SERCOM_INTFLAG & SERCOM_SPIM_INTFLAG_DRE_Msk) ==
-	       SERCOM_SPIM_INTFLAG_DRE_Msk;
-}
-
-#if defined(CONFIG_SPI_MCHP_INTERRUPT_DRIVEN) || (CONFIG_SPI_MCHP_INTERRUPT_DRIVEN_ASYNC)
-/*Enable the Receive Complete Interrupt*/
-static void spi_enable_rxc_interrupt(const struct mchp_spi_reg_config *spi_reg_cfg,
-				     spi_operation_t op)
-{
-	if (SPI_OP_MODE_GET(op) == SPI_OP_MODE_MASTER) {
-		spi_reg_cfg->regs->SPIM.SERCOM_INTENSET = SERCOM_SPIM_INTENSET_RXC_Msk;
-	} else {
-		spi_reg_cfg->regs->SPIS.SERCOM_INTENSET = SERCOM_SPIS_INTENSET_RXC_Msk;
-	}
-}
-#endif /* CONFIG_SPI_MCHP_INTERRUPT_DRIVEN || CONFIG_SPI_MCHP_INTERRUPT_DRIVEN_ASYNC */
-
-/*Enable the Transmit Complete Interrupt*/
-static inline void spi_enable_txc_interrupt(const struct mchp_spi_reg_config *spi_reg_cfg)
-{
-	spi_reg_cfg->regs->SPIM.SERCOM_INTENSET = SERCOM_SPIM_INTENSET_TXC_Msk;
-}
-
-/*Enable the Data Register Empty Interrupt*/
-static inline void spi_enable_data_empty_interrupt(const struct mchp_spi_reg_config *spi_reg_cfg)
-{
-	spi_reg_cfg->regs->SPIM.SERCOM_INTENSET = SERCOM_SPIM_INTENSET_DRE_Msk;
-}
-
-/*Disable the Receive Complete Interrupt*/
-static inline void spi_disable_rxc_interrupt(const struct mchp_spi_reg_config *spi_reg_cfg)
-{
-	spi_reg_cfg->regs->SPIM.SERCOM_INTENCLR = SERCOM_SPIM_INTENCLR_RXC_Msk;
-}
-
-/*Disable the Transmit Complete Interrupt*/
-static inline void spi_disable_txc_interrupt(const struct mchp_spi_reg_config *spi_reg_cfg)
-{
-	spi_reg_cfg->regs->SPIM.SERCOM_INTENCLR = SERCOM_SPIM_INTENCLR_TXC_Msk;
-}
-
-/*Disable the Data Register Empty Interrupt*/
-static inline void spi_disable_data_empty_interrupt(const struct mchp_spi_reg_config *spi_reg_cfg)
-{
-	spi_reg_cfg->regs->SPIM.SERCOM_INTENCLR = SERCOM_SPIM_INTENCLR_DRE_Msk;
-}
-
-/* Enable the preload slave data*/
-static inline void spi_slave_preload_enable(const struct mchp_spi_reg_config *spi_reg_cfg)
-{
-	spi_reg_cfg->regs->SPIS.SERCOM_CTRLB =
-		(spi_reg_cfg->regs->SPIS.SERCOM_CTRLB & ~SERCOM_SPIS_CTRLB_PLOADEN_Msk) |
-		SERCOM_SPIS_CTRLB_PLOADEN_Msk;
-}
-
-/* Enable the slave select detection*/
-static inline void spi_slave_select_low_enable(const struct mchp_spi_reg_config *spi_reg_cfg)
-{
-	spi_reg_cfg->regs->SPIS.SERCOM_CTRLB =
-		(spi_reg_cfg->regs->SPIS.SERCOM_CTRLB & ~SERCOM_SPIS_CTRLB_SSDE_Msk) |
-		SERCOM_SPIS_CTRLB_SSDE_Msk;
-}
-
-/* Enable the Immediate buffer overflow*/
-static inline void spi_immediate_buf_overflow(const struct mchp_spi_reg_config *spi_reg_cfg)
-{
-	spi_reg_cfg->regs->SPIS.SERCOM_CTRLA =
-		(spi_reg_cfg->regs->SPIS.SERCOM_CTRLA & ~SERCOM_SPIS_CTRLA_IBON_Msk) |
-		SERCOM_SPIS_CTRLA_IBON_Msk;
-}
-
-/* Enable slave select line interrupt */
-static inline void spi_slave_select_line_enable(const struct mchp_spi_reg_config *spi_reg_cfg)
-{
-	spi_reg_cfg->regs->SPIS.SERCOM_INTENSET =
-		(spi_reg_cfg->regs->SPIS.SERCOM_INTENSET & ~SERCOM_SPIS_INTENSET_SSL_Msk) |
-		SERCOM_SPIS_INTENSET_SSL_Msk;
-}
-
-/* Return the slave select line status*/
-static inline bool spi_slave_select_line(const struct mchp_spi_reg_config *spi_reg_cfg)
-{
-	return ((spi_reg_cfg->regs->SPIS.SERCOM_INTFLAG & SERCOM_SPIS_INTFLAG_SSL_Msk) ==
-		SERCOM_SPIS_INTFLAG_SSL_Msk);
-}
-
-/* Clear the slave select line interrupt */
-static inline void spi_slave_clr_slave_select_line(const struct mchp_spi_reg_config *spi_reg_cfg)
-{
-	spi_reg_cfg->regs->SPIS.SERCOM_INTFLAG = SERCOM_SPIS_INTFLAG_SSL_Msk;
-}
-
-/* Clear buffer overflow flag */
-static inline void spi_slave_clr_buf_overflow(const struct mchp_spi_reg_config *spi_reg_cfg)
-{
-	spi_reg_cfg->regs->SPIS.SERCOM_STATUS = SERCOM_SPIS_STATUS_BUFOVF_Msk;
-}
-
-/* Set the Hardware slave select*/
-static void spi_slave_select_enable(const struct mchp_spi_reg_config *spi_reg_cfg)
-{
-	spi_wait_sync(spi_reg_cfg, SERCOM_SPIM_SYNCBUSY_CTRLB_Msk);
-
-	/* Clear the MSSEN bit field and enable Master Slave Select */
-	spi_reg_cfg->regs->SPIM.SERCOM_CTRLB =
-		(spi_reg_cfg->regs->SPIM.SERCOM_CTRLB & ~SERCOM_SPIM_CTRLB_MSSEN_Msk) |
-		SERCOM_SPIM_CTRLB_MSSEN_Msk;
-	spi_wait_sync(spi_reg_cfg, SERCOM_SPIM_SYNCBUSY_CTRLB_Msk);
-}
-
-/* Enable the Transmit Complete Interrupt */
-static inline void spi_slave_enable_txc_interrupt(const struct mchp_spi_reg_config *spi_reg_cfg)
-{
-	spi_reg_cfg->regs->SPIS.SERCOM_INTENSET = SERCOM_SPIS_INTENSET_TXC_Msk;
-}
-
-/* Clear the DATA register */
-static inline void spi_slave_clr_data(const struct mchp_spi_reg_config *spi_reg_cfg)
-{
-	if (WAIT_FOR(((spi_reg_cfg->regs->SPIS.SERCOM_INTFLAG & SERCOM_SPIS_INTFLAG_RXC_Msk) == 0),
-		     TIMEOUT_VALUE_US,
-		     ((void)spi_reg_cfg->regs->SPIM.SERCOM_DATA, k_busy_wait(DELAY_US))) == false) {
-		LOG_ERR("Timeout while clearing RXC");
-	}
-}
-
-/*Clear the Error Interrupt Flag */
-static inline void spi_slave_clr_error_int_flag(const struct mchp_spi_reg_config *spi_reg_cfg)
-{
-	spi_reg_cfg->regs->SPIS.SERCOM_INTFLAG = (uint8_t)SERCOM_SPIS_INTFLAG_ERROR_Msk;
-}
-
-/*Return true if receive complete flag is set*/
-static inline bool spi_slave_is_rx_comp(const struct mchp_spi_reg_config *spi_reg_cfg)
-{
-	return (spi_reg_cfg->regs->SPIS.SERCOM_INTFLAG & SERCOM_SPIS_INTFLAG_RXC_Msk) ==
-	       SERCOM_SPIS_INTFLAG_RXC_Msk;
+	sercom_spi_registers_t *spi = SPI_GET_BASE_ADDR(spi_reg_cfg->regs, SPI_OP_MODE_MASTER);
+	return (uint8_t)spi->SERCOM_DATA;
 }
 
 /*Return true if data register empty flag is set*/
 static inline bool spi_slave_is_data_empty(const struct mchp_spi_reg_config *spi_reg_cfg)
 {
-	return (spi_reg_cfg->regs->SPIS.SERCOM_INTFLAG & SERCOM_SPIS_INTFLAG_DRE_Msk) ==
-	       SERCOM_SPIS_INTFLAG_DRE_Msk;
-}
-
-/*Return true if transmit complete flag is set*/
-static inline bool spi_slave_is_tx_comp(const struct mchp_spi_reg_config *spi_reg_cfg)
-{
-	return ((spi_reg_cfg->regs->SPIS.SERCOM_INTFLAG & SERCOM_SPIS_INTFLAG_TXC_Msk) ==
-		SERCOM_SPIS_INTFLAG_TXC_Msk);
+	sercom_spi_registers_t *spi = SPI_GET_BASE_ADDR(spi_reg_cfg->regs, SPI_OP_MODE_SLAVE);
+	return (spi->SERCOM_INTFLAG & SERCOM_SPI_INTFLAG_DRE_Msk) == SERCOM_SPI_INTFLAG_DRE_Msk;
 }
 
 /*Write Data into DATA register*/
 static inline void spi_slave_write_data(const struct mchp_spi_reg_config *spi_reg_cfg, uint8_t data)
 {
-	spi_reg_cfg->regs->SPIS.SERCOM_DATA = data;
-}
-
-/*Disable DRE interrupt*/
-static inline void spi_slave_disable_dre_int(const struct mchp_spi_reg_config *spi_reg_cfg)
-{
-	spi_reg_cfg->regs->SPIS.SERCOM_INTENCLR = (uint8_t)SERCOM_SPIS_INTENCLR_DRE_Msk;
-}
-
-/*Clear transmit complete flag is set*/
-static inline void spi_slave_clr_tx_comp_flag(const struct mchp_spi_reg_config *spi_reg_cfg)
-{
-	spi_reg_cfg->regs->SPIS.SERCOM_INTFLAG = SERCOM_SPIS_INTFLAG_TXC_Msk;
-}
-
-/*Disable all SPI Interrupt*/
-static inline void spi_slave_disable_interrupts(const struct mchp_spi_reg_config *spi_reg_cfg)
-{
-	spi_reg_cfg->regs->SPIS.SERCOM_INTENCLR = SERCOM_SPIS_INTENCLR_Msk;
-}
-
-/*Clear all SPI Interrupt*/
-static inline void spi_slave_clr_interrupts(const struct mchp_spi_reg_config *spi_reg_cfg)
-{
-	spi_reg_cfg->regs->SPIS.SERCOM_INTFLAG = SERCOM_SPIS_INTFLAG_Msk;
-}
-
-/*Enable the Data Register Empty Interrupt*/
-static inline void
-spi_slave_enable_data_empty_interrupt(const struct mchp_spi_reg_config *spi_reg_cfg)
-{
-	spi_reg_cfg->regs->SPIS.SERCOM_INTENSET = SERCOM_SPIS_INTENSET_DRE_Msk;
+	sercom_spi_registers_t *spi = SPI_GET_BASE_ADDR(spi_reg_cfg->regs, SPI_OP_MODE_SLAVE);
+	spi->SERCOM_DATA = data;
 }
 
 static int spi_configure_pinout(const struct mchp_spi_reg_config *spi_reg_cfg,
 				const struct spi_config *config)
 {
+	sercom_spi_registers_t *spi = SPI_GET_BASE_ADDR(
+		spi_reg_cfg->regs, SPI_OP_MODE_GET(config->operation) == SPI_OP_MODE_SLAVE);
+
 	if ((config->operation & SPI_MODE_LOOP) != 0U) {
 		if (SPI_OP_MODE_GET(config->operation) == SPI_OP_MODE_SLAVE) {
 			LOG_ERR("For slave Loopback mode is not supported");
 
 			return -ENOTSUP;
 		}
-		spi_mode_loopback(spi_reg_cfg);
+		/*Set the pads for the SPI Transmission for loopback mode*/
+		spi->SERCOM_CTRLA = (spi->SERCOM_CTRLA &
+				     ~(SERCOM_SPI_CTRLA_DIPO_Msk | SERCOM_SPI_CTRLA_DOPO_Msk)) |
+				    (SERCOM_SPI_CTRLA_DIPO_MUX0 | SERCOM_SPI_CTRLA_DOPO_MUX0);
 	} else {
-		if (SPI_OP_MODE_GET(config->operation) != SPI_OP_MODE_MASTER) {
-			spi_slave_config_pinout(spi_reg_cfg);
-		} else {
-			spi_master_config_pinout(spi_reg_cfg);
-		}
+		/*Set the pads for the SPI Transmission*/
+		spi->SERCOM_CTRLA = (spi->SERCOM_CTRLA &
+				     ~(SERCOM_SPI_CTRLA_DIPO_Msk | SERCOM_SPI_CTRLA_DOPO_Msk)) |
+				    spi_reg_cfg->pads;
 	}
 
 	return 0;
@@ -597,30 +195,47 @@ static int spi_configure_pinout(const struct mchp_spi_reg_config *spi_reg_cfg,
 static void spi_configure_cpol(const struct mchp_spi_reg_config *spi_reg_cfg,
 			       const struct spi_config *config)
 {
+	sercom_spi_registers_t *spi = SPI_GET_BASE_ADDR(
+		spi_reg_cfg->regs, SPI_OP_MODE_GET(config->operation) == SPI_OP_MODE_SLAVE);
 	if ((config->operation & SPI_MODE_CPOL) != 0U) {
-		spi_cpol_idle_high(spi_reg_cfg, config->operation);
+		/*Set the SPI Clock Polarity Idle High*/
+		spi->SERCOM_CTRLA = (spi->SERCOM_CTRLA & ~SERCOM_SPI_CTRLA_CPOL_Msk) |
+				    SERCOM_SPI_CTRLA_CPOL_IDLE_HIGH;
 	} else {
-		spi_cpol_idle_low(spi_reg_cfg, config->operation);
+		/* Clear the CPOL bit field and set clock polarity to Idle Low */
+		spi->SERCOM_CTRLA = (spi->SERCOM_CTRLA & ~SERCOM_SPI_CTRLA_CPOL_Msk) |
+				    SERCOM_SPI_CTRLA_CPOL_IDLE_LOW;
 	}
 }
 
 static void spi_configure_cpha(const struct mchp_spi_reg_config *spi_reg_cfg,
 			       const struct spi_config *config)
 {
+	sercom_spi_registers_t *spi = SPI_GET_BASE_ADDR(
+		spi_reg_cfg->regs, SPI_OP_MODE_GET(config->operation) == SPI_OP_MODE_SLAVE);
 	if ((config->operation & SPI_MODE_CPHA) != 0U) {
-		spi_cpha_trail_edge(spi_reg_cfg, config->operation);
+		/*Set the SPI Clock Phase Trailing Edge*/
+		spi->SERCOM_CTRLA = (spi->SERCOM_CTRLA & ~SERCOM_SPI_CTRLA_CPHA_Msk) |
+				    SERCOM_SPI_CTRLA_CPHA_TRAILING_EDGE;
 	} else {
-		spi_cpha_lead_edge(spi_reg_cfg, config->operation);
+		/* Clear the CPHA bit field and set clock phase to Leading Edge */
+		spi->SERCOM_CTRLA = (spi->SERCOM_CTRLA & ~SERCOM_SPI_CTRLA_CPHA_Msk) |
+				    SERCOM_SPI_CTRLA_CPHA_LEADING_EDGE;
 	}
 }
 
 static void spi_configure_bit_order(const struct mchp_spi_reg_config *spi_reg_cfg,
 				    const struct spi_config *config)
 {
+	sercom_spi_registers_t *spi = SPI_GET_BASE_ADDR(
+		spi_reg_cfg->regs, SPI_OP_MODE_GET(config->operation) == SPI_OP_MODE_SLAVE);
 	if ((config->operation & SPI_TRANSFER_LSB) != 0U) {
-		spi_lsb_first(spi_reg_cfg, config->operation);
+		/*Set the SPI Data Order, LSB first*/
+		spi->SERCOM_CTRLA = (spi->SERCOM_CTRLA & ~SERCOM_SPI_CTRLA_DORD_Msk) |
+				    SERCOM_SPI_CTRLA_DORD_LSB;
 	} else {
-		spi_msb_first(spi_reg_cfg, config->operation);
+		spi->SERCOM_CTRLA = (spi->SERCOM_CTRLA & ~SERCOM_SPI_CTRLA_DORD_Msk) |
+				    SERCOM_SPI_CTRLA_DORD_MSB;
 	}
 }
 
@@ -632,6 +247,8 @@ static int spi_mchp_configure(const struct device *dev, const struct spi_config 
 	int retval;
 	uint32_t clock_rate;
 	bool has_cs = false;
+	sercom_spi_registers_t *spi = SPI_GET_BASE_ADDR(
+		spi_reg_cfg->regs, SPI_OP_MODE_GET(config->operation) == SPI_OP_MODE_SLAVE);
 
 	spi_disable(spi_reg_cfg);
 
@@ -648,20 +265,31 @@ static int spi_mchp_configure(const struct device *dev, const struct spi_config 
 
 		return -ENOTSUP;
 	}
-	spi_8bit_ch_size(spi_reg_cfg, config->operation);
+	/* Clear the CHSIZE bit field and set character size to 8-bit */
+	spi->SERCOM_CTRLB =
+		(spi->SERCOM_CTRLB & ~SERCOM_SPI_CTRLB_CHSIZE_Msk) | SERCOM_SPI_CTRLB_CHSIZE_8_BIT;
+	
+	/*Enable the Receiver in SPI peripheral*/
+	spi_wait_sync(spi_reg_cfg, SERCOM_SPI_SYNCBUSY_CTRLB_Msk);
 
-	spi_rx_enable(spi_reg_cfg, config->operation);
+	spi->SERCOM_CTRLB =
+		(spi->SERCOM_CTRLB & ~SERCOM_SPI_CTRLB_RXEN_Msk) | SERCOM_SPI_CTRLB_RXEN_Msk;
+	spi_wait_sync(spi_reg_cfg, SERCOM_SPI_SYNCBUSY_CTRLB_Msk);
 
 #if CONFIG_SPI_SLAVE
 	if (SPI_OP_MODE_GET(config->operation) == SPI_OP_MODE_SLAVE) {
-
-		spi_slave_preload_enable(spi_reg_cfg);
-
-		spi_slave_select_low_enable(spi_reg_cfg);
-
-		spi_immediate_buf_overflow(spi_reg_cfg);
-
-		spi_slave_mode(spi_reg_cfg);
+		/* Enable the preload slave data*/
+		spi->SERCOM_CTRLB = (spi->SERCOM_CTRLB & ~SERCOM_SPI_CTRLB_PLOADEN_Msk) |
+				    SERCOM_SPI_CTRLB_PLOADEN_Msk;
+		/* Enable the slave select detection*/
+		spi->SERCOM_CTRLB = (spi->SERCOM_CTRLB & ~SERCOM_SPI_CTRLB_SSDE_Msk) |
+				    SERCOM_SPI_CTRLB_SSDE_Msk;
+		/* Enable the Immediate buffer overflow*/
+		spi->SERCOM_CTRLA = (spi->SERCOM_CTRLA & ~SERCOM_SPI_CTRLA_IBON_Msk) |
+				    SERCOM_SPI_CTRLA_IBON_Msk;
+		/*Set the SPI Slave Mode*/
+		spi->SERCOM_CTRLA = (spi->SERCOM_CTRLA & ~SERCOM_SPI_CTRLA_MODE_Msk) |
+				    SERCOM_SPI_CTRLA_MODE_SPI_SLAVE;
 	}
 #endif /* CONFIG_SPI_SLAVE */
 
@@ -680,7 +308,9 @@ static int spi_mchp_configure(const struct device *dev, const struct spi_config 
 			return -ENOTSUP;
 		}
 
-		spi_master_mode(spi_reg_cfg);
+		/* Clear the MODE bit field and set it to SPI Master mode */
+		spi->SERCOM_CTRLA = (spi->SERCOM_CTRLA & ~SERCOM_SPI_CTRLA_MODE_Msk) |
+				    SERCOM_SPI_CTRLA_MODE_SPI_MASTER;
 
 #if !DT_SPI_CTX_HAS_NO_CS_GPIOS
 		has_cs = (data->ctx.num_cs_gpios != 0);
@@ -692,7 +322,12 @@ static int spi_mchp_configure(const struct device *dev, const struct spi_config 
 				return retval;
 			}
 		} else if (cfg->pcfg->states->pin_cnt == SPI_PIN_CNT) {
-			spi_slave_select_enable(spi_reg_cfg);
+			spi_wait_sync(spi_reg_cfg, SERCOM_SPI_SYNCBUSY_CTRLB_Msk);
+
+			/* Clear the MSSEN bit field and enable Master Slave Select */
+			spi->SERCOM_CTRLB = (spi->SERCOM_CTRLB & ~SERCOM_SPI_CTRLB_MSSEN_Msk) |
+					    SERCOM_SPI_CTRLB_MSSEN_Msk;
+			spi_wait_sync(spi_reg_cfg, SERCOM_SPI_SYNCBUSY_CTRLB_Msk);
 		} else {
 			/* Handled by user */
 		}
@@ -715,15 +350,7 @@ static int spi_mchp_configure(const struct device *dev, const struct spi_config 
 	spi_configure_bit_order(spi_reg_cfg, config);
 
 	if ((config->operation & SPI_HALF_DUPLEX) != 0U) {
-		retval = spi_half_duplex_mode(spi_reg_cfg);
-		if (retval != 0) {
-			return retval;
-		}
-	} else {
-		retval = spi_full_duplex_mode(spi_reg_cfg);
-		if (retval != 0) {
-			return -ENOTSUP;
-		}
+		return -ENOTSUP;
 	}
 
 	spi_enable(spi_reg_cfg, config->operation);
@@ -774,6 +401,7 @@ static int spi_mchp_poll_in(const struct mchp_spi_reg_config *spi_reg_cfg,
 	uint8_t tx_data;
 	uint8_t rx_data;
 	uint32_t retry_count;
+	sercom_spi_registers_t *spi = SPI_GET_BASE_ADDR(spi_reg_cfg->regs, SPI_OP_MODE_MASTER);
 
 	/* Check if there is data to transmit */
 	if (spi_context_tx_buf_on(&data->ctx) == true) {
@@ -784,7 +412,7 @@ static int spi_mchp_poll_in(const struct mchp_spi_reg_config *spi_reg_cfg,
 
 	retry_count = SPI_RETRY_LIMIT;
 	/* wait until the SPI data is empty */
-	while (spi_is_data_empty(spi_reg_cfg) != true) {
+	while ((spi->SERCOM_INTFLAG & SERCOM_SPI_INTFLAG_DRE_Msk) != SERCOM_SPI_INTFLAG_DRE_Msk) {
 		if (--retry_count == 0) {
 			return -ETIMEDOUT;
 		}
@@ -796,7 +424,7 @@ static int spi_mchp_poll_in(const struct mchp_spi_reg_config *spi_reg_cfg,
 
 	retry_count = SPI_RETRY_LIMIT;
 	/* Wait for the reception to complete */
-	while (spi_is_rx_comp(spi_reg_cfg) != true) {
+	while ((spi->SERCOM_INTFLAG & SERCOM_SPI_INTFLAG_RXC_Msk) != SERCOM_SPI_INTFLAG_RXC_Msk) {
 		if (--retry_count == 0) {
 			return -ETIMEDOUT;
 		}
@@ -825,6 +453,7 @@ static int spi_mchp_transceive_interrupt(const struct device *dev, const struct 
 	const struct mchp_spi_reg_config *spi_reg_cfg = &cfg->reg_cfg;
 	struct spi_mchp_dev_data *const data = dev->data;
 	uint8_t tx_data;
+	sercom_spi_registers_t *spi = SPI_GET_BASE_ADDR(spi_reg_cfg->regs, SPI_OP_MODE_MASTER);
 
 	/* Setup SPI buffers */
 	spi_context_buffers_setup(&data->ctx, tx_bufs, rx_bufs, 1);
@@ -836,7 +465,11 @@ static int spi_mchp_transceive_interrupt(const struct device *dev, const struct 
 		tx_data = 0U;
 	}
 
-	spi_clr_data(spi_reg_cfg);
+	/*Clear the DATA register until the RXC flag is cleared*/
+	if (WAIT_FOR(((spi->SERCOM_INTFLAG & SERCOM_SPI_INTFLAG_RXC_Msk) == 0), TIMEOUT_VALUE_US,
+		     ((void)spi->SERCOM_DATA, k_busy_wait(DELAY_US))) == false) {
+		LOG_ERR("Timeout while clearing RXC");
+	}
 
 	/* Get the dummysize */
 	if ((data->ctx.rx_len) > (data->ctx.tx_len)) {
@@ -849,9 +482,11 @@ static int spi_mchp_transceive_interrupt(const struct device *dev, const struct 
 
 	/* Enable SPI interrupts for RX, TX completion, and data empty events */
 	if (data->ctx.rx_len > 0) {
-		spi_enable_rxc_interrupt(spi_reg_cfg, config->operation);
+		/*Enable the Receive Complete Interrupt*/
+		spi->SERCOM_INTENSET = SERCOM_SPI_INTENSET_RXC_Msk;
 	} else {
-		spi_enable_data_empty_interrupt(spi_reg_cfg);
+		/*Enable the Data Register Empty Interrupt*/
+		spi->SERCOM_INTENSET = SERCOM_SPI_INTENSET_DRE_Msk;
 	}
 
 	return 0;
@@ -866,6 +501,7 @@ static void spi_mchp_slave_write(const struct device *dev)
 	uint8_t dummy_data = 0U;
 	struct spi_mchp_dev_data *const data = dev->data;
 	bool write_ready;
+	sercom_spi_registers_t *spi = SPI_GET_BASE_ADDR(spi_reg_cfg->regs, SPI_OP_MODE_SLAVE);
 
 	/* Prepare initial bytes for transmission */
 	if (spi_context_tx_buf_on(&data->ctx) == true) {
@@ -884,7 +520,8 @@ static void spi_mchp_slave_write(const struct device *dev)
 			spi_slave_write_data(spi_reg_cfg, dummy_data);
 		}
 	}
-	spi_slave_enable_data_empty_interrupt(spi_reg_cfg);
+	/*Enable the Data Register Empty Interrupt*/
+	spi->SERCOM_INTENSET = SERCOM_SPI_INTENSET_DRE_Msk;
 }
 
 static int spi_mchp_slave_transceive_interrupt(const struct device *dev,
@@ -896,6 +533,7 @@ static int spi_mchp_slave_transceive_interrupt(const struct device *dev,
 	const struct mchp_spi_reg_config *spi_reg_cfg = &cfg->reg_cfg;
 	struct spi_mchp_dev_data *const data = dev->data;
 	int ret = 0;
+	sercom_spi_registers_t *spi = SPI_GET_BASE_ADDR(spi_reg_cfg->regs, SPI_OP_MODE_SLAVE);
 
 	spi_context_buffers_setup(&data->ctx, tx_bufs, rx_bufs, 1);
 
@@ -903,10 +541,11 @@ static int spi_mchp_slave_transceive_interrupt(const struct device *dev,
 		/* Prepare for transmission */
 		spi_mchp_slave_write(dev);
 	}
-
-	spi_enable_rxc_interrupt(spi_reg_cfg, config->operation);
-
-	spi_slave_select_line_enable(spi_reg_cfg);
+	/*Enable the Receive Complete Interrupt*/
+	spi->SERCOM_INTENSET = SERCOM_SPI_INTENSET_RXC_Msk;
+	/* Enable slave select line interrupt */
+	spi->SERCOM_INTENSET =
+		(spi->SERCOM_INTENSET & ~SERCOM_SPI_INTENSET_SSL_Msk) | SERCOM_SPI_INTENSET_SSL_Msk;
 
 	return ret;
 }
@@ -996,6 +635,7 @@ static int spi_mchp_dma_tx_load(const struct device *dev, const uint8_t *buf, si
 {
 	const struct spi_mchp_dev_config *cfg = dev->config;
 	const struct mchp_spi_reg_config *spi_reg_cfg = &cfg->reg_cfg;
+	sercom_spi_registers_t *spi = SPI_GET_BASE_ADDR(spi_reg_cfg->regs, SPI_OP_MODE_MASTER);
 
 	struct dma_config dma_cfg = {0};
 	struct dma_block_config dma_blk = {0};
@@ -1019,7 +659,7 @@ static int spi_mchp_dma_tx_load(const struct device *dev, const uint8_t *buf, si
 		dma_blk.source_addr_adj = DMA_ADDR_ADJ_NO_CHANGE;
 	}
 
-	dma_blk.dest_address = (uint32_t)&spi_reg_cfg->regs->SPIM.SERCOM_DATA;
+	dma_blk.dest_address = (uint32_t)&spi->SERCOM_DATA;
 	dma_blk.dest_addr_adj = DMA_ADDR_ADJ_NO_CHANGE;
 
 	retval = dma_config(cfg->spi_dma.dma_dev, cfg->spi_dma.tx_dma_channel, &dma_cfg);
@@ -1038,6 +678,7 @@ static int spi_mchp_dma_rx_load(const struct device *dev, uint8_t *buf, size_t l
 	const struct spi_mchp_dev_config *cfg = dev->config;
 	const struct mchp_spi_reg_config *spi_reg_cfg = &cfg->reg_cfg;
 	struct spi_mchp_dev_data *data = dev->data;
+	sercom_spi_registers_t *spi = SPI_GET_BASE_ADDR(spi_reg_cfg->regs, SPI_OP_MODE_MASTER);
 
 	struct dma_config dma_cfg = {0};
 	struct dma_block_config dma_blk = {0};
@@ -1064,7 +705,7 @@ static int spi_mchp_dma_rx_load(const struct device *dev, uint8_t *buf, size_t l
 		dma_blk.dest_addr_adj = DMA_ADDR_ADJ_NO_CHANGE;
 	}
 
-	dma_blk.source_address = (uint32_t)&spi_reg_cfg->regs->SPIM.SERCOM_DATA;
+	dma_blk.source_address = (uint32_t)&spi->SERCOM_DATA;
 	dma_blk.source_addr_adj = DMA_ADDR_ADJ_NO_CHANGE;
 
 	retval = dma_config(cfg->spi_dma.dma_dev, cfg->spi_dma.rx_dma_channel, &dma_cfg);
@@ -1277,21 +918,29 @@ static void spi_mchp_isr_slave(const struct device *dev)
 	struct spi_mchp_dev_data *data = dev->data;
 	const struct spi_mchp_dev_config *cfg = dev->config;
 	const struct mchp_spi_reg_config *spi_reg_cfg = &cfg->reg_cfg;
-	uint8_t intFlag = spi_reg_cfg->regs->SPIS.SERCOM_INTFLAG;
+	sercom_spi_registers_t *spi = SPI_GET_BASE_ADDR(spi_reg_cfg->regs, SPI_OP_MODE_SLAVE);
+
+	uint8_t intFlag = spi->SERCOM_INTFLAG;
 	uint8_t tx_data = 0U;
 	uint8_t rx_data = 0U;
 
 	/* Handle buffer overflow error */
-	if ((spi_reg_cfg->regs->SPIS.SERCOM_STATUS & SERCOM_SPIS_STATUS_BUFOVF_Msk) ==
-	    SERCOM_SPIS_STATUS_BUFOVF_Msk) {
-		spi_slave_clr_buf_overflow(spi_reg_cfg);
-		spi_slave_clr_data(spi_reg_cfg);
-		spi_slave_clr_error_int_flag(spi_reg_cfg);
+	if ((spi->SERCOM_STATUS & SERCOM_SPI_STATUS_BUFOVF_Msk) == SERCOM_SPI_STATUS_BUFOVF_Msk) {
+		/* Clear buffer overflow flag */
+		spi->SERCOM_STATUS = SERCOM_SPI_STATUS_BUFOVF_Msk;
+		/* Clear the DATA register */
+		if (WAIT_FOR(((spi->SERCOM_INTFLAG & SERCOM_SPI_INTFLAG_RXC_Msk) == 0),
+			     TIMEOUT_VALUE_US,
+			     ((void)spi->SERCOM_DATA, k_busy_wait(DELAY_US))) == false) {
+			LOG_ERR("Timeout while clearing RXC");
+		}
+		/*Clear the Error Interrupt Flag */
+		spi->SERCOM_INTFLAG = (uint8_t)SERCOM_SPI_INTFLAG_ERROR_Msk;
 	}
 
 	/* Handle received data */
-	if (spi_slave_is_rx_comp(spi_reg_cfg) == true) {
-		rx_data = spi_slave_read_data(spi_reg_cfg);
+	if ((spi->SERCOM_INTFLAG & SERCOM_SPI_INTFLAG_RXC_Msk) == SERCOM_SPI_INTFLAG_RXC_Msk) {
+		rx_data = (uint8_t)spi->SERCOM_DATA;
 		if (spi_context_rx_buf_on(&data->ctx)) {
 			*data->ctx.rx_buf = rx_data;
 			spi_context_update_rx(&data->ctx, 1, 1);
@@ -1305,26 +954,32 @@ static void spi_mchp_isr_slave(const struct device *dev)
 			spi_context_update_tx(&data->ctx, 1, 1);
 		} else {
 			tx_data = 0x00;
-			spi_slave_disable_dre_int(spi_reg_cfg);
+			/*Disable DRE interrupt*/
+			spi->SERCOM_INTENCLR = (uint8_t)SERCOM_SPI_INTENCLR_DRE_Msk;
 		}
 		spi_slave_write_data(spi_reg_cfg, tx_data);
 	}
 
 	/* Handle slave select */
-	if (spi_slave_select_line(spi_reg_cfg) == true) {
-		spi_slave_clr_slave_select_line(spi_reg_cfg);
-		spi_slave_enable_txc_interrupt(spi_reg_cfg);
+	if ((spi->SERCOM_INTFLAG & SERCOM_SPI_INTFLAG_SSL_Msk) == SERCOM_SPI_INTFLAG_SSL_Msk) {
+		/* Clear the slave select line interrupt */
+		spi->SERCOM_INTFLAG = SERCOM_SPI_INTFLAG_SSL_Msk;
+		/* Enable the Transmit Complete Interrupt */
+		spi->SERCOM_INTENSET = SERCOM_SPI_INTENSET_TXC_Msk;
 	}
 
 	/* Handle transaction complete */
-	if ((intFlag & SERCOM_SPIS_INTFLAG_TXC_Msk) == SERCOM_SPIS_INTFLAG_TXC_Msk) {
-		spi_slave_clr_tx_comp_flag(spi_reg_cfg);
+	if ((intFlag & SERCOM_SPI_INTFLAG_TXC_Msk) == SERCOM_SPI_INTFLAG_TXC_Msk) {
+		/*Clear transmit complete flag*/
+		spi->SERCOM_INTFLAG = SERCOM_SPI_INTFLAG_TXC_Msk;
 
 		/* If both TX and RX are done, complete the transaction */
 		if ((spi_context_rx_on(&data->ctx) == false) &&
 		    (spi_context_tx_on(&data->ctx) == false)) {
-			spi_slave_disable_interrupts(spi_reg_cfg);
-			spi_slave_clr_interrupts(spi_reg_cfg);
+			/*Disable all SPI Interrupts*/
+			spi->SERCOM_INTENCLR = SERCOM_SPI_INTENCLR_Msk;
+			/*Clear all SPI Interrupt*/
+			spi->SERCOM_INTFLAG = SERCOM_SPI_INTFLAG_Msk;
 			spi_context_complete(&data->ctx, dev, 0);
 		}
 	}
@@ -1336,16 +991,18 @@ static void spi_mchp_isr_master(const struct device *dev)
 	struct spi_mchp_dev_data *data = dev->data;
 	const struct spi_mchp_dev_config *cfg = dev->config;
 	const struct mchp_spi_reg_config *spi_reg_cfg = &cfg->reg_cfg;
+	sercom_spi_registers_t *spi = SPI_GET_BASE_ADDR(spi_reg_cfg->regs, SPI_OP_MODE_MASTER);
+
 	uint8_t dummy_data = 0U;
 	uint8_t tx_data = 0U;
 	uint8_t rx_data = 0U;
 
-	if (spi_reg_cfg->regs->SPIM.SERCOM_INTENSET == 0) {
+	if (spi->SERCOM_INTENSET == 0) {
 		return;
 	}
 
 	/* Handle received data */
-	if (spi_is_rx_comp(spi_reg_cfg) == true) {
+	if ((spi->SERCOM_INTFLAG & SERCOM_SPI_INTFLAG_RXC_Msk) == SERCOM_SPI_INTFLAG_RXC_Msk) {
 		if (spi_context_rx_buf_on(&data->ctx) == true) {
 			rx_data = spi_read_data(spi_reg_cfg);
 			*data->ctx.rx_buf = rx_data;
@@ -1354,8 +1011,9 @@ static void spi_mchp_isr_master(const struct device *dev)
 	}
 
 	/* Handle transmit data or dummy bytes */
-	if (spi_is_data_empty(spi_reg_cfg) == true) {
-		spi_disable_data_empty_interrupt(spi_reg_cfg);
+	if ((spi->SERCOM_INTFLAG & SERCOM_SPI_INTFLAG_DRE_Msk) == SERCOM_SPI_INTFLAG_DRE_Msk) {
+		/*Disable the Data Register Empty Interrupt*/
+		spi->SERCOM_INTENCLR = SERCOM_SPI_INTENCLR_DRE_Msk;
 
 		if (spi_context_tx_on(&data->ctx) == true) {
 			tx_data = *data->ctx.tx_buf;
@@ -1368,26 +1026,33 @@ static void spi_mchp_isr_master(const struct device *dev)
 
 		/* Enable TXC interrupt if this was the last byte to send */
 		if ((data->dummysize == 0) && (spi_context_tx_on(&data->ctx) == false)) {
-			spi_enable_txc_interrupt(spi_reg_cfg);
+			/*Enable the Transmit Complete Interrupt*/
+			spi->SERCOM_INTENSET = SERCOM_SPI_INTENSET_TXC_Msk;
 		} else if (spi_context_rx_on(&data->ctx) == false) {
-			spi_enable_data_empty_interrupt(spi_reg_cfg);
-			spi_disable_rxc_interrupt(spi_reg_cfg);
+			/*Enable the Data Register Empty Interrupt*/
+			spi->SERCOM_INTENSET = SERCOM_SPI_INTENSET_DRE_Msk;
+			/*Disable the Receive Complete Interrupt*/
+			spi->SERCOM_INTENCLR = SERCOM_SPI_INTENCLR_RXC_Msk;
 		}
 	}
 
 	/* If TX complete and all bytes sent, finish transaction */
-	if (spi_is_tx_comp(spi_reg_cfg) == true) {
+	if ((spi->SERCOM_INTFLAG & SERCOM_SPI_INTFLAG_TXC_Msk) == SERCOM_SPI_INTFLAG_TXC_Msk) {
 		bool tx_all_done =
 			(data->dummysize == 0) && (spi_context_tx_on(&data->ctx) == false);
 
 		if (tx_all_done == true && (spi_context_rx_on(&data->ctx) == false)) {
-			spi_disable_rxc_interrupt(spi_reg_cfg);
-			spi_disable_txc_interrupt(spi_reg_cfg);
-			spi_disable_data_empty_interrupt(spi_reg_cfg);
+			/*Disable the Receive Complete Interrupt*/
+			spi->SERCOM_INTENCLR = SERCOM_SPI_INTENCLR_RXC_Msk;
+			/*Disable the Transmit Complete Interrupt*/
+			spi->SERCOM_INTENCLR = SERCOM_SPI_INTENCLR_TXC_Msk;
+			/*Disable the Data Register Empty Interrupt*/
+			spi->SERCOM_INTENCLR = SERCOM_SPI_INTENCLR_DRE_Msk;
 			spi_context_cs_control(&data->ctx, false);
 			spi_context_complete(&data->ctx, dev, 0);
 		} else if (tx_all_done == true) {
-			spi_disable_txc_interrupt(spi_reg_cfg);
+			/*Disable the Transmit Complete Interrupt*/
+			spi->SERCOM_INTENCLR = SERCOM_SPI_INTENCLR_TXC_Msk;
 		}
 	}
 }
@@ -1413,6 +1078,7 @@ static int spi_mchp_init(const struct device *dev)
 	int retval;
 	const struct spi_mchp_dev_config *cfg = dev->config;
 	const struct mchp_spi_reg_config *spi_reg_cfg = &cfg->reg_cfg;
+	sercom_spi_registers_t *spi = SPI_GET_BASE_ADDR(spi_reg_cfg->regs, SPI_OP_MODE_MASTER);
 	struct spi_mchp_dev_data *const data = dev->data;
 
 	retval = clock_control_on(cfg->spi_clock.clock_dev, cfg->spi_clock.gclk_sys);
@@ -1430,7 +1096,7 @@ static int spi_mchp_init(const struct device *dev)
 	}
 
 	/* Disable all SPI Interrupts*/
-	spi_reg_cfg->regs->SPIM.SERCOM_INTENCLR = SERCOM_SPIM_INTENCLR_Msk;
+	spi->SERCOM_INTENCLR = SERCOM_SPI_INTENCLR_Msk;
 
 	retval = pinctrl_apply_state(cfg->pcfg, PINCTRL_STATE_DEFAULT);
 	if (retval < 0) {
@@ -1459,8 +1125,7 @@ static DEVICE_API(spi, spi_mchp_api) = {
 };
 
 #define SPI_MCHP_SERCOM_PADS(n)                                                                    \
-	SERCOM_SPIM_CTRLA_DIPO(DT_INST_PROP(n, dipo)) |                                            \
-		SERCOM_SPIM_CTRLA_DOPO(DT_INST_PROP(n, dopo))
+	SERCOM_SPI_CTRLA_DIPO(DT_INST_PROP(n, dipo)) | SERCOM_SPI_CTRLA_DOPO(DT_INST_PROP(n, dopo))
 
 #define SPI_MCHP_REG_CFG_DEFN(n)                                                                   \
 	.reg_cfg.regs = (sercom_registers_t *)DT_INST_REG_ADDR(n),                                 \
