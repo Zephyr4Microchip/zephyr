@@ -153,7 +153,7 @@ static inline uint8_t spi_read_data(const struct mchp_spi_reg_config *spi_reg_cf
 }
 
 /*Return true if data register empty flag is set*/
-static inline bool spi_slave_is_data_empty(const struct mchp_spi_reg_config *spi_reg_cfg)
+static inline bool spi_slave_is_data_reg_empty(const struct mchp_spi_reg_config *spi_reg_cfg)
 {
 	sercom_spi_registers_t *spi = SPI_GET_BASE_ADDR(spi_reg_cfg->regs, SPI_OP_MODE_SLAVE);
 	return (spi->SERCOM_INTFLAG & SERCOM_SPI_INTFLAG_DRE_Msk) == SERCOM_SPI_INTFLAG_DRE_Msk;
@@ -199,12 +199,10 @@ static void spi_configure_cpol(const struct mchp_spi_reg_config *spi_reg_cfg,
 		spi_reg_cfg->regs, SPI_OP_MODE_GET(config->operation) == SPI_OP_MODE_SLAVE);
 	if ((config->operation & SPI_MODE_CPOL) != 0U) {
 		/*Set the SPI Clock Polarity Idle High*/
-		spi->SERCOM_CTRLA = (spi->SERCOM_CTRLA & ~SERCOM_SPI_CTRLA_CPOL_Msk) |
-				    SERCOM_SPI_CTRLA_CPOL_IDLE_HIGH;
+		spi->SERCOM_CTRLA |= SERCOM_SPI_CTRLA_CPOL_IDLE_HIGH;
 	} else {
 		/* Clear the CPOL bit field and set clock polarity to Idle Low */
-		spi->SERCOM_CTRLA = (spi->SERCOM_CTRLA & ~SERCOM_SPI_CTRLA_CPOL_Msk) |
-				    SERCOM_SPI_CTRLA_CPOL_IDLE_LOW;
+		spi->SERCOM_CTRLA |= SERCOM_SPI_CTRLA_CPOL_IDLE_LOW;
 	}
 }
 
@@ -215,12 +213,10 @@ static void spi_configure_cpha(const struct mchp_spi_reg_config *spi_reg_cfg,
 		spi_reg_cfg->regs, SPI_OP_MODE_GET(config->operation) == SPI_OP_MODE_SLAVE);
 	if ((config->operation & SPI_MODE_CPHA) != 0U) {
 		/*Set the SPI Clock Phase Trailing Edge*/
-		spi->SERCOM_CTRLA = (spi->SERCOM_CTRLA & ~SERCOM_SPI_CTRLA_CPHA_Msk) |
-				    SERCOM_SPI_CTRLA_CPHA_TRAILING_EDGE;
+		spi->SERCOM_CTRLA |= SERCOM_SPI_CTRLA_CPHA_TRAILING_EDGE;
 	} else {
 		/* Clear the CPHA bit field and set clock phase to Leading Edge */
-		spi->SERCOM_CTRLA = (spi->SERCOM_CTRLA & ~SERCOM_SPI_CTRLA_CPHA_Msk) |
-				    SERCOM_SPI_CTRLA_CPHA_LEADING_EDGE;
+		spi->SERCOM_CTRLA |= SERCOM_SPI_CTRLA_CPHA_LEADING_EDGE;
 	}
 }
 
@@ -231,11 +227,9 @@ static void spi_configure_bit_order(const struct mchp_spi_reg_config *spi_reg_cf
 		spi_reg_cfg->regs, SPI_OP_MODE_GET(config->operation) == SPI_OP_MODE_SLAVE);
 	if ((config->operation & SPI_TRANSFER_LSB) != 0U) {
 		/*Set the SPI Data Order, LSB first*/
-		spi->SERCOM_CTRLA = (spi->SERCOM_CTRLA & ~SERCOM_SPI_CTRLA_DORD_Msk) |
-				    SERCOM_SPI_CTRLA_DORD_LSB;
+		spi->SERCOM_CTRLA |= SERCOM_SPI_CTRLA_DORD_LSB;
 	} else {
-		spi->SERCOM_CTRLA = (spi->SERCOM_CTRLA & ~SERCOM_SPI_CTRLA_DORD_Msk) |
-				    SERCOM_SPI_CTRLA_DORD_MSB;
+		spi->SERCOM_CTRLA |= SERCOM_SPI_CTRLA_DORD_MSB;
 	}
 }
 
@@ -266,27 +260,21 @@ static int spi_mchp_configure(const struct device *dev, const struct spi_config 
 		return -ENOTSUP;
 	}
 	/* Clear the CHSIZE bit field and set character size to 8-bit */
-	spi->SERCOM_CTRLB =
-		(spi->SERCOM_CTRLB & ~SERCOM_SPI_CTRLB_CHSIZE_Msk) | SERCOM_SPI_CTRLB_CHSIZE_8_BIT;
-	
+	spi->SERCOM_CTRLB |= SERCOM_SPI_CTRLB_CHSIZE_8_BIT;
+
 	/*Enable the Receiver in SPI peripheral*/
 	spi_wait_sync(spi_reg_cfg, SERCOM_SPI_SYNCBUSY_CTRLB_Msk);
-
-	spi->SERCOM_CTRLB =
-		(spi->SERCOM_CTRLB & ~SERCOM_SPI_CTRLB_RXEN_Msk) | SERCOM_SPI_CTRLB_RXEN_Msk;
+	spi->SERCOM_CTRLB |= SERCOM_SPI_CTRLB_RXEN_Msk;
 	spi_wait_sync(spi_reg_cfg, SERCOM_SPI_SYNCBUSY_CTRLB_Msk);
 
 #if CONFIG_SPI_SLAVE
 	if (SPI_OP_MODE_GET(config->operation) == SPI_OP_MODE_SLAVE) {
 		/* Enable the preload slave data*/
-		spi->SERCOM_CTRLB = (spi->SERCOM_CTRLB & ~SERCOM_SPI_CTRLB_PLOADEN_Msk) |
-				    SERCOM_SPI_CTRLB_PLOADEN_Msk;
+		spi->SERCOM_CTRLB |= SERCOM_SPI_CTRLB_PLOADEN_Msk;
 		/* Enable the slave select detection*/
-		spi->SERCOM_CTRLB = (spi->SERCOM_CTRLB & ~SERCOM_SPI_CTRLB_SSDE_Msk) |
-				    SERCOM_SPI_CTRLB_SSDE_Msk;
+		spi->SERCOM_CTRLB |= SERCOM_SPI_CTRLB_SSDE_Msk;
 		/* Enable the Immediate buffer overflow*/
-		spi->SERCOM_CTRLA = (spi->SERCOM_CTRLA & ~SERCOM_SPI_CTRLA_IBON_Msk) |
-				    SERCOM_SPI_CTRLA_IBON_Msk;
+		spi->SERCOM_CTRLA |= SERCOM_SPI_CTRLA_IBON_Msk;
 		/*Set the SPI Slave Mode*/
 		spi->SERCOM_CTRLA = (spi->SERCOM_CTRLA & ~SERCOM_SPI_CTRLA_MODE_Msk) |
 				    SERCOM_SPI_CTRLA_MODE_SPI_SLAVE;
@@ -323,10 +311,8 @@ static int spi_mchp_configure(const struct device *dev, const struct spi_config 
 			}
 		} else if (cfg->pcfg->states->pin_cnt == SPI_PIN_CNT) {
 			spi_wait_sync(spi_reg_cfg, SERCOM_SPI_SYNCBUSY_CTRLB_Msk);
-
 			/* Clear the MSSEN bit field and enable Master Slave Select */
-			spi->SERCOM_CTRLB = (spi->SERCOM_CTRLB & ~SERCOM_SPI_CTRLB_MSSEN_Msk) |
-					    SERCOM_SPI_CTRLB_MSSEN_Msk;
+			spi->SERCOM_CTRLB |= SERCOM_SPI_CTRLB_MSSEN_Msk;
 			spi_wait_sync(spi_reg_cfg, SERCOM_SPI_SYNCBUSY_CTRLB_Msk);
 		} else {
 			/* Handled by user */
@@ -506,16 +492,19 @@ static void spi_mchp_slave_write(const struct device *dev)
 	/* Prepare initial bytes for transmission */
 	if (spi_context_tx_buf_on(&data->ctx) == true) {
 		write_ready = spi_context_tx_buf_on(&data->ctx);
-		write_ready = write_ready && (spi_slave_is_data_empty(spi_reg_cfg) == true);
-		if (write_ready == true) {
+		write_ready = write_ready && (spi_slave_is_data_reg_empty(spi_reg_cfg) == true);
+		while (write_ready == true) {
 			tx_data = *data->ctx.tx_buf;
 			spi_slave_write_data(spi_reg_cfg, tx_data);
 
 			/* Write data byte to the SPI data register */
 			spi_context_update_tx(&data->ctx, 1, 1);
+			write_ready = spi_context_tx_buf_on(&data->ctx);
+			write_ready =
+				write_ready && (spi_slave_is_data_reg_empty(spi_reg_cfg) == true);
 		}
 	} else {
-		write_ready = (spi_slave_is_data_empty(spi_reg_cfg));
+		write_ready = (spi_slave_is_data_reg_empty(spi_reg_cfg));
 		if (write_ready == true) {
 			spi_slave_write_data(spi_reg_cfg, dummy_data);
 		}
@@ -537,15 +526,13 @@ static int spi_mchp_slave_transceive_interrupt(const struct device *dev,
 
 	spi_context_buffers_setup(&data->ctx, tx_bufs, rx_bufs, 1);
 
-	if (spi_context_tx_on(&data->ctx) == true) {
-		/* Prepare for transmission */
-		spi_mchp_slave_write(dev);
-	}
+	/* Prepare for transmission */
+	spi_mchp_slave_write(dev);
+
 	/*Enable the Receive Complete Interrupt*/
 	spi->SERCOM_INTENSET = SERCOM_SPI_INTENSET_RXC_Msk;
 	/* Enable slave select line interrupt */
-	spi->SERCOM_INTENSET =
-		(spi->SERCOM_INTENSET & ~SERCOM_SPI_INTENSET_SSL_Msk) | SERCOM_SPI_INTENSET_SSL_Msk;
+	spi->SERCOM_INTENSET |= SERCOM_SPI_INTENSET_SSL_Msk;
 
 	return ret;
 }
@@ -919,16 +906,14 @@ static void spi_mchp_isr_slave(const struct device *dev)
 		spi->SERCOM_STATUS = SERCOM_SPI_STATUS_BUFOVF_Msk;
 		/* Clear the DATA register */
 		if (WAIT_FOR(((spi->SERCOM_INTFLAG & SERCOM_SPI_INTFLAG_RXC_Msk) == 0),
-			     TIMEOUT_VALUE_US,
-			     ((void)spi->SERCOM_DATA, k_busy_wait(DELAY_US))) == false) {
+			     TIMEOUT_VALUE_US, (void)spi->SERCOM_DATA) == false) {
 			LOG_ERR("Timeout while clearing RXC");
 		}
 		/*Clear the Error Interrupt Flag */
 		spi->SERCOM_INTFLAG = (uint8_t)SERCOM_SPI_INTFLAG_ERROR_Msk;
-	}
-
-	/* Handle received data */
-	if ((spi->SERCOM_INTFLAG & SERCOM_SPI_INTFLAG_RXC_Msk) == SERCOM_SPI_INTFLAG_RXC_Msk) {
+	} else if ((spi->SERCOM_INTFLAG & SERCOM_SPI_INTFLAG_RXC_Msk) ==
+		   SERCOM_SPI_INTFLAG_RXC_Msk) {
+		/* Handle received data */
 		rx_data = (uint8_t)spi->SERCOM_DATA;
 		if (spi_context_rx_buf_on(&data->ctx)) {
 			*data->ctx.rx_buf = rx_data;
@@ -936,8 +921,16 @@ static void spi_mchp_isr_slave(const struct device *dev)
 		}
 	}
 
+	/* Handle slave select */
+	if ((spi->SERCOM_INTFLAG & SERCOM_SPI_INTFLAG_SSL_Msk) == SERCOM_SPI_INTFLAG_SSL_Msk) {
+		/* Clear the slave select line interrupt */
+		spi->SERCOM_INTFLAG = SERCOM_SPI_INTFLAG_SSL_Msk;
+		/* Enable the Transmit Complete Interrupt */
+		spi->SERCOM_INTENSET = SERCOM_SPI_INTENSET_TXC_Msk;
+	}
+
 	/* Handle transmit data */
-	if (spi_slave_is_data_empty(spi_reg_cfg) == true) {
+	if (spi_slave_is_data_reg_empty(spi_reg_cfg) == true) {
 		if (spi_context_tx_on(&data->ctx)) {
 			tx_data = *data->ctx.tx_buf;
 			spi_context_update_tx(&data->ctx, 1, 1);
@@ -947,14 +940,6 @@ static void spi_mchp_isr_slave(const struct device *dev)
 			spi->SERCOM_INTENCLR = (uint8_t)SERCOM_SPI_INTENCLR_DRE_Msk;
 		}
 		spi_slave_write_data(spi_reg_cfg, tx_data);
-	}
-
-	/* Handle slave select */
-	if ((spi->SERCOM_INTFLAG & SERCOM_SPI_INTFLAG_SSL_Msk) == SERCOM_SPI_INTFLAG_SSL_Msk) {
-		/* Clear the slave select line interrupt */
-		spi->SERCOM_INTFLAG = SERCOM_SPI_INTFLAG_SSL_Msk;
-		/* Enable the Transmit Complete Interrupt */
-		spi->SERCOM_INTENSET = SERCOM_SPI_INTENSET_TXC_Msk;
 	}
 
 	/* Handle transaction complete */
@@ -990,8 +975,21 @@ static void spi_mchp_isr_master(const struct device *dev)
 		return;
 	}
 
-	/* Handle received data */
-	if ((spi->SERCOM_INTFLAG & SERCOM_SPI_INTFLAG_RXC_Msk) == SERCOM_SPI_INTFLAG_RXC_Msk) {
+	/* Handle buffer overflow error */
+	if ((spi->SERCOM_STATUS & SERCOM_SPI_STATUS_BUFOVF_Msk) == SERCOM_SPI_STATUS_BUFOVF_Msk) {
+		/* Clear buffer overflow flag */
+		spi->SERCOM_STATUS = SERCOM_SPI_STATUS_BUFOVF_Msk;
+		/* Clear the DATA register */
+		if (WAIT_FOR(((spi->SERCOM_INTFLAG & SERCOM_SPI_INTFLAG_RXC_Msk) == 0),
+			     TIMEOUT_VALUE_US, (void)spi->SERCOM_DATA) == false) {
+			LOG_ERR("Timeout while clearing RXC");
+		}
+		/*Clear the Error Interrupt Flag */
+		spi->SERCOM_INTFLAG = (uint8_t)SERCOM_SPI_INTFLAG_ERROR_Msk;
+
+	} else if ((spi->SERCOM_INTFLAG & SERCOM_SPI_INTFLAG_RXC_Msk) ==
+		   SERCOM_SPI_INTFLAG_RXC_Msk) {
+		/* Handle received data */
 		if (spi_context_rx_buf_on(&data->ctx) == true) {
 			rx_data = spi_read_data(spi_reg_cfg);
 			*data->ctx.rx_buf = rx_data;
@@ -1011,6 +1009,8 @@ static void spi_mchp_isr_master(const struct device *dev)
 		} else if (data->dummysize > 0) {
 			spi_write_data(spi_reg_cfg, dummy_data);
 			data->dummysize--;
+		} else {
+			/* Do nothing */
 		}
 
 		/* Enable TXC interrupt if this was the last byte to send */
