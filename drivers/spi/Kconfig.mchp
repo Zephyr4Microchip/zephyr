@@ -32,24 +32,17 @@ config SPI_MCHP_POLLING_MODE
 	  Enable polling mode support for Microchip Devices
 	  SERCOM SPI driver.
 
-config SPI_MCHP_INTERRUPT_DRIVEN
-	bool "Microchip SERCOM SPI driver (Interrupt Driven)"
-	depends on SPI_MCHP_SERCOM_G1 && !SPI_ASYNC
-	help
-	  Enable interrupt-driven support for Microchip Devices
-	  SERCOM SPI driver.
-
 menu "SPI ASYNC SELECTION"
 	depends on SPI_MCHP_SERCOM_G1 && SPI_ASYNC
 
 choice
 	prompt "Select Async Mode: Interrupt or DMA"
-	default SPI_MCHP_INTERRUPT_DRIVEN_ASYNC
+	default SPI_MCHP_INTERRUPT_DRIVEN
 	help
 	  Choose between interrupt or DMA async mode for the MCHP SPI driver.
 
-config SPI_MCHP_INTERRUPT_DRIVEN_ASYNC
-	bool "MCHP Interrupt Async"
+config SPI_MCHP_INTERRUPT_DRIVEN
+	bool "Microchip SERCOM SPI driver (Interrupt Driven)"
 	help
 	  Enables interrupt support for the MCHP SPI driver in async mode.
 

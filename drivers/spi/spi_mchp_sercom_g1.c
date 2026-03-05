@@ -57,9 +57,9 @@ struct spi_mchp_dev_config {
 	struct mchp_spi_dma spi_dma;
 #endif /* CONFIG_SPI_MCHP_DMA_DRIVEN_ASYNC */
 
-#if defined(CONFIG_SPI_ASYNC) || defined(CONFIG_SPI_MCHP_INTERRUPT_DRIVEN)
+#if defined(CONFIG_SPI_MCHP_INTERRUPT_DRIVEN)
 	void (*irq_config_func)(const struct device *dev);
-#endif /* CONFIG_SPI_ASYNC) || CONFIG_SPI_MCHP_INTERRUPT_DRIVEN */
+#endif /* CONFIG_SPI_MCHP_INTERRUPT_DRIVEN */
 
 	struct mchp_spi_clock spi_clock;
 };
@@ -67,9 +67,9 @@ struct spi_mchp_dev_config {
 struct spi_mchp_dev_data {
 	struct spi_context ctx;
 
-#if defined(CONFIG_SPI_ASYNC) || defined(CONFIG_SPI_MCHP_INTERRUPT_DRIVEN)
+#if defined(CONFIG_SPI_MCHP_INTERRUPT_DRIVEN)
 	uint16_t dummysize;
-#endif /* CONFIG_SPI_ASYNC) || CONFIG_SPI_MCHP_INTERRUPT_DRIVEN */
+#endif /* CONFIG_SPI_MCHP_INTERRUPT_DRIVEN */
 
 #if CONFIG_SPI_MCHP_DMA_DRIVEN_ASYNC
 	const struct device *dev;
@@ -355,9 +355,9 @@ static int spi_mchp_configure(const struct device *dev, const struct spi_config 
 
 	spi_enable(spi_reg_cfg, config->operation);
 
-#if defined(CONFIG_SPI_ASYNC) || defined(CONFIG_SPI_MCHP_INTERRUPT_DRIVEN)
+#if defined(CONFIG_SPI_MCHP_INTERRUPT_DRIVEN)
 	cfg->irq_config_func(dev);
-#endif /* CONFIG_SPI_ASYNC || CONFIG_SPI_MCHP_INTERRUPT_DRIVEN */
+#endif /* CONFIG_SPI_MCHP_INTERRUPT_DRIVEN */
 
 #if CONFIG_SPI_MCHP_DMA_DRIVEN_ASYNC
 	if (device_is_ready(cfg->spi_dma.dma_dev) != true) {
@@ -389,7 +389,7 @@ static int spi_mchp_check_buf_len(const struct spi_buf_set *buf_set)
 	return 0;
 }
 
-#ifndef CONFIG_SPI_MCHP_INTERRUPT_DRIVEN
+#if CONFIG_SPI_MCHP_POLLING_MODE
 static bool spi_mchp_transfer_in_progress(struct spi_mchp_dev_data *data)
 {
 	return spi_context_tx_on(&data->ctx) || spi_context_rx_on(&data->ctx);
@@ -442,9 +442,9 @@ static int spi_mchp_poll_in(const struct mchp_spi_reg_config *spi_reg_cfg,
 	return 0;
 }
 
-#endif /* CONFIG_SPI_MCHP_INTERRUPT_DRIVEN*/
+#endif /* CONFIG_SPI_MCHP_POLLING_MODE*/
 
-#if defined(CONFIG_SPI_MCHP_INTERRUPT_DRIVEN) || (CONFIG_SPI_MCHP_INTERRUPT_DRIVEN_ASYNC)
+#if CONFIG_SPI_MCHP_INTERRUPT_DRIVEN
 static int spi_mchp_transceive_interrupt(const struct device *dev, const struct spi_config *config,
 					 const struct spi_buf_set *tx_bufs,
 					 const struct spi_buf_set *rx_bufs)
@@ -551,8 +551,9 @@ static int spi_mchp_slave_transceive_interrupt(const struct device *dev,
 }
 
 #endif /* CONFIG_SPI_SLAVE */
-#endif /* CONFIG_SPI_MCHP_INTERRUPT_DRIVEN || (CONFIG_SPI_MCHP_INTERRUPT_DRIVEN_ASYNC */
+#endif /* CONFIG_SPI_MCHP_INTERRUPT_DRIVEN */
 
+#if CONFIG_SPI_MCHP_POLLING_MODE
 static int spi_mchp_transceive_sync(const struct device *dev, const struct spi_config *config,
 				    const struct spi_buf_set *tx_bufs,
 				    const struct spi_buf_set *rx_bufs)
@@ -587,18 +588,6 @@ static int spi_mchp_transceive_sync(const struct device *dev, const struct spi_c
 		spi_context_cs_control(&data->ctx, true);
 	}
 
-#if CONFIG_SPI_MCHP_INTERRUPT_DRIVEN
-#if CONFIG_SPI_SLAVE
-	if (SPI_OP_MODE_GET(config->operation) == SPI_OP_MODE_SLAVE) {
-		ret = spi_mchp_slave_transceive_interrupt(dev, config, tx_bufs, rx_bufs);
-	}
-#endif /* CONFIG_SPI_SLAVE */
-	if (SPI_OP_MODE_GET(config->operation) == SPI_OP_MODE_MASTER) {
-		ret = spi_mchp_transceive_interrupt(dev, config, tx_bufs, rx_bufs);
-	}
-	ret = spi_context_wait_for_completion(&data->ctx);
-#elif defined(CONFIG_SPI_MCHP_POLLING_MODE)
-	/* Use optimized fast path if TX and RX buffer lengths match */
 	if (SPI_OP_MODE_GET(config->operation) == SPI_OP_MODE_MASTER) {
 		/* Setup SPI buffers and process using polling */
 		spi_context_buffers_setup(&data->ctx, tx_bufs, rx_bufs, 1);
@@ -615,7 +604,6 @@ static int spi_mchp_transceive_sync(const struct device *dev, const struct spi_c
 		return -ENOTSUP;
 	}
 #endif /* CONFIG_SPI_SLAVE */
-#endif /* CONFIG_SPI_MCHP_INTERRUPT_DRIVEN */
 
 	if (SPI_OP_MODE_GET(config->operation) == SPI_OP_MODE_MASTER) {
 		spi_context_cs_control(&data->ctx, false);
@@ -625,6 +613,7 @@ static int spi_mchp_transceive_sync(const struct device *dev, const struct spi_c
 
 	return ret;
 }
+#endif /* CONFIG_SPI_MCHP_POLLING_MODE */
 
 #if CONFIG_SPI_ASYNC
 #if CONFIG_SPI_MCHP_DMA_DRIVEN_ASYNC
@@ -911,8 +900,8 @@ static int spi_mchp_release(const struct device *dev, const struct spi_config *c
 	return 0;
 }
 
-#if defined(CONFIG_SPI_ASYNC) || defined(CONFIG_SPI_MCHP_INTERRUPT_DRIVEN)
-#if (CONFIG_SPI_SLAVE)
+#if CONFIG_SPI_MCHP_INTERRUPT_DRIVEN
+#if CONFIG_SPI_SLAVE
 static void spi_mchp_isr_slave(const struct device *dev)
 {
 	struct spi_mchp_dev_data *data = dev->data;
@@ -1071,7 +1060,7 @@ static void spi_mchp_isr(const struct device *dev)
 
 	spi_mchp_isr_master(dev);
 }
-#endif /* CONFIG_SPI_ASYNC || CONFIG_SPI_MCHP_INTERRUPT_DRIVEN */
+#endif /* CONFIG_SPI_MCHP_INTERRUPT_DRIVEN */
 
 static int spi_mchp_init(const struct device *dev)
 {
@@ -1131,7 +1120,7 @@ static DEVICE_API(spi, spi_mchp_api) = {
 	.reg_cfg.regs = (sercom_registers_t *)DT_INST_REG_ADDR(n),                                 \
 	.reg_cfg.pads = SPI_MCHP_SERCOM_PADS(n),
 
-#if CONFIG_SPI_MCHP_INTERRUPT_DRIVEN || CONFIG_SPI_ASYNC
+#if CONFIG_SPI_MCHP_INTERRUPT_DRIVEN
 #if DT_INST_IRQ_HAS_IDX(0, 3)
 #define SPI_MCHP_IRQ_HANDLER(n)                                                                    \
 	static void spi_mchp_irq_config_##n(const struct device *dev)                              \
@@ -1150,14 +1139,14 @@ static DEVICE_API(spi, spi_mchp_api) = {
 #endif
 #else
 #define SPI_MCHP_IRQ_HANDLER(n)
-#endif /* CONFIG_SPI_MCHP_INTERRUPT_DRIVEN || CONFIG_SPI_ASYNC */
+#endif /* CONFIG_SPI_MCHP_INTERRUPT_DRIVEN  */
 
 #define SPI_MCHP_CLOCK_DEFN(n)                                                                     \
 	.spi_clock.clock_dev = DEVICE_DT_GET(DT_NODELABEL(clock)),                                 \
 	.spi_clock.mclk_sys = (void *)(DT_INST_CLOCKS_CELL_BY_NAME(n, mclk, subsystem)),           \
 	.spi_clock.gclk_sys = (void *)(DT_INST_CLOCKS_CELL_BY_NAME(n, gclk, subsystem))
 
-#if CONFIG_SPI_MCHP_INTERRUPT_DRIVEN || CONFIG_SPI_ASYNC
+#if CONFIG_SPI_MCHP_INTERRUPT_DRIVEN
 #define MCHP_SPI_IRQ_CONNECT(n, m)                                                                 \
 	do {                                                                                       \
 		IRQ_CONNECT(DT_INST_IRQ_BY_IDX(n, m, irq), DT_INST_IRQ_BY_IDX(n, m, priority),     \
@@ -1170,7 +1159,7 @@ static DEVICE_API(spi, spi_mchp_api) = {
 #else
 #define SPI_MCHP_IRQ_HANDLER_DECL(n)
 #define SPI_MCHP_IRQ_HANDLER_FUNC(n)
-#endif /* CONFIG_SPI_MCHP_INTERRUPT_DRIVEN || CONFIG_SPI_ASYNC */
+#endif /* CONFIG_SPI_MCHP_INTERRUPT_DRIVEN  */
 
 #if CONFIG_SPI_MCHP_DMA_DRIVEN_ASYNC
 #define SPI_MCHP_DMA_CHANNELS(n)                                                                   \
