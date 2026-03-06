@@ -450,3 +450,16 @@ ext1_serial: &sercom0 {};
 ext2_serial: &sercom5 {};
 
 ext3_serial: &sercom1 {};
+
+&mdio {
+	compatible = "microchip,gmac-g1-mdio";
+	pinctrl-0 = <&mdio_default>;
+	pinctrl-names = "default";
+	status = "okay";
+
+	phy: ethernet-phy@0 {
+		compatible = "ethernet-phy";
+		status = "okay";
+		reg = <0>;
+	};
+};
