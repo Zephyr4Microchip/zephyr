@@ -483,3 +483,16 @@ ext3_serial: &sercom1 {
 &trng {
 	status = "okay";
 };
+
+&mdio {
+	compatible = "microchip,gmac-g1-mdio";
+	pinctrl-0 = <&mdio_default>;
+	pinctrl-names = "default";
+	status = "okay";
+
+	phy: ethernet-phy@0 {
+		compatible = "ethernet-phy";
+		status = "okay";
+		reg = <0>;
+	};
+};
