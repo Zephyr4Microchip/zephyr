@@ -483,30 +483,21 @@ static void spi_mchp_slave_write(const struct device *dev)
 {
 	const struct spi_mchp_dev_config *cfg = dev->config;
 	const struct mchp_spi_reg_config *spi_reg_cfg = &cfg->reg_cfg;
-	uint8_t tx_data;
-	uint8_t dummy_data = 0U;
 	struct spi_mchp_dev_data *const data = dev->data;
-	bool write_ready;
 	sercom_spi_registers_t *spi = SPI_GET_BASE_ADDR(spi_reg_cfg->regs, SPI_OP_MODE_SLAVE);
 
 	/* Prepare initial bytes for transmission */
 	if (spi_context_tx_buf_on(&data->ctx) == true) {
-		write_ready = spi_context_tx_buf_on(&data->ctx);
-		write_ready = write_ready && (spi_slave_is_data_reg_empty(spi_reg_cfg) == true);
-		while (write_ready == true) {
-			tx_data = *data->ctx.tx_buf;
-			spi_slave_write_data(spi_reg_cfg, tx_data);
+		while ((spi_context_tx_buf_on(&data->ctx) == true) &&
+		       (spi_slave_is_data_reg_empty(spi_reg_cfg) == true)) {
+			spi_slave_write_data(spi_reg_cfg, *data->ctx.tx_buf);
 
 			/* Write data byte to the SPI data register */
 			spi_context_update_tx(&data->ctx, 1, 1);
-			write_ready = spi_context_tx_buf_on(&data->ctx);
-			write_ready =
-				write_ready && (spi_slave_is_data_reg_empty(spi_reg_cfg) == true);
 		}
 	} else {
-		write_ready = (spi_slave_is_data_reg_empty(spi_reg_cfg));
-		if (write_ready == true) {
-			spi_slave_write_data(spi_reg_cfg, dummy_data);
+		if (spi_slave_is_data_reg_empty(spi_reg_cfg) == true) {
+			spi_slave_write_data(spi_reg_cfg, 0);
 		}
 	}
 	/*Enable the Data Register Empty Interrupt*/
@@ -532,7 +523,7 @@ static int spi_mchp_slave_transceive_interrupt(const struct device *dev,
 	/*Enable the Receive Complete Interrupt*/
 	spi->SERCOM_INTENSET = SERCOM_SPI_INTENSET_RXC_Msk;
 	/* Enable slave select line interrupt */
-	spi->SERCOM_INTENSET |= SERCOM_SPI_INTENSET_SSL_Msk;
+	spi->SERCOM_INTENSET = SERCOM_SPI_INTENSET_SSL_Msk;
 
 	return ret;
 }
@@ -900,6 +891,15 @@ static void spi_mchp_isr_slave(const struct device *dev)
 	uint8_t tx_data = 0U;
 	uint8_t rx_data = 0U;
 
+	/* Handle slave select */
+	if ((spi->SERCOM_INTFLAG & SERCOM_SPI_INTFLAG_SSL_Msk) == SERCOM_SPI_INTFLAG_SSL_Msk) {
+		/* Clear the slave select line interrupt */
+		spi->SERCOM_INTFLAG = SERCOM_SPI_INTFLAG_SSL_Msk;
+		/* Enable the Transmit Complete Interrupt */
+		spi->SERCOM_INTENSET = SERCOM_SPI_INTENSET_TXC_Msk;
+		return;
+	}
+
 	/* Handle buffer overflow error */
 	if ((spi->SERCOM_STATUS & SERCOM_SPI_STATUS_BUFOVF_Msk) == SERCOM_SPI_STATUS_BUFOVF_Msk) {
 		/* Clear buffer overflow flag */
@@ -911,8 +911,11 @@ static void spi_mchp_isr_slave(const struct device *dev)
 		}
 		/*Clear the Error Interrupt Flag */
 		spi->SERCOM_INTFLAG = (uint8_t)SERCOM_SPI_INTFLAG_ERROR_Msk;
-	} else if ((spi->SERCOM_INTFLAG & SERCOM_SPI_INTFLAG_RXC_Msk) ==
-		   SERCOM_SPI_INTFLAG_RXC_Msk) {
+		spi_context_complete(&data->ctx, dev, -EIO);
+		return;
+	}
+
+	if ((spi->SERCOM_INTFLAG & SERCOM_SPI_INTFLAG_RXC_Msk) == SERCOM_SPI_INTFLAG_RXC_Msk) {
 		/* Handle received data */
 		rx_data = (uint8_t)spi->SERCOM_DATA;
 		if (spi_context_rx_buf_on(&data->ctx)) {
@@ -921,17 +924,9 @@ static void spi_mchp_isr_slave(const struct device *dev)
 		}
 	}
 
-	/* Handle slave select */
-	if ((spi->SERCOM_INTFLAG & SERCOM_SPI_INTFLAG_SSL_Msk) == SERCOM_SPI_INTFLAG_SSL_Msk) {
-		/* Clear the slave select line interrupt */
-		spi->SERCOM_INTFLAG = SERCOM_SPI_INTFLAG_SSL_Msk;
-		/* Enable the Transmit Complete Interrupt */
-		spi->SERCOM_INTENSET = SERCOM_SPI_INTENSET_TXC_Msk;
-	}
-
 	/* Handle transmit data */
 	if (spi_slave_is_data_reg_empty(spi_reg_cfg) == true) {
-		if (spi_context_tx_on(&data->ctx)) {
+		if (spi_context_tx_on(&data->ctx) == true) {
 			tx_data = *data->ctx.tx_buf;
 			spi_context_update_tx(&data->ctx, 1, 1);
 		} else {
@@ -969,80 +964,97 @@ static void spi_mchp_isr_master(const struct device *dev)
 
 	uint8_t dummy_data = 0U;
 	uint8_t tx_data = 0U;
-	uint8_t rx_data = 0U;
+	bool transeive_complete = false;
+	int ret = 0;
 
-	if (spi->SERCOM_INTENSET == 0) {
-		return;
-	}
-
-	/* Handle buffer overflow error */
-	if ((spi->SERCOM_STATUS & SERCOM_SPI_STATUS_BUFOVF_Msk) == SERCOM_SPI_STATUS_BUFOVF_Msk) {
-		/* Clear buffer overflow flag */
-		spi->SERCOM_STATUS = SERCOM_SPI_STATUS_BUFOVF_Msk;
-		/* Clear the DATA register */
-		if (WAIT_FOR(((spi->SERCOM_INTFLAG & SERCOM_SPI_INTFLAG_RXC_Msk) == 0),
-			     TIMEOUT_VALUE_US, (void)spi->SERCOM_DATA) == false) {
-			LOG_ERR("Timeout while clearing RXC");
+	do {
+		bool transmit_needed, receive_needed;
+		if (spi->SERCOM_INTENSET == 0) {
+			break;
 		}
+
+		receive_needed = (spi_context_rx_buf_on(&data->ctx) == true) &&
+				 ((spi->SERCOM_INTFLAG & SERCOM_SPI_INTFLAG_RXC_Msk) ==
+				  SERCOM_SPI_INTFLAG_RXC_Msk);
+		transmit_needed = (spi_context_tx_on(&data->ctx) == true) || (data->dummysize > 0);
+
+		/* Handle buffer overflow error */
+		if ((spi->SERCOM_STATUS & SERCOM_SPI_STATUS_BUFOVF_Msk) ==
+		    SERCOM_SPI_STATUS_BUFOVF_Msk) {
+			/* Clear buffer overflow flag */
+			spi->SERCOM_STATUS = SERCOM_SPI_STATUS_BUFOVF_Msk;
+			/* Clear the DATA register */
+			if (WAIT_FOR(((spi->SERCOM_INTFLAG & SERCOM_SPI_INTFLAG_RXC_Msk) == 0),
+				     TIMEOUT_VALUE_US, (void)spi->SERCOM_DATA) == false) {
+				LOG_ERR("Timeout while clearing RXC");
+			}
+			transeive_complete = true;
+			ret = -EIO;
+			break;
+		}
+
+		/* Handle received data */
+		if (receive_needed) {
+			*data->ctx.rx_buf = spi_read_data(spi_reg_cfg);
+			spi_context_update_rx(&data->ctx, 1, 1);
+
+			if (spi_context_rx_on(&data->ctx) == false) {
+				if (transmit_needed == false) {
+					transeive_complete = true;
+					break;
+				} else {
+					/*Disable the Receive Complete Interrupt*/
+					spi->SERCOM_INTENCLR = SERCOM_SPI_INTENCLR_RXC_Msk;
+					spi->SERCOM_INTENSET = SERCOM_SPI_INTENCLR_DRE_Msk;
+				}
+			}
+		}
+
+		/* Transmit if needed */
+		if (transmit_needed) {
+			if ((spi->SERCOM_INTFLAG & SERCOM_SPI_INTFLAG_DRE_Msk) ==
+			    SERCOM_SPI_INTFLAG_DRE_Msk) {
+				if (spi_context_tx_on(&data->ctx) == true) {
+					tx_data = *data->ctx.tx_buf;
+					spi_context_update_tx(&data->ctx, 1, 1);
+				} else if (data->dummysize > 0) {
+					tx_data = dummy_data;
+					data->dummysize--;
+				}
+				/* if this was the last byte to send */
+				if ((data->dummysize == 0) &&
+				    (spi_context_tx_on(&data->ctx) == false)) {
+					/*Disable the Data Register Empty Interrupt*/
+					spi->SERCOM_INTENCLR = SERCOM_SPI_INTENCLR_DRE_Msk;
+					/*Enable the Transmit Complete Interrupt*/
+					spi->SERCOM_INTENSET = SERCOM_SPI_INTENSET_TXC_Msk;
+				}
+
+				spi_write_data(spi_reg_cfg, tx_data);
+			}
+		}
+
+		/* Handle transmit complete */
+		if ((spi->SERCOM_INTFLAG & SERCOM_SPI_INTFLAG_TXC_Msk) ==
+		    SERCOM_SPI_INTFLAG_TXC_Msk) {
+			/*Disable the Transmit Complete Interrupt*/
+			spi->SERCOM_INTFLAG = SERCOM_SPIS_INTFLAG_TXC_Msk;
+
+			/* If all bytes sent and received, finish transaction */
+			if ((receive_needed == false) && (transmit_needed == false)) {
+				transeive_complete = true;
+			}
+		}
+	} while (0);
+
+	if (transeive_complete == true) {
 		/*Clear the Error Interrupt Flag */
 		spi->SERCOM_INTFLAG = (uint8_t)SERCOM_SPI_INTFLAG_ERROR_Msk;
-
-	} else if ((spi->SERCOM_INTFLAG & SERCOM_SPI_INTFLAG_RXC_Msk) ==
-		   SERCOM_SPI_INTFLAG_RXC_Msk) {
-		/* Handle received data */
-		if (spi_context_rx_buf_on(&data->ctx) == true) {
-			rx_data = spi_read_data(spi_reg_cfg);
-			*data->ctx.rx_buf = rx_data;
-			spi_context_update_rx(&data->ctx, 1, 1);
-		}
-	}
-
-	/* Handle transmit data or dummy bytes */
-	if ((spi->SERCOM_INTFLAG & SERCOM_SPI_INTFLAG_DRE_Msk) == SERCOM_SPI_INTFLAG_DRE_Msk) {
-		/*Disable the Data Register Empty Interrupt*/
+		spi->SERCOM_INTENCLR = SERCOM_SPI_INTENCLR_RXC_Msk;
 		spi->SERCOM_INTENCLR = SERCOM_SPI_INTENCLR_DRE_Msk;
-
-		if (spi_context_tx_on(&data->ctx) == true) {
-			tx_data = *data->ctx.tx_buf;
-			spi_write_data(spi_reg_cfg, tx_data);
-			spi_context_update_tx(&data->ctx, 1, 1);
-		} else if (data->dummysize > 0) {
-			spi_write_data(spi_reg_cfg, dummy_data);
-			data->dummysize--;
-		} else {
-			/* Do nothing */
-		}
-
-		/* Enable TXC interrupt if this was the last byte to send */
-		if ((data->dummysize == 0) && (spi_context_tx_on(&data->ctx) == false)) {
-			/*Enable the Transmit Complete Interrupt*/
-			spi->SERCOM_INTENSET = SERCOM_SPI_INTENSET_TXC_Msk;
-		} else if (spi_context_rx_on(&data->ctx) == false) {
-			/*Enable the Data Register Empty Interrupt*/
-			spi->SERCOM_INTENSET = SERCOM_SPI_INTENSET_DRE_Msk;
-			/*Disable the Receive Complete Interrupt*/
-			spi->SERCOM_INTENCLR = SERCOM_SPI_INTENCLR_RXC_Msk;
-		}
-	}
-
-	/* If TX complete and all bytes sent, finish transaction */
-	if ((spi->SERCOM_INTFLAG & SERCOM_SPI_INTFLAG_TXC_Msk) == SERCOM_SPI_INTFLAG_TXC_Msk) {
-		bool tx_all_done =
-			(data->dummysize == 0) && (spi_context_tx_on(&data->ctx) == false);
-
-		if (tx_all_done == true && (spi_context_rx_on(&data->ctx) == false)) {
-			/*Disable the Receive Complete Interrupt*/
-			spi->SERCOM_INTENCLR = SERCOM_SPI_INTENCLR_RXC_Msk;
-			/*Disable the Transmit Complete Interrupt*/
-			spi->SERCOM_INTENCLR = SERCOM_SPI_INTENCLR_TXC_Msk;
-			/*Disable the Data Register Empty Interrupt*/
-			spi->SERCOM_INTENCLR = SERCOM_SPI_INTENCLR_DRE_Msk;
-			spi_context_cs_control(&data->ctx, false);
-			spi_context_complete(&data->ctx, dev, 0);
-		} else if (tx_all_done == true) {
-			/*Disable the Transmit Complete Interrupt*/
-			spi->SERCOM_INTENCLR = SERCOM_SPI_INTENCLR_TXC_Msk;
-		}
+		spi->SERCOM_INTENCLR = SERCOM_SPI_INTENCLR_TXC_Msk;
+		spi_context_cs_control(&data->ctx, false);
+		spi_context_complete(&data->ctx, dev, ret);
 	}
 }
 
