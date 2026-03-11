@@ -54,6 +54,17 @@ struct gpio_mchp_data {
 
 	/* Variable used for enabling or disabling debounce */
 	gpio_port_pins_t debounce;
+
+	/*
+	 * Bitmask tracking pins configured as open-drain (software emulated).
+	 * PIC32CX SG41/SG60/SG61 PORT controller does not have hardware
+	 * open-drain support (no ODCx register like PIC32CX-BZ2/BZ3).
+	 * Open-drain is emulated by:
+	 *   - Output LOW: Configure as output, drive low
+	 *   - Output HIGH: Configure as input (high-Z), external pull-up drives high
+	 */
+	gpio_port_pins_t open_drain;
+
 #ifdef CONFIG_INTC_MCHP_EIC_G1
 	/* provided by gpio_utils
 	 * callbacks are stored here for each pins
@@ -309,6 +320,38 @@ static int gpio_configure_output(port_group_registers_t *gpio_reg, gpio_pin_t pi
 	return retval;
 }
 
+/**
+ * Configure GPIO pin as open-drain (software emulated)
+ *
+ * PIC32CX SG41/SG60/SG61 does not have hardware open-drain support.
+ * We emulate it by switching between output-low and input (high-Z).
+ *
+ * Initial state:
+ *   - INIT_LOW:  Configure as output, drive low
+ *   - INIT_HIGH: Configure as input (high-Z), external pull-up drives high
+ */
+static int gpio_configure_open_drain(port_group_registers_t *gpio_reg, gpio_pin_t pin,
+				     gpio_flags_t flags)
+{
+	/* Open-drain with pull-down doesn't make sense */
+	if ((flags & GPIO_PULL_DOWN) != 0) {
+		return -ENOTSUP;
+	}
+
+	/* Pre-set OUT register to low so when we switch to output, it drives low */
+	gpio_outclr(gpio_reg, pin);
+
+	if ((flags & GPIO_OUTPUT_INIT_LOW) != 0) {
+		/* Drive low: set as output (OUT is already 0) */
+		gpio_set_dir_output(gpio_reg, pin);
+	} else {
+		/* Release (high): set as input (high-Z), external pull-up drives high */
+		gpio_set_dir_input(gpio_reg, pin);
+	}
+
+	return 0;
+}
+
 /******************************************************************************
  * @brief API functions
  *****************************************************************************/
@@ -324,6 +367,7 @@ static int gpio_configure_output(port_group_registers_t *gpio_reg, gpio_pin_t pi
 static int gpio_mchp_configure(const struct device *dev, gpio_pin_t pin, gpio_flags_t flags)
 {
 	const struct gpio_mchp_config *config = dev->config;
+	struct gpio_mchp_data *data = dev->data;
 	port_group_registers_t *gpio_reg = config->gpio_regs;
 	gpio_flags_t io_flags = flags & (GPIO_INPUT | GPIO_OUTPUT);
 	int retval = 0;
@@ -331,14 +375,30 @@ static int gpio_mchp_configure(const struct device *dev, gpio_pin_t pin, gpio_fl
 	/* Disable the pinmux functionality as its gpio */
 	gpio_reg->PORT_PINCFG[pin] &= (uint8_t)~PORT_PINCFG_PMUXEN_Msk;
 
-	if (io_flags == GPIO_DISCONNECTED) {
+	/* Clear open-drain tracking for this pin by default */
+	data->open_drain &= ~BIT(pin);
 
+	if (io_flags == GPIO_DISCONNECTED) {
 		/* Disconnect the gpio */
 		gpio_disconnect(gpio_reg, pin);
 	}
 
-	/* Check for single-ended mode configuration */
+	/* Handle open-drain (software emulated) */
+	else if ((flags & GPIO_OPEN_DRAIN) == GPIO_OPEN_DRAIN) {
+		/*
+		 * GPIO_OPEN_DRAIN = GPIO_SINGLE_ENDED | GPIO_LINE_OPEN_DRAIN
+		 * PIC32CX SG61 does not have hardware open-drain, so we emulate:
+		 *   - Output LOW:  Configure as output, drive low
+		 *   - Output HIGH: Configure as input (high-Z), pull-up drives high
+		 */
+		data->open_drain |= BIT(pin);
+		retval = gpio_configure_open_drain(gpio_reg, pin, flags);
+		LOG_DBG("Pin %u configured as open-drain (software emulated)", pin);
+	}
+
+	/* Open-source mode is not supported */
 	else if (flags & GPIO_SINGLE_ENDED) {
+		LOG_ERR("GPIO_OPEN_SOURCE not supported on PIC32CX SG61");
 		retval = -ENOTSUP;
 	}
 
@@ -397,10 +457,42 @@ static int gpio_mchp_port_set_masked_raw(const struct device *dev, gpio_port_pin
 					 gpio_port_value_t value)
 {
 	const struct gpio_mchp_config *config = dev->config;
+	struct gpio_mchp_data *data = dev->data;
 	port_group_registers_t *gpio_reg = config->gpio_regs;
+	gpio_port_pins_t od_mask = mask & data->open_drain;
 
-	/* Set the output value of the port with the specified mask */
-	gpio_port_outset_masked(gpio_reg, mask, value);
+	if (od_mask != 0) {
+		/* Handle open-drain pins */
+		gpio_port_pins_t od_high = od_mask & value;       /* Pins to set HIGH */
+		gpio_port_pins_t od_low = od_mask & ~value;       /* Pins to set LOW */
+
+		if (od_high != 0) {
+			/* Set HIGH: switch to input (high-Z) */
+			for (uint32_t pin = 0; pin < 32; pin++) {
+				if (od_high & BIT(pin)) {
+					gpio_enable_input(gpio_reg, pin);
+				}
+			}
+			gpio_reg->PORT_DIRCLR = od_high;
+		}
+
+		if (od_low != 0) {
+			/* Set LOW: switch to output (drives low) */
+			for (uint32_t pin = 0; pin < 32; pin++) {
+				if (od_low & BIT(pin)) {
+					gpio_reg->PORT_PINCFG[pin] &= ~PORT_PINCFG_INEN(1);
+				}
+			}
+			gpio_reg->PORT_DIRSET = od_low;
+		}
+	}
+
+	/* Handle normal push-pull pins */
+	gpio_port_pins_t pp_mask = mask & ~data->open_drain;
+
+	if (pp_mask != 0) {
+		gpio_port_outset_masked(gpio_reg, pp_mask, value);
+	}
 
 	return 0;
 }
@@ -415,10 +507,28 @@ static int gpio_mchp_port_set_masked_raw(const struct device *dev, gpio_port_pin
 static int gpio_mchp_port_set_bits_raw(const struct device *dev, gpio_port_pins_t pins)
 {
 	const struct gpio_mchp_config *config = dev->config;
+	struct gpio_mchp_data *data = dev->data;
 	port_group_registers_t *gpio_reg = config->gpio_regs;
 
-	/* Set the specified pins in the output register */
-	gpio_port_set_pins_high(gpio_reg, pins);
+	/* Handle open-drain pins: set HIGH by switching to input (high-Z) */
+	gpio_port_pins_t od_pins = pins & data->open_drain;
+
+	if (od_pins != 0) {
+		/* Switch open-drain pins to input (releases the line) */
+		for (uint32_t pin = 0; pin < 32; pin++) {
+			if (od_pins & BIT(pin)) {
+				gpio_enable_input(gpio_reg, pin);
+			}
+		}
+		gpio_reg->PORT_DIRCLR = od_pins;
+	}
+
+	/* Handle normal push-pull pins */
+	gpio_port_pins_t pp_pins = pins & ~data->open_drain;
+
+	if (pp_pins != 0) {
+		gpio_port_set_pins_high(gpio_reg, pp_pins);
+	}
 
 	return 0;
 }
@@ -433,10 +543,32 @@ static int gpio_mchp_port_set_bits_raw(const struct device *dev, gpio_port_pins_
 static int gpio_mchp_port_clear_bits_raw(const struct device *dev, gpio_port_pins_t pins)
 {
 	const struct gpio_mchp_config *config = dev->config;
+	struct gpio_mchp_data *data = dev->data;
 	port_group_registers_t *gpio_reg = config->gpio_regs;
 
-	/* Clear the specified pins in the output register */
-	gpio_port_set_pins_low(gpio_reg, pins);
+	/* Handle open-drain pins: set LOW by switching to output (drives low) */
+	gpio_port_pins_t od_pins = pins & data->open_drain;
+
+	if (od_pins != 0) {
+		/*
+		 * Switch open-drain pins to output (drives low).
+		 * OUT register is pre-set to 0 during configuration.
+		 */
+		for (uint32_t pin = 0; pin < 32; pin++) {
+			if (od_pins & BIT(pin)) {
+				/* Disable input, set as output */
+				gpio_reg->PORT_PINCFG[pin] &= ~PORT_PINCFG_INEN(1);
+			}
+		}
+		gpio_reg->PORT_DIRSET = od_pins;
+	}
+
+	/* Handle normal push-pull pins */
+	gpio_port_pins_t pp_pins = pins & ~data->open_drain;
+
+	if (pp_pins != 0) {
+		gpio_port_set_pins_low(gpio_reg, pp_pins);
+	}
 
 	return 0;
 }
@@ -451,10 +583,47 @@ static int gpio_mchp_port_clear_bits_raw(const struct device *dev, gpio_port_pin
 static int gpio_mchp_port_toggle_bits(const struct device *dev, gpio_port_pins_t pins)
 {
 	const struct gpio_mchp_config *config = dev->config;
+	struct gpio_mchp_data *data = dev->data;
 	port_group_registers_t *gpio_reg = config->gpio_regs;
+	gpio_port_pins_t od_pins = pins & data->open_drain;
 
-	/* Toggle the specified pins in the output register */
-	gpio_port_toggle_pins(gpio_reg, pins);
+	if (od_pins != 0) {
+		/*
+		 * Toggle open-drain pins by toggling direction:
+		 *   - If currently output (driving low) -> switch to input (high-Z)
+		 *   - If currently input (high-Z) -> switch to output (drive low)
+		 */
+		gpio_port_pins_t current_dir = gpio_reg->PORT_DIR;
+		gpio_port_pins_t od_to_input = od_pins & current_dir;    /* Currently output */
+		gpio_port_pins_t od_to_output = od_pins & ~current_dir;  /* Currently input */
+
+		if (od_to_input != 0) {
+			/* Switch to input (release) */
+			for (uint32_t pin = 0; pin < 32; pin++) {
+				if (od_to_input & BIT(pin)) {
+					gpio_enable_input(gpio_reg, pin);
+				}
+			}
+			gpio_reg->PORT_DIRCLR = od_to_input;
+		}
+
+		if (od_to_output != 0) {
+			/* Switch to output (drive low) */
+			for (uint32_t pin = 0; pin < 32; pin++) {
+				if (od_to_output & BIT(pin)) {
+					gpio_reg->PORT_PINCFG[pin] &= ~PORT_PINCFG_INEN(1);
+				}
+			}
+			gpio_reg->PORT_DIRSET = od_to_output;
+		}
+	}
+
+	/* Toggle normal push-pull pins */
+	gpio_port_pins_t pp_pins = pins & ~data->open_drain;
+
+	if (pp_pins != 0) {
+		gpio_port_toggle_pins(gpio_reg, pp_pins);
+	}
 
 	return 0;
 }
@@ -478,6 +647,9 @@ static int gpio_mchp_pin_get_config(const struct device *dev, gpio_pin_t pin,
 	struct gpio_mchp_data *data = dev->data;
 	gpio_flags_t flags = 0;
 
+	/* Check if the pin is configured as open-drain (software emulated) */
+	bool is_open_drain = (data->open_drain & BIT(pin)) != 0;
+
 	/* flag to check if the pin is configured as an output */
 	bool is_output = gpio_is_pin_output(gpio_reg, pin);
 
@@ -490,8 +662,15 @@ static int gpio_mchp_pin_get_config(const struct device *dev, gpio_pin_t pin,
 	/* Check if the pin is configured as active low */
 	bool is_active_low = data->common.invert & (gpio_port_pins_t)BIT(pin);
 
-	/* Check if the pin is configured as an output */
-	if (is_output) {
+	if (is_open_drain) {
+		/*
+		 * For open-drain pins:
+		 *   - If currently input (high-Z), the line is "high" (released)
+		 *   - If currently output, the line is "low" (driven)
+		 */
+		flags |= GPIO_OUTPUT | GPIO_OPEN_DRAIN;
+		flags |= is_output ? GPIO_OUTPUT_INIT_LOW : GPIO_OUTPUT_INIT_HIGH;
+	} else if (is_output) {
 		flags |= GPIO_OUTPUT;
 		flags |= is_output_high ? GPIO_OUTPUT_INIT_HIGH : GPIO_OUTPUT_INIT_LOW;
 	} else {
