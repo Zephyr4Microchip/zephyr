@@ -13,4 +13,8 @@ if(CONFIG_BOARD_DSPIC33A_CURIOSITY_P33AK512MPS512)
   board_runner_args(ipecmd "--device=33AK512MPS512" "--flash-tool=PKOB4")
 endif()
 
+if(CONFIG_BOARD_DSPIC33A_CURIOSITY_P33AK256MPS306)
+  board_runner_args(ipecmd "--device=33AK256MPS306" "--flash-tool=PKOB4")
+endif()
+
 board_finalize_runner_args(ipecmd)

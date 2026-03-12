@@ -173,6 +173,15 @@ elseif("${BOARD_QUALIFIERS}" MATCHES "/p33ak512mps512" AND
     ARCHES AK
     FAMILIES MP
   )
+  elseif("${BOARD_QUALIFIERS}" MATCHES "/p33ak256mps306" AND
+  "${BOARD}" MATCHES "dspic33a_curiosity")
+  set(TARGET_CPU "33AK256MPS306")
+  find_dspic33_dfp(
+    OUT_INFO C30_DEVICE_INFO
+    OUT_ROOT DFP_ROOT
+    ARCHES AK
+    FAMILIES MP
+  )
 endif()
 message(STATUS "DFP file in ${C30_DEVICE_INFO}")
 message(STATUS "DFP path  ${DFP_ROOT}")
@@ -205,7 +214,7 @@ if("${XCDSC_VERSION_STR}" MATCHES ".*v([0-9]+)\\.([0-9]+).*")
   string(REGEX REPLACE ".*v([0-9]+)\\.([0-9]+).*" "\\1\\2" __XCDSC_VERSION__ "${XCDSC_VERSION_STR}")
   math(EXPR XCDSC_VERSION_INT "${__XCDSC_VERSION__}")
   if(XCDSC_VERSION_INT LESS 330)
-    message(FATAL_ERROR "XC-DSC compiler v3.30 or newer is required. Found version: ${XCDSC_VERSION_STR}")
+    message(FATAL_ERROR "XC-DSC compiler v3.31 or newer is required. Found version: ${XCDSC_VERSION_STR}")
   endif()
 else()
   message(FATAL_ERROR "Unable to detect XC-DSC compiler version from: '${XCDSC_VERSION_STR}'")
