@@ -28,6 +28,8 @@ extern "C" {
 #define IFS_COUNT 12
 #elif defined(CONFIG_BOARD_DSPIC33A_CURIOSITY_P33AK128MC106)
 #define IFS_COUNT 9
+#elif defined(CONFIG_BOARD_DSPIC33A_CURIOSITY_P33AK256MPS306)
+#define IFS_COUNT 12
 #endif
 extern uint32_t vector_start;
 
