@@ -27,8 +27,10 @@ LOG_MODULE_REGISTER(spi_mchp_sercom_g1);
 #define SPI_PIN_CNT             4
 #define TIMEOUT_VALUE_US        1000
 #define DELAY_US                1
-#define TIMEOUT_CYCLES          (TIMEOUT_VALUE_US * (CONFIG_SYS_CLOCK_HW_CYCLES_PER_SEC / 1000000))
-#define SPI_RETRY_LIMIT     ((CONFIG_SYS_CLOCK_HW_CYCLES_PER_SEC / 1000000) * TIMEOUT_VALUE_US / 6)
+/* Number of CPU Cycles used in poll-in wait */
+#define DELAY_CPU_CYCLES        6
+#define SPI_RETRY_LIMIT                                                                            \
+	((CONFIG_SYS_CLOCK_HW_CYCLES_PER_SEC / 1000000) * TIMEOUT_VALUE_US / DELAY_CPU_CYCLES)
 
 struct mchp_spi_reg_config {
 	sercom_registers_t *regs;
@@ -57,9 +59,9 @@ struct spi_mchp_dev_config {
 	struct mchp_spi_dma spi_dma;
 #endif /* CONFIG_SPI_MCHP_DMA_DRIVEN_ASYNC */
 
-#if defined(CONFIG_SPI_MCHP_INTERRUPT_DRIVEN)
+#if defined(CONFIG_SPI_MCHP_INTERRUPT_DRIVEN_ASYNC)
 	void (*irq_config_func)(const struct device *dev);
-#endif /* CONFIG_SPI_MCHP_INTERRUPT_DRIVEN */
+#endif /* CONFIG_SPI_MCHP_INTERRUPT_DRIVEN_ASYNC */
 
 	struct mchp_spi_clock spi_clock;
 };
@@ -67,9 +69,9 @@ struct spi_mchp_dev_config {
 struct spi_mchp_dev_data {
 	struct spi_context ctx;
 
-#if defined(CONFIG_SPI_MCHP_INTERRUPT_DRIVEN)
+#if defined(CONFIG_SPI_MCHP_INTERRUPT_DRIVEN_ASYNC)
 	uint16_t dummysize;
-#endif /* CONFIG_SPI_MCHP_INTERRUPT_DRIVEN */
+#endif /* CONFIG_SPI_MCHP_INTERRUPT_DRIVEN_ASYNC */
 
 #if CONFIG_SPI_MCHP_DMA_DRIVEN_ASYNC
 	const struct device *dev;
@@ -81,6 +83,7 @@ struct spi_mchp_dev_data {
 static inline void spi_wait_sync(const struct mchp_spi_reg_config *spi_reg_cfg, uint32_t sync_flag)
 {
 	sercom_spi_registers_t *spi = SPI_GET_BASE_ADDR(spi_reg_cfg->regs, SPI_OP_MODE_MASTER);
+
 	if (WAIT_FOR(((spi->SERCOM_SYNCBUSY & sync_flag) == 0), TIMEOUT_VALUE_US,
 		     k_busy_wait(DELAY_US)) == false) {
 		LOG_ERR("Timeout waiting for SPI SYNCBUSY ENABLE clear");
@@ -92,6 +95,7 @@ static void spi_enable(const struct mchp_spi_reg_config *spi_reg_cfg, spi_operat
 {
 	sercom_spi_registers_t *spi =
 		SPI_GET_BASE_ADDR(spi_reg_cfg->regs, SPI_OP_MODE_GET(op) == SPI_OP_MODE_SLAVE);
+
 	spi_wait_sync(spi_reg_cfg, SERCOM_SPI_SYNCBUSY_ENABLE_Msk);
 	spi->SERCOM_CTRLA |= SERCOM_SPI_CTRLA_ENABLE_Msk;
 	spi_wait_sync(spi_reg_cfg, SERCOM_SPI_SYNCBUSY_ENABLE_Msk);
@@ -101,6 +105,7 @@ static void spi_enable(const struct mchp_spi_reg_config *spi_reg_cfg, spi_operat
 static void spi_disable(const struct mchp_spi_reg_config *spi_reg_cfg)
 {
 	sercom_spi_registers_t *spi = SPI_GET_BASE_ADDR(spi_reg_cfg->regs, SPI_OP_MODE_MASTER);
+
 	spi_wait_sync(spi_reg_cfg, SERCOM_SPI_SYNCBUSY_ENABLE_Msk);
 	spi->SERCOM_CTRLA &= ~SERCOM_SPI_CTRLA_ENABLE_Msk;
 	spi_wait_sync(spi_reg_cfg, SERCOM_SPI_SYNCBUSY_ENABLE_Msk);
@@ -129,19 +134,11 @@ static void spi_set_baudrate(const struct mchp_spi_reg_config *spi_reg_cfg,
 	spi->SERCOM_BAUD = baud_value;
 }
 
-#ifdef CONFIG_SPI_MCHP_INTER_CHARACTER_SPACE
-/*Set the Inter character dpacing*/
-static inline void spi_set_icspace(const struct mchp_spi_reg_config *spi_reg_cfg)
-{
-	spi_reg_cfg->regs->SPIM.SERCOM_CTRLC |=
-		SERCOM_SPIM_CTRLC_ICSPACE(CONFIG_SPI_MCHP_INTER_CHARACTER_SPACE);
-}
-#endif /* CONFIG_SPI_MCHP_INTER_CHARACTER_SPACE */
-
 /*Write Data into DATA register*/
 static inline void spi_write_data(const struct mchp_spi_reg_config *spi_reg_cfg, uint8_t data)
 {
 	sercom_spi_registers_t *spi = SPI_GET_BASE_ADDR(spi_reg_cfg->regs, SPI_OP_MODE_MASTER);
+
 	spi->SERCOM_DATA = data;
 }
 
@@ -149,6 +146,7 @@ static inline void spi_write_data(const struct mchp_spi_reg_config *spi_reg_cfg,
 static inline uint8_t spi_read_data(const struct mchp_spi_reg_config *spi_reg_cfg)
 {
 	sercom_spi_registers_t *spi = SPI_GET_BASE_ADDR(spi_reg_cfg->regs, SPI_OP_MODE_MASTER);
+
 	return (uint8_t)spi->SERCOM_DATA;
 }
 
@@ -156,6 +154,7 @@ static inline uint8_t spi_read_data(const struct mchp_spi_reg_config *spi_reg_cf
 static inline bool spi_slave_is_data_reg_empty(const struct mchp_spi_reg_config *spi_reg_cfg)
 {
 	sercom_spi_registers_t *spi = SPI_GET_BASE_ADDR(spi_reg_cfg->regs, SPI_OP_MODE_SLAVE);
+
 	return (spi->SERCOM_INTFLAG & SERCOM_SPI_INTFLAG_DRE_Msk) == SERCOM_SPI_INTFLAG_DRE_Msk;
 }
 
@@ -163,6 +162,7 @@ static inline bool spi_slave_is_data_reg_empty(const struct mchp_spi_reg_config 
 static inline void spi_slave_write_data(const struct mchp_spi_reg_config *spi_reg_cfg, uint8_t data)
 {
 	sercom_spi_registers_t *spi = SPI_GET_BASE_ADDR(spi_reg_cfg->regs, SPI_OP_MODE_SLAVE);
+
 	spi->SERCOM_DATA = data;
 }
 
@@ -197,6 +197,7 @@ static void spi_configure_cpol(const struct mchp_spi_reg_config *spi_reg_cfg,
 {
 	sercom_spi_registers_t *spi = SPI_GET_BASE_ADDR(
 		spi_reg_cfg->regs, SPI_OP_MODE_GET(config->operation) == SPI_OP_MODE_SLAVE);
+
 	if ((config->operation & SPI_MODE_CPOL) != 0U) {
 		/*Set the SPI Clock Polarity Idle High*/
 		spi->SERCOM_CTRLA |= SERCOM_SPI_CTRLA_CPOL_IDLE_HIGH;
@@ -211,6 +212,7 @@ static void spi_configure_cpha(const struct mchp_spi_reg_config *spi_reg_cfg,
 {
 	sercom_spi_registers_t *spi = SPI_GET_BASE_ADDR(
 		spi_reg_cfg->regs, SPI_OP_MODE_GET(config->operation) == SPI_OP_MODE_SLAVE);
+
 	if ((config->operation & SPI_MODE_CPHA) != 0U) {
 		/*Set the SPI Clock Phase Trailing Edge*/
 		spi->SERCOM_CTRLA |= SERCOM_SPI_CTRLA_CPHA_TRAILING_EDGE;
@@ -266,7 +268,6 @@ static int spi_mchp_configure(const struct device *dev, const struct spi_config 
 	spi_wait_sync(spi_reg_cfg, SERCOM_SPI_SYNCBUSY_CTRLB_Msk);
 	spi->SERCOM_CTRLB |= SERCOM_SPI_CTRLB_RXEN_Msk;
 	spi_wait_sync(spi_reg_cfg, SERCOM_SPI_SYNCBUSY_CTRLB_Msk);
-
 #if CONFIG_SPI_SLAVE
 	if (SPI_OP_MODE_GET(config->operation) == SPI_OP_MODE_SLAVE) {
 		/* Enable the preload slave data*/
@@ -284,7 +285,8 @@ static int spi_mchp_configure(const struct device *dev, const struct spi_config 
 	if (SPI_OP_MODE_GET(config->operation) == SPI_OP_MODE_MASTER) {
 
 #ifdef CONFIG_SPI_MCHP_INTER_CHARACTER_SPACE
-		spi_set_icspace(spi_reg_cfg);
+		spi_reg_cfg->regs->SPIM.SERCOM_CTRLC |=
+			SERCOM_SPIM_CTRLC_ICSPACE(CONFIG_SPI_MCHP_INTER_CHARACTER_SPACE);
 #endif /* CONFIG_SPI_MCHP_INTER_CHARACTER_SPACE */
 
 		clock_control_get_rate(cfg->spi_clock.clock_dev, cfg->spi_clock.gclk_sys,
@@ -341,9 +343,9 @@ static int spi_mchp_configure(const struct device *dev, const struct spi_config 
 
 	spi_enable(spi_reg_cfg, config->operation);
 
-#if defined(CONFIG_SPI_MCHP_INTERRUPT_DRIVEN)
+#if defined(CONFIG_SPI_MCHP_INTERRUPT_DRIVEN_ASYNC)
 	cfg->irq_config_func(dev);
-#endif /* CONFIG_SPI_MCHP_INTERRUPT_DRIVEN */
+#endif /* CONFIG_SPI_MCHP_INTERRUPT_DRIVEN_ASYNC */
 
 #if CONFIG_SPI_MCHP_DMA_DRIVEN_ASYNC
 	if (device_is_ready(cfg->spi_dma.dma_dev) != true) {
@@ -430,7 +432,7 @@ static int spi_mchp_poll_in(const struct mchp_spi_reg_config *spi_reg_cfg,
 
 #endif /* CONFIG_SPI_MCHP_POLLING_MODE*/
 
-#if CONFIG_SPI_MCHP_INTERRUPT_DRIVEN
+#if CONFIG_SPI_MCHP_INTERRUPT_DRIVEN_ASYNC
 static int spi_mchp_transceive_interrupt(const struct device *dev, const struct spi_config *config,
 					 const struct spi_buf_set *tx_bufs,
 					 const struct spi_buf_set *rx_bufs)
@@ -529,7 +531,7 @@ static int spi_mchp_slave_transceive_interrupt(const struct device *dev,
 }
 
 #endif /* CONFIG_SPI_SLAVE */
-#endif /* CONFIG_SPI_MCHP_INTERRUPT_DRIVEN */
+#endif /* CONFIG_SPI_MCHP_INTERRUPT_DRIVEN_ASYNC */
 
 #if CONFIG_SPI_MCHP_POLLING_MODE
 static int spi_mchp_transceive_sync(const struct device *dev, const struct spi_config *config,
@@ -878,7 +880,7 @@ static int spi_mchp_release(const struct device *dev, const struct spi_config *c
 	return 0;
 }
 
-#if CONFIG_SPI_MCHP_INTERRUPT_DRIVEN
+#if CONFIG_SPI_MCHP_INTERRUPT_DRIVEN_ASYNC
 #if CONFIG_SPI_SLAVE
 static void spi_mchp_isr_slave(const struct device *dev)
 {
@@ -969,6 +971,7 @@ static void spi_mchp_isr_master(const struct device *dev)
 
 	do {
 		bool transmit_needed, receive_needed;
+
 		if (spi->SERCOM_INTENSET == 0) {
 			break;
 		}
@@ -1002,11 +1005,10 @@ static void spi_mchp_isr_master(const struct device *dev)
 				if (transmit_needed == false) {
 					transeive_complete = true;
 					break;
-				} else {
-					/*Disable the Receive Complete Interrupt*/
-					spi->SERCOM_INTENCLR = SERCOM_SPI_INTENCLR_RXC_Msk;
-					spi->SERCOM_INTENSET = SERCOM_SPI_INTENCLR_DRE_Msk;
 				}
+				/*Disable the Receive Complete Interrupt*/
+				spi->SERCOM_INTENCLR = SERCOM_SPI_INTENCLR_RXC_Msk;
+				spi->SERCOM_INTENSET = SERCOM_SPI_INTENCLR_DRE_Msk;
 			}
 		}
 
@@ -1072,7 +1074,7 @@ static void spi_mchp_isr(const struct device *dev)
 
 	spi_mchp_isr_master(dev);
 }
-#endif /* CONFIG_SPI_MCHP_INTERRUPT_DRIVEN */
+#endif /* CONFIG_SPI_MCHP_INTERRUPT_DRIVEN_ASYNC */
 
 static int spi_mchp_init(const struct device *dev)
 {
@@ -1132,7 +1134,7 @@ static DEVICE_API(spi, spi_mchp_api) = {
 	.reg_cfg.regs = (sercom_registers_t *)DT_INST_REG_ADDR(n),                                 \
 	.reg_cfg.pads = SPI_MCHP_SERCOM_PADS(n),
 
-#if CONFIG_SPI_MCHP_INTERRUPT_DRIVEN
+#if CONFIG_SPI_MCHP_INTERRUPT_DRIVEN_ASYNC
 #if DT_INST_IRQ_HAS_IDX(0, 3)
 #define SPI_MCHP_IRQ_HANDLER(n)                                                                    \
 	static void spi_mchp_irq_config_##n(const struct device *dev)                              \
@@ -1151,14 +1153,14 @@ static DEVICE_API(spi, spi_mchp_api) = {
 #endif
 #else
 #define SPI_MCHP_IRQ_HANDLER(n)
-#endif /* CONFIG_SPI_MCHP_INTERRUPT_DRIVEN  */
+#endif /* CONFIG_SPI_MCHP_INTERRUPT_DRIVEN_ASYNC  */
 
 #define SPI_MCHP_CLOCK_DEFN(n)                                                                     \
 	.spi_clock.clock_dev = DEVICE_DT_GET(DT_NODELABEL(clock)),                                 \
 	.spi_clock.mclk_sys = (void *)(DT_INST_CLOCKS_CELL_BY_NAME(n, mclk, subsystem)),           \
 	.spi_clock.gclk_sys = (void *)(DT_INST_CLOCKS_CELL_BY_NAME(n, gclk, subsystem))
 
-#if CONFIG_SPI_MCHP_INTERRUPT_DRIVEN
+#if CONFIG_SPI_MCHP_INTERRUPT_DRIVEN_ASYNC
 #define MCHP_SPI_IRQ_CONNECT(n, m)                                                                 \
 	do {                                                                                       \
 		IRQ_CONNECT(DT_INST_IRQ_BY_IDX(n, m, irq), DT_INST_IRQ_BY_IDX(n, m, priority),     \
@@ -1171,7 +1173,7 @@ static DEVICE_API(spi, spi_mchp_api) = {
 #else
 #define SPI_MCHP_IRQ_HANDLER_DECL(n)
 #define SPI_MCHP_IRQ_HANDLER_FUNC(n)
-#endif /* CONFIG_SPI_MCHP_INTERRUPT_DRIVEN  */
+#endif /* CONFIG_SPI_MCHP_INTERRUPT_DRIVEN_ASYNC  */
 
 #if CONFIG_SPI_MCHP_DMA_DRIVEN_ASYNC
 #define SPI_MCHP_DMA_CHANNELS(n)                                                                   \

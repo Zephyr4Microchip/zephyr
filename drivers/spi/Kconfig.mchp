@@ -37,11 +37,11 @@ menu "SPI ASYNC SELECTION"
 
 choice
 	prompt "Select Async Mode: Interrupt or DMA"
-	default SPI_MCHP_INTERRUPT_DRIVEN
+	default SPI_MCHP_INTERRUPT_DRIVEN_ASYNC
 	help
 	  Choose between interrupt or DMA async mode for the MCHP SPI driver.
 
-config SPI_MCHP_INTERRUPT_DRIVEN
+config SPI_MCHP_INTERRUPT_DRIVEN_ASYNC
 	bool "Microchip SERCOM SPI driver (Interrupt Driven)"
 	help
 	  Enables interrupt support for the MCHP SPI driver in async mode.
