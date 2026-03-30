@@ -31,4 +31,9 @@ config PIN_DRIVE_STRENGTH
 	help
 	  This option enables Drive strength for the pin.
 
+config PIN_NON_SECURE_ENABLE
+	bool "Support secure and non-secure pin control"
+	help
+	  This option enables secure and non-secure pin control.
+
 endif # PINCTRL_MCHP_COMMON
