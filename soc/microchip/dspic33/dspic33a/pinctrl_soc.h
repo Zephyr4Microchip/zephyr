@@ -13,6 +13,8 @@
 #include <zephyr/dt-bindings/pinctrl/mchp-p33ak128mc106-pinctrl.h>
 #elif defined(CONFIG_BOARD_DSPIC33A_CURIOSITY_P33AK512MPS512)
 #include <zephyr/dt-bindings/pinctrl/mchp-p33ak512mps512-pinctrl.h>
+#elif defined(CONFIG_BOARD_DSPIC33A_CURIOSITY_P33AK256MPS306)
+#include <zephyr/dt-bindings/pinctrl/mchp-p33ak256mps306-pinctrl.h>
 #endif
 
 #ifdef __cplusplus

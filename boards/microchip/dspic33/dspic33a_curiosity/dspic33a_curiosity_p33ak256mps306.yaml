@@ -1,0 +1,15 @@
+identifier: dspic33a_curiosity/p33ak256mps306
+name: EV74H48A EVB DSPIC33AK256MPS306
+type: mcu
+arch: dspic
+toolchain:
+  - xcdsc
+ram: 64
+flash: 256
+supported:
+  - uart
+  - timer
+  - gpio
+testing:
+  default: true
+vendor: microchip
