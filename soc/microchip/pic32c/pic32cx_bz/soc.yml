@@ -11,6 +11,16 @@ family:
   - name: bz24
     socs:
     - name: pic32cx1012bz24032
+- name: microchip_pic32cx_bz3
+  series:
+  - name: bz3
+    socs:
+    - name: pic32cx5109bz31048
+    - name: pic32cx5109bz31032
+  - name: bz36
+    socs:
+    - name: pic32cx5109bz36032
+    - name: pic32cx5109bz36048
 - name: microchip_pic32cx_bz6
   series:
   - name: bz62
