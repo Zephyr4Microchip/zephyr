@@ -16,7 +16,3 @@ config SOC_PIC32CX1012BZ24032
 
 config SOC
 	default "pic32cx1012bz24032" if SOC_PIC32CX1012BZ24032
-
-
-
-rsource "Kconfig.system_config"

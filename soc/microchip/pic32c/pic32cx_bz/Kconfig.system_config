@@ -3,10 +3,10 @@
 
 
 menu "System Configuration"
-	depends on SOC_SERIES_PIC32CX_BZ66
 
 
 ############################### FUSERID ###############################
+
 
 menu "FUSERID"
 
@@ -466,6 +466,7 @@ config FUSES_DEVCFG4_UVREGROVR
 	default 0 if FUSES_DEVCFG4_UVREGROVR_CONTROLLED
 
 
+if SOC_FAMILY_MICROCHIP_PIC32CX_BZ6
 choice FUSES_DEVCFG4_LPOSCEN
 	prompt "Low Power (Secondary) Oscillator Enable (LPOSCEN)"
 	default FUSES_DEVCFG4_LPOSCEN_OFF
@@ -484,6 +485,7 @@ config FUSES_DEVCFG4_LPOSCEN
 	int
 	default 1 if FUSES_DEVCFG4_LPOSCEN_ON
 	default 0 if FUSES_DEVCFG4_LPOSCEN_OFF
+endif #SOC_FAMILY_MICROCHIP_PIC32CX_BZ6
 
 
 choice FUSES_DEVCFG4_RTCNTM_CSEL
@@ -1062,11 +1064,43 @@ endmenu
 
 menu "DEVCFG1"
 
+if SOC_FAMILY_MICROCHIP_PIC32CX_BZ6
 config FUSES_DEVCFG1_CAN0_PIN_EN
 	hex "CAN0 Pin Enable (CAN0_PIN_EN)"
 	default 0x0
 	help
 	  Assignment of value for CAN0_PIN_EN in the FUSES_DEVCFG1 register
+endif #SOC_FAMILY_MICROCHIP_PIC32CX_BZ6
+
+
+if SOC_FAMILY_MICROCHIP_PIC32CX_BZ2
+choice FUSES_DEVCFG1_ICESEL
+	prompt "EMUC/EMUD Communication Channel Select (ICESEL)"
+	default FUSES_DEVCFG1_ICESEL_PGC1_PGD1
+	help
+	  Assignment of value for ICESEL in the FUSES_DEVCFG1 register
+	  - PGC4_PGD4: ICE EMUC4/EMUD4 pins are shared with PGC4/PGD4
+	  - NOT_USED: ICE EMUC3/EMUD3 pins are shared with PGC3/PGD3 (Not used on this device)
+	  - PGC2_PGD2: ICE EMUC2/EMUD2 pins are shared with PGC2/PGD2
+	  - PGC1_PGD1: ICE EMUC1/EMUD1 pins are shared with PGC1/PGD1
+
+	config FUSES_DEVCFG1_ICESEL_PGC4_PGD4
+		bool "PGC4_PGD4"
+	config FUSES_DEVCFG1_ICESEL_NOT_USED
+		bool "NOT_USED"
+	config FUSES_DEVCFG1_ICESEL_PGC2_PGD2
+		bool "PGC2_PGD2"
+	config FUSES_DEVCFG1_ICESEL_PGC1_PGD1
+		bool "PGC1_PGD1"
+endchoice
+
+config FUSES_DEVCFG1_ICESEL
+	int
+	default 0 if FUSES_DEVCFG1_ICESEL_PGC4_PGD4
+	default 1 if FUSES_DEVCFG1_ICESEL_NOT_USED
+	default 2 if FUSES_DEVCFG1_ICESEL_PGC2_PGD2
+	default 3 if FUSES_DEVCFG1_ICESEL_PGC1_PGD1
+endif #SOC_FAMILY_MICROCHIP_PIC32CX_BZ2
 
 
 choice FUSES_DEVCFG1_TRCEN
@@ -1149,6 +1183,92 @@ config FUSES_DEVCFG1_CMP1_OE
 	default 1 if FUSES_DEVCFG1_CMP1_OE_ON
 
 
+if SOC_FAMILY_MICROCHIP_PIC32CX_BZ2
+choice FUSES_DEVCFG1_CLASSBDIS
+	prompt "Disable CLASSB Device Functionality (CLASSBDIS)"
+	default FUSES_DEVCFG1_CLASSBDIS_OFF
+	help
+	  Assignment of value for CLASSBDIS in the FUSES_DEVCFG1 register
+	  - OFF: CLASSB functions are enabled
+	  - ON: CLASSB functions are disabled
+
+	config FUSES_DEVCFG1_CLASSBDIS_OFF
+		bool "OFF"
+	config FUSES_DEVCFG1_CLASSBDIS_ON
+		bool "ON"
+endchoice
+
+config FUSES_DEVCFG1_CLASSBDIS
+	int
+	default 1 if FUSES_DEVCFG1_CLASSBDIS_OFF
+	default 0 if FUSES_DEVCFG1_CLASSBDIS_ON
+endif #SOC_FAMILY_MICROCHIP_PIC32CX_BZ2
+
+
+if SOC_FAMILY_MICROCHIP_PIC32CX_BZ2
+choice FUSES_DEVCFG1_SLRCTRL0
+	prompt "I2C Slew Rate Control for SERCOM0 (SLRCTRL0)"
+	default FUSES_DEVCFG1_SLRCTRL0_GPIO
+	help
+	  Assignment of value for SLRCTRL0 in the FUSES_DEVCFG1 register
+	  - SERCOM: Slew rate control is configured via SERCOM configuration
+	  - GPIO: Slew rate control is configured via GPIO configuration
+
+	config FUSES_DEVCFG1_SLRCTRL0_GPIO
+		bool "GPIO"
+	config FUSES_DEVCFG1_SLRCTRL0_SERCOM
+		bool "SERCOM"
+endchoice
+
+config FUSES_DEVCFG1_SLRCTRL0
+	int
+	default 1 if FUSES_DEVCFG1_SLRCTRL0_SERCOM
+	default 0 if FUSES_DEVCFG1_SLRCTRL0_GPIO
+
+
+choice FUSES_DEVCFG1_SLRCTRL1
+	prompt "I2C Slew Rate Control for SERCOM1 (SLRCTRL1)"
+	default FUSES_DEVCFG1_SLRCTRL1_GPIO
+	help
+	  Assignment of value for SLRCTRL1 in the FUSES_DEVCFG1 register
+	  - SERCOM: Slew rate control is configured via SERCOM configuration
+	  - GPIO: Slew rate control is configured via GPIO configuration
+
+	config FUSES_DEVCFG1_SLRCTRL1_GPIO
+		bool "GPIO"
+	config FUSES_DEVCFG1_SLRCTRL1_SERCOM
+		bool "SERCOM"
+endchoice
+
+config FUSES_DEVCFG1_SLRCTRL1
+	int
+	default 1 if FUSES_DEVCFG1_SLRCTRL1_SERCOM
+	default 0 if FUSES_DEVCFG1_SLRCTRL1_GPIO
+endif #SOC_FAMILY_MICROCHIP_PIC32CX_BZ2
+
+
+if SOC_SERIES_PIC32CX_BZ25
+choice FUSES_DEVCFG1_SLRCTRL2
+	prompt "I2C Slew Rate Control for SERCOM2 (SLRCTRL2)"
+	default FUSES_DEVCFG1_SLRCTRL2_GPIO
+	help
+	  Assignment of value for SLRCTRL2 in the FUSES_DEVCFG1 register
+	  - SERCOM: Slew rate control is configured via SERCOM configuration
+	  - GPIO: Slew rate control is configured via GPIO configuration
+
+	config FUSES_DEVCFG1_SLRCTRL2_GPIO
+		bool "GPIO"
+	config FUSES_DEVCFG1_SLRCTRL2_SERCOM
+		bool "SERCOM"
+endchoice
+
+config FUSES_DEVCFG1_SLRCTRL2
+	int
+	default 1 if FUSES_DEVCFG1_SLRCTRL2_SERCOM
+	default 0 if FUSES_DEVCFG1_SLRCTRL2_GPIO
+endif #SOC_SERIES_PIC32CX_BZ25
+
+
 choice FUSES_DEVCFG1_SMCLR
 	prompt "Selects CRU handling of MCLR Control (SMCLR)"
 	default FUSES_DEVCFG1_SMCLR_NO_POR
@@ -1190,6 +1310,7 @@ config FUSES_DEVCFG1_QSCHE_EN
 	default 1 if FUSES_DEVCFG1_QSCHE_EN_ON
 
 
+if !SOC_SERIES_PIC32CX_BZ24
 choice FUSES_DEVCFG1_QSPI_HSEN
 	prompt "QSPI Direct (High Speed) Pin Enable (QSPI_HSEN)"
 	default FUSES_DEVCFG1_QSPI_HSEN_PPS
@@ -1208,6 +1329,7 @@ config FUSES_DEVCFG1_QSPI_HSEN
 	int
 	default 0 if FUSES_DEVCFG1_QSPI_HSEN_PPS
 	default 1 if FUSES_DEVCFG1_QSPI_HSEN_DIRECT
+endif #!SOC_SERIES_PIC32CX_BZ24
 
 
 choice FUSES_DEVCFG1_SCOM0_HSEN
@@ -1250,6 +1372,7 @@ config FUSES_DEVCFG1_SCOM1_HSEN
 	default 1 if FUSES_DEVCFG1_SCOM1_HSEN_DIRECT
 
 
+if SOC_FAMILY_MICROCHIP_PIC32CX_BZ6 || SOC_SERIES_PIC32CX_BZ25
 choice FUSES_DEVCFG1_SCOM2_HSEN
 	prompt "SERCOM2 Direct (High Speed) Pin Enable (SCOM2_HSEN)"
 	default FUSES_DEVCFG1_SCOM2_HSEN_PPS
@@ -1268,11 +1391,13 @@ config FUSES_DEVCFG1_SCOM2_HSEN
 	int
 	default 0 if FUSES_DEVCFG1_SCOM2_HSEN_PPS
 	default 1 if FUSES_DEVCFG1_SCOM2_HSEN_DIRECT
+endif #SOC_FAMILY_MICROCHIP_PIC32CX_BZ6 || SOC_SERIES_PIC32CX_BZ25
 
 
 choice FUSES_DEVCFG1_CCL_OE
 	prompt "CCL Pads (via PPS) Output Enable (CCL_OE)"
-	default FUSES_DEVCFG1_CCL_OE_OFF
+	default FUSES_DEVCFG1_CCL_OE_OFF if SOC_FAMILY_MICROCHIP_PIC32CX_BZ6
+	default FUSES_DEVCFG1_CCL_OE_ON
 	help
 	  Assignment of value for CCL_OE in the FUSES_DEVCFG1 register
 	  - OFF: CCL pads (via PPS) output is disabled
@@ -1288,6 +1413,184 @@ config FUSES_DEVCFG1_CCL_OE
 	int
 	default 0 if FUSES_DEVCFG1_CCL_OE_OFF
 	default 1 if FUSES_DEVCFG1_CCL_OE_ON
+
+
+if SOC_FAMILY_MICROCHIP_PIC32CX_BZ2
+choice FUSES_DEVCFG1_I2CDSEL0
+	prompt "I2C Delay Select for SERCOM0 (I2CDSEL0)"
+	default FUSES_DEVCFG1_I2CDSEL0_OFF
+	help
+	  Assignment of value for I2CDSEL0 in the FUSES_DEVCFG1 register
+	  - OFF: CCL pads (via PPS) output is disabled
+	  - ON: CCL pads (via PPS) output is enabled
+
+	config FUSES_DEVCFG1_I2CDSEL0_OFF
+		bool "OFF"
+	config FUSES_DEVCFG1_I2CDSEL0_ON
+		bool "ON"
+endchoice
+
+config FUSES_DEVCFG1_I2CDSEL0
+	int
+	default 0 if FUSES_DEVCFG1_I2CDSEL0_OFF
+	default 1 if FUSES_DEVCFG1_I2CDSEL0_ON
+
+
+choice FUSES_DEVCFG1_I2CDSEL1
+	prompt "I2C Delay Select for SERCOM1 (I2CDSEL1)"
+	default FUSES_DEVCFG1_I2CDSEL1_OFF
+	help
+	  Assignment of value for I2CDSEL1 in the FUSES_DEVCFG1 register
+	  - OFF: CCL pads (via PPS) output is disabled
+	  - ON: CCL pads (via PPS) output is enabled
+
+	config FUSES_DEVCFG1_I2CDSEL1_OFF
+		bool "OFF"
+	config FUSES_DEVCFG1_I2CDSEL1_ON
+		bool "ON"
+endchoice
+
+config FUSES_DEVCFG1_I2CDSEL1
+	int
+	default 0 if FUSES_DEVCFG1_I2CDSEL1_OFF
+	default 1 if FUSES_DEVCFG1_I2CDSEL1_ON
+endif #SOC_FAMILY_MICROCHIP_PIC32CX_BZ2
+
+
+if SOC_SERIES_PIC32CX_BZ25
+choice FUSES_DEVCFG1_I2CDSEL2
+	prompt "I2C Delay Select for SERCOM2 (I2CDSEL2)"
+	default FUSES_DEVCFG1_I2CDSEL2_OFF
+	help
+	  Assignment of value for I2CDSEL2 in the FUSES_DEVCFG1 register
+	  - OFF: CCL pads (via PPS) output is disabled
+	  - ON: CCL pads (via PPS) output is enabled
+
+	config FUSES_DEVCFG1_I2CDSEL2_OFF
+		bool "OFF"
+	config FUSES_DEVCFG1_I2CDSEL2_ON
+		bool "ON"
+endchoice
+
+config FUSES_DEVCFG1_I2CDSEL2
+	int
+	default 0 if FUSES_DEVCFG1_I2CDSEL2_OFF
+	default 1 if FUSES_DEVCFG1_I2CDSEL2_ON
+endif #SOC_SERIES_PIC32CX_BZ25
+
+
+if SOC_SERIES_PIC32CX_BZ62
+choice FUSES_DEVCFG1_USBDMFTRIM
+	prompt "USB DM Fall Trim fuse bits (USBDMFTRIM)"
+	default FUSES_DEVCFG1_USBDMFTRIM_DEFAULT
+	help
+	  Assignment of value for USBDMFTRIM in the FUSES_DEVCFG1 register
+	  - DEFAULT: DEFAULT
+	  - SLOWER: SLOWER
+	  - SLIGH_FASTER: SLIGH_FASTER
+	  - SLIGH_SLOWER: SLIGH_SLOWER
+
+	config FUSES_DEVCFG1_USBDMFTRIM_DEFAULT
+		bool "DEFAULT"
+	config FUSES_DEVCFG1_USBDMFTRIM_SLOWER
+		bool "SLOWER"
+	config FUSES_DEVCFG1_USBDMFTRIM_SLIGH_FASTER
+		bool "SLIGH_FASTER"
+	config FUSES_DEVCFG1_USBDMFTRIM_SLIGH_SLOWER
+		bool "SLIGH_SLOWER"
+endchoice
+
+config FUSES_DEVCFG1_USBDMFTRIM
+	int
+	default 0 if FUSES_DEVCFG1_USBDMFTRIM_DEFAULT
+	default 1 if FUSES_DEVCFG1_USBDMFTRIM_SLOWER
+	default 2 if FUSES_DEVCFG1_USBDMFTRIM_SLIGH_FASTER
+	default 3 if FUSES_DEVCFG1_USBDMFTRIM_SLIGH_SLOWER
+
+
+choice FUSES_DEVCFG1_USBDMRTRIM
+	prompt "USB DM Rise Trim fuse bits (USBDMRTRIM)"
+	default FUSES_DEVCFG1_USBDMRTRIM_DEFAULT
+	help
+	  Assignment of value for USBDMRTRIM in the FUSES_DEVCFG1 register
+	  - DEFAULT: DEFAULT
+	  - SLOWER: SLOWER
+	  - SLIGH_FASTER: SLIGH_FASTER
+	  - SLIGH_SLOWER: SLIGH_SLOWER
+
+	config FUSES_DEVCFG1_USBDMRTRIM_DEFAULT
+		bool "DEFAULT"
+	config FUSES_DEVCFG1_USBDMRTRIM_SLIGH_FASTER
+		bool "SLOWER"
+	config FUSES_DEVCFG1_USBDMRTRIM_FASTER
+		bool "SLIGH_FASTER"
+	config FUSES_DEVCFG1_USBDMRTRIM_SLOWER
+		bool "SLIGH_SLOWER"
+endchoice
+
+config FUSES_DEVCFG1_USBDMRTRIM
+	int
+	default 0 if FUSES_DEVCFG1_USBDMRTRIM_DEFAULT
+	default 1 if FUSES_DEVCFG1_USBDMRTRIM_SLIGH_FASTER
+	default 2 if FUSES_DEVCFG1_USBDMRTRIM_FASTER
+	default 3 if FUSES_DEVCFG1_USBDMRTRIM_SLOWER
+
+
+choice FUSES_DEVCFG1_USBDPFTRIM
+	prompt "USB DP Fall Trim fuse bits (USBDPFTRIM)"
+	default FUSES_DEVCFG1_USBDPFTRIM_DEFAULT
+	help
+	  Assignment of value for USBDPFTRIM in the FUSES_DEVCFG1 register
+	  - DEFAULT: DEFAULT
+	  - SLOWER: SLOWER
+	  - SLIGH_FASTER: SLIGH_FASTER
+	  - SLIGH_SLOWER: SLIGH_SLOWER
+
+	config FUSES_DEVCFG1_USBDPFTRIM_DEFAULT
+		bool "DEFAULT"
+	config FUSES_DEVCFG1_USBDPFTRIM_SLOWER
+		bool "SLOWER"
+	config FUSES_DEVCFG1_USBDPFTRIM_SLIGH_FASTER
+		bool "SLIGH_FASTER"
+	config FUSES_DEVCFG1_USBDPFTRIM_SLIGH_SLOWER
+		bool "SLIGH_SLOWER"
+endchoice
+
+config FUSES_DEVCFG1_USBDPFTRIM
+	int
+	default 0 if FUSES_DEVCFG1_USBDPFTRIM_DEFAULT
+	default 1 if FUSES_DEVCFG1_USBDPFTRIM_SLOWER
+	default 2 if FUSES_DEVCFG1_USBDPFTRIM_SLIGH_FASTER
+	default 3 if FUSES_DEVCFG1_USBDPFTRIM_SLIGH_SLOWER
+
+
+choice FUSES_DEVCFG1_USBDPRTRIM
+	prompt "USB DP Rise Trim fuse bits (USBDPRTRIM)"
+	default FUSES_DEVCFG1_USBDPRTRIM_DEFAULT
+	help
+	  Assignment of value for USBDPRTRIM in the FUSES_DEVCFG1 register
+	  - DEFAULT: DEFAULT
+	  - SLOWER: SLOWER
+	  - SLIGH_FASTER: SLIGH_FASTER
+	  - SLIGH_SLOWER: SLIGH_SLOWER
+
+	config FUSES_DEVCFG1_USBDPRTRIM_DEFAULT
+		bool "DEFAULT"
+	config FUSES_DEVCFG1_USBDPRTRIM_SLIGH_FASTER
+		bool "SLOWER"
+	config FUSES_DEVCFG1_USBDPRTRIM_FASTER
+		bool "SLIGH_FASTER"
+	config FUSES_DEVCFG1_USBDPRTRIM_SLOWER
+		bool "SLIGH_SLOWER"
+endchoice
+
+config FUSES_DEVCFG1_USBDPRTRIM
+	int
+	default 0 if FUSES_DEVCFG1_USBDPRTRIM_DEFAULT
+	default 1 if FUSES_DEVCFG1_USBDPRTRIM_SLIGH_FASTER
+	default 2 if FUSES_DEVCFG1_USBDPRTRIM_FASTER
+	default 3 if FUSES_DEVCFG1_USBDPRTRIM_SLOWER
+endif #SOC_SERIES_PIC32CX_BZ62
 
 
 choice FUSES_DEVCFG1_WDTPSS
@@ -1426,11 +1729,15 @@ config FUSES_DEVCFG1_CLKZBREF
 	default 0 if FUSES_DEVCFG1_CLKZBREF_OFF
 
 
+if SOC_FAMILY_MICROCHIP_PIC32CX_BZ6
 config FUSES_DEVCFG1_CAN1_PIN_EN
 	hex "CAN1 Pin Enable (CAN1_PIN_EN)"
 	default 0x0
 	help
 	  Assignment of value for CAN1_PIN_EN in the FUSES_DEVCFG1 register
+endif #SOC_FAMILY_MICROCHIP_PIC32CX_BZ6
+
+
 endmenu
 
 
@@ -1438,6 +1745,29 @@ endmenu
 
 
 menu "DEVCFG0"
+
+if SOC_FAMILY_MICROCHIP_PIC32CX_BZ2
+choice FUSES_DEVCFG0_TDOEN
+	prompt "TDO enable for 2-wire JTAG (TDOEN)"
+	default FUSES_DEVCFG0_TDOEN_ON
+	help
+	  Assignment of value for TDOEN in the FUSES_DEVCFG0 register
+	  - OFF: 2-wire JTAG protocol does not use TDO (Two phase (Half Duplex) protocol)
+	  - ON: 2-wire JTAG protocol uses TDO (Four phase (Full Duplex) protocol)
+
+	config FUSES_DEVCFG0_TDOEN_OFF
+		bool "OFF"
+	config FUSES_DEVCFG0_TDOEN_ON
+		bool "ON"
+endchoice
+
+config FUSES_DEVCFG0_TDOEN
+	int
+	default 0 if FUSES_DEVCFG0_TDOEN_OFF
+	default 1 if FUSES_DEVCFG0_TDOEN_ON
+
+endif #SOC_FAMILY_MICROCHIP_PIC32CX_BZ2
+
 
 choice FUSES_DEVCFG0_SWOEN
 	prompt "SWO enable on 2-wire debug interface (SWOEN)"
@@ -1497,6 +1827,50 @@ config FUSES_DEVCFG0_ADCPOVR
 	int
 	default 0 if FUSES_DEVCFG0_ADCPOVR_HW
 	default 1 if FUSES_DEVCFG0_ADCPOVR_SW
+
+
+if SOC_SERIES_PIC32CX_BZ24
+choice FUSES_DEVCFG0_GPSOSCE
+	prompt "GPIO/SOSC Enable Position (GPSOSCE)"
+	default FUSES_DEVCFG0_GPSOSCE_GPIO
+	help
+	  Assignment of value for GPSOSCE in the FUSES_DEVCFG0 register
+	  - GPIO: GPIO is selected
+	  - SOSC: SOSC is selected
+
+	config FUSES_DEVCFG0_GPSOSCE_GPIO
+		bool "GPIO"
+	config FUSES_DEVCFG0_GPSOSCE_SOSC
+		bool "SOSC"
+endchoice
+
+config FUSES_DEVCFG0_GPSOSCE
+	int
+	default 1 if FUSES_DEVCFG0_GPSOSCE_SOSC
+	default 0 if FUSES_DEVCFG0_GPSOSCE_GPIO
+endif #SOC_SERIES_PIC32CX_BZ24
+
+
+if SOC_FAMILY_MICROCHIP_PIC32CX_BZ2
+choice FUSES_DEVCFG0_ACCMP1_ALTEN
+	prompt "AC CMP1 Alternate Enable (ACCMP1_ALTEN)"
+	default FUSES_DEVCFG0_ACCMP1_ALTEN_PA1
+	help
+	  Assignment of value for ACCMP1_ALTEN in the FUSES_DEVCFG1 register
+	  - PA6: AC/CMP1 Out is available on PA6
+	  - PA1: AC/CMP1 Out is available on PA1
+
+	config FUSES_DEVCFG0_ACCMP1_ALTEN_PA6
+		bool "PA6"
+	config FUSES_DEVCFG0_ACCMP1_ALTEN_PA1
+		bool "PA1"
+endchoice
+
+config FUSES_DEVCFG0_ACCMP1_ALTEN
+	int
+	default 1 if FUSES_DEVCFG0_ACCMP1_ALTEN_PA6
+	default 0 if FUSES_DEVCFG0_ACCMP1_ALTEN_PA1
+endif #SOC_FAMILY_MICROCHIP_PIC32CX_BZ2
 
 
 choice FUSES_DEVCFG0_CPENFILT
@@ -1559,6 +1933,141 @@ config FUSES_DEVCFG0_RTCOUT_ALTEN
 	default 1 if FUSES_DEVCFG0_RTCOUT_ALTEN_PA10
 
 
+if SOC_FAMILY_MICROCHIP_PIC32CX_BZ2
+choice FUSES_DEVCFG0_VBCMODE
+	prompt "VBC Operating Mode (VBCMODE)"
+	default FUSES_DEVCFG0_VBCMODE_DIRECT
+	help
+	  Assignment of value for VBCMODE in the FUSES_DEVCFG1 register:
+	  - DIRECT: Direct addressing. The VDDBKUPCORE memory mapped on PB-Bridge-B.
+	  - INDIR: Indirect addressing. The VDDBKUPCORE IO mapped using PMU Controller.
+
+	config FUSES_DEVCFG0_VBCMODE_DIRECT
+		bool "DIRECT"
+	config FUSES_DEVCFG0_VBCMODE_INDIR
+		bool "INDIR"
+endchoice
+
+config FUSES_DEVCFG0_VBCMODE
+	int
+	default 1 if FUSES_DEVCFG0_VBCMODE_INDIR
+	default 0 if FUSES_DEVCFG0_VBCMODE_DIRECT
+endif #SOC_FAMILY_MICROCHIP_PIC32CX_BZ2
+
+
+if SOC_FAMILY_MICROCHIP_PIC32CX_BZ2
+choice FUSES_DEVCFG0_SMBUSEN0
+	prompt "SMBus Enable for SERCOM0 (SMBUSEN0)"
+	default FUSES_DEVCFG0_SMBUSEN0_OFF
+	help
+	  Assignment of value for SMBUSEN0 in the FUSES_DEVCFG0 register
+	  - OFF: SMBus is disabled
+	  - ON: SMBus is enabled
+
+	config FUSES_DEVCFG0_SMBUSEN0_OFF
+		bool "OFF"
+	config FUSES_DEVCFG0_SMBUSEN0_ON
+		bool "ON"
+endchoice
+
+config FUSES_DEVCFG0_SMBUSEN0
+	int
+	default 0 if FUSES_DEVCFG0_SMBUSEN0_OFF
+	default 1 if FUSES_DEVCFG0_SMBUSEN0_ON
+
+
+choice FUSES_DEVCFG0_SMBUSEN1
+	prompt "SMBus Enable for SERCOM1 (SMBUSEN1)"
+	default FUSES_DEVCFG0_SMBUSEN1_OFF
+	help
+	  Assignment of value for SMBUSEN1 in the FUSES_DEVCFG0 register
+	  - OFF: SMBus is disabled
+	  - ON: SMBus is enabled
+
+	config FUSES_DEVCFG0_SMBUSEN1_OFF
+		bool "OFF"
+	config FUSES_DEVCFG0_SMBUSEN1_ON
+		bool "ON"
+endchoice
+
+config FUSES_DEVCFG0_SMBUSEN1
+	int
+	default 0 if FUSES_DEVCFG0_SMBUSEN1_OFF
+	default 1 if FUSES_DEVCFG0_SMBUSEN1_ON
+endif #SOC_FAMILY_MICROCHIP_PIC32CX_BZ2
+
+
+if SOC_SERIES_PIC32CX_BZ25
+choice FUSES_DEVCFG0_SMBUSEN2
+	prompt "SMBus Enable for SERCOM2 (SMBUSEN2)"
+	default FUSES_DEVCFG0_SMBUSEN2_OFF
+	help
+	  Assignment of value for SMBUSEN2 in the FUSES_DEVCFG0 register
+	  - OFF: SMBus is disabled
+	  - ON: SMBus is enabled
+
+	config FUSES_DEVCFG0_SMBUSEN2_OFF
+		bool "OFF"
+	config FUSES_DEVCFG0_SMBUSEN2_ON
+		bool "ON"
+endchoice
+
+config FUSES_DEVCFG0_SMBUSEN2
+	int
+	default 0 if FUSES_DEVCFG0_SMBUSEN2_OFF
+	default 1 if FUSES_DEVCFG0_SMBUSEN2_ON
+endif #SOC_SERIES_PIC32CX_BZ25
+
+
+if SOC_SERIES_PIC32CX_BZ62
+config FUSES_DEVCFG0_USBSSEN
+	hex "USB Suspend Sleep Enable (USBSSEN)"
+	default 0x0
+	help
+	  Assignment of value for USBSSEN in the FUSES_DEVCFG0 register
+
+
+choice FUSES_DEVCFG0_EPLLHWMD
+	prompt "EWPLL HW Control Mode for PWDN and RESET (EPLLHWMD)"
+	default FUSES_DEVCFG0_EPLLHWMD_OFF
+	help
+	  Assignment of value for EPLLHWMD in the FUSES_DEVCFG0 register
+	  - ON: PWDN and RESET are generated by HW
+	  - OFF: PWDN and RESET are generated by SW using corresponding PLLCON register bits
+
+	config FUSES_DEVCFG0_EPLLHWMD_OFF
+		bool "OFF"
+	config FUSES_DEVCFG0_EPLLHWMD_ON
+		bool "ON"
+endchoice
+
+config FUSES_DEVCFG0_EPLLHWMD
+	int
+	default 0 if FUSES_DEVCFG0_EPLLHWMD_OFF
+	default 1 if FUSES_DEVCFG0_EPLLHWMD_ON
+
+
+choice FUSES_DEVCFG0_UPLLHWMD
+	prompt "UWPLL HW Control Mode for PWDN and RESET (UPLLHWMD)"
+	default FUSES_DEVCFG0_UPLLHWMD_OFF
+	help
+	  Assignment of value for UPLLHWMD in the FUSES_DEVCFG0 register
+	  - ON: PWDN and RESET are generated by HW
+	  - OFF: PWDN and RESET are generated by SW using corresponding PLLCON register bits
+
+	config FUSES_DEVCFG0_UPLLHWMD_OFF
+		bool "OFF"
+	config FUSES_DEVCFG0_UPLLHWMD_ON
+		bool "ON"
+endchoice
+
+config FUSES_DEVCFG0_UPLLHWMD
+	int
+	default 0 if FUSES_DEVCFG0_UPLLHWMD_OFF
+	default 1 if FUSES_DEVCFG0_UPLLHWMD_ON
+endif #SOC_SERIES_PIC32CX_BZ62
+
+
 choice FUSES_DEVCFG0_HPLUGDIS
 	prompt "Hot Plugging Disable (HPLUGDIS)"
 	default FUSES_DEVCFG0_HPLUGDIS_OFF
@@ -1579,12 +2088,93 @@ config FUSES_DEVCFG0_HPLUGDIS
 	default 1 if FUSES_DEVCFG0_HPLUGDIS_ON
 
 
+if SOC_FAMILY_MICROCHIP_PIC32CX_BZ2
+choice FUSES_DEVCFG0_SLRTEN0
+	prompt "SLRT Enable for SERCOM0 (SLRTEN0)"
+	default FUSES_DEVCFG0_SLRTEN0_OFF
+	help
+	  Assignment of value for SLRTEN0 in the FUSES_DEVCFG0 register
+	  - OFF: Slew rate is disabled
+	  - ON: Slew rate is enabled
 
+	config FUSES_DEVCFG0_SLRTEN0_OFF
+		bool "OFF"
+	config FUSES_DEVCFG0_SLRTEN0_ON
+		bool "ON"
+endchoice
+
+config FUSES_DEVCFG0_SLRTEN0
+	int
+	default 0 if FUSES_DEVCFG0_SLRTEN0_OFF
+	default 1 if FUSES_DEVCFG0_SLRTEN0_ON
+
+
+choice FUSES_DEVCFG0_SLRTEN1
+	prompt "SLRT Enable for SERCOM1 (SLRTEN1)"
+	default FUSES_DEVCFG0_SLRTEN1_OFF
+	help
+	  Assignment of value for SLRTEN1 in the FUSES_DEVCFG0 register
+	  - OFF: Slew rate is disabled
+	  - ON: Slew rate is enabled
+
+	config FUSES_DEVCFG0_SLRTEN1_OFF
+		bool "OFF"
+	config FUSES_DEVCFG0_SLRTEN1_ON
+		bool "ON"
+endchoice
+
+config FUSES_DEVCFG0_SLRTEN1
+	int
+	default 0 if FUSES_DEVCFG0_SLRTEN1_OFF
+	default 1 if FUSES_DEVCFG0_SLRTEN1_ON
+endif #SOC_FAMILY_MICROCHIP_PIC32CX_BZ2
+
+
+if SOC_SERIES_PIC32CX_BZ25
+choice FUSES_DEVCFG0_SLRTEN2
+	prompt "SLRT Enable for SERCOM2 (SLRTEN2)"
+	default FUSES_DEVCFG0_SLRTEN2_OFF
+	help
+	  Assignment of value for SLRTEN2 in the FUSES_DEVCFG0 register
+	  - OFF: Slew rate is disabled
+	  - ON: Slew rate is enabled
+
+	config FUSES_DEVCFG0_SLRTEN2_OFF
+		bool "OFF"
+	config FUSES_DEVCFG0_SLRTEN2_ON
+		bool "ON"
+endchoice
+
+config FUSES_DEVCFG0_SLRTEN2
+	int
+	default 0 if FUSES_DEVCFG0_SLRTEN2_OFF
+	default 1 if FUSES_DEVCFG0_SLRTEN2_ON
+endif #SOC_SERIES_PIC32CX_BZ25
+
+
+if SOC_SERIES_PIC32CX_BZ62
+config FUSES_DEVCFG0_USBIDIO
+	hex "USB USBID Selection bit (USBIDIO)"
+	default 0x1
+	help
+	  Assignment of value for USBIDIO in the FUSES_DEVCFG0 register
+
+
+config FUSES_DEVCFG0_VBUSONIO
+	hex "USB VBUS_ON Selection bit (VBUSONIO)"
+	default 0x1
+	help
+	  Assignment of value for VBUSONIO in the FUSES_DEVCFG0 register
+endif #SOC_SERIES_PIC32CX_BZ62
+
+
+if SOC_FAMILY_MICROCHIP_PIC32CX_BZ6
 config FUSES_DEVCFG0_SMBUS3EN2
 	hex "SMBus3 Enable for SERCOM2 (SMBUS3EN2)"
 	default 0x0
 	help
 	  Assignment of value for SMBUS3EN2 in the FUSES_DEVCFG0 register
+endif #SOC_FAMILY_MICROCHIP_PIC32CX_BZ6
 
 
 choice FUSES_DEVCFG0_PCM
@@ -1647,11 +2237,13 @@ config FUSES_DEVCFG0_INT0P
 	default 1 if FUSES_DEVCFG0_INT0P_POS
 
 
+if SOC_FAMILY_MICROCHIP_PIC32CX_BZ6
 config FUSES_DEVCFG0_CMEN
 	hex "SPA/DPA Countermeasures Enable (CMEN)"
 	default 0x1
 	help
 	  Assignment of value for CMEN in the FUSES_DEVCFG0 register
+endif #SOC_FAMILY_MICROCHIP_PIC32CX_BZ6
 
 
 choice FUSES_DEVCFG0_FECCCON
@@ -1706,6 +2298,25 @@ endmenu
 
 menu "FBCFG0"
 
+
+if SOC_FAMILY_MICROCHIP_PIC32CX_BZ2
+choice FUSES_FBCFG0_BINFOVALID
+	prompt "BCFG info valid (BINFOVALID)"
+	default FUSES_FBCFG0_BINFOVALID_VALID
+	help
+	  Assignment of value for BINFOVALID in the FUSES_FBCFG0 register
+	  - NOT_VALID: BCFG0 to BCFG5 is not valid (Untrusted, Flash values are ignored and safe values are used)
+	  - VALID: BCFG0 to BCFG5 is valid (Trusted and loaded from Flash)
+
+	config FUSES_FBCFG0_BINFOVALID_NOT_VALID
+		bool "NOT_VALID"
+	config FUSES_FBCFG0_BINFOVALID_VALID
+		bool "VALID"
+endchoice
+endif #SOC_FAMILY_MICROCHIP_PIC32CX_BZ2
+
+
+if SOC_FAMILY_MICROCHIP_PIC32CX_BZ6
 choice FUSES_FBCFG0_BINFOVALID
 	prompt "BCFG info valid (BINFOVALID)"
 	default FUSES_FBCFG0_BINFOVALID_VALID
@@ -1719,6 +2330,7 @@ choice FUSES_FBCFG0_BINFOVALID
 	config FUSES_FBCFG0_BINFOVALID_VALID
 		bool "VALID"
 endchoice
+endif #SOC_FAMILY_MICROCHIP_PIC32CX_BZ6
 
 config FUSES_FBCFG0_BINFOVALID
 	int
