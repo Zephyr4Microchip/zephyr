@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 config ENABLE_PMU_BUCK_MODE
-	bool "PMU Buck Mode support"
+	bool "PMU Buck Mode support" if !SOC_SERIES_PIC32CX_BZ3
 
 config CUSTOM_ANTENNA_GAIN
 	int "Custom Antenna Gain (dBm)"
