@@ -17,12 +17,4 @@ config SOC_SERIES_REVISION
 	default ""
 	depends on SOC_FAMILY_MICROCHIP_PIC32CX_BZ2
 
-config ENABLE_PMU_BUCK_MODE
-	bool "PMU Buck Mode support" if SOC_FAMILY_MICROCHIP_PIC32CX_BZ2
-
-config CUSTOM_ANTENNA_GAIN
-	int "Custom Antenna Gain (dBm)" if SOC_FAMILY_MICROCHIP_PIC32CX_BZ2
-	default 3
-	range -5 6
-
 rsource "*/Kconfig.soc"
