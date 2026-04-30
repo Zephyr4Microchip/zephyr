@@ -13,7 +13,7 @@
 #include <string.h>
 #include <zephyr/drivers/pinctrl.h>
 
-#include <zephyr/drivers/clock_control/mchp_clock_pic32cx_bz2.h>
+#include <zephyr/drivers/clock_control/mchp_clock_control.h>
 
 /******************************************************************************
  * @brief Macro definitions
