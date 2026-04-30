@@ -7,10 +7,17 @@ description: WDT Clock configuration.
 compatible: "microchip,pic32cx-bz-wdtclk"
 
 properties:
+  "#clock-cells":
+    const: 1
+    type: int
+
   wdtclk-run-mode-clock-sel:
     type: string
     enum:
       - "pbclk"
       - "lprc"
-    default: "pbclk"
+    default: "lprc"
     description: WDT RUN Mode Clock Select
+
+clock-cells:
+  - subsystem
