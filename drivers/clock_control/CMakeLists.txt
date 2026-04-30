@@ -18,6 +18,7 @@ zephyr_library_sources_ifdef(CONFIG_CLOCK_CONTROL_MCHP_PIC32CM_PL     clock_cont
 zephyr_library_sources_ifdef(CONFIG_CLOCK_CONTROL_MCHP_PIC32CZ_CA     clock_control_mchp_pic32cz_ca.c)
 zephyr_library_sources_ifdef(CONFIG_CLOCK_CONTROL_MCHP_SAM_D5X_E5X    clock_control_mchp_sam_d5x_e5x.c)
 zephyr_library_sources_ifdef(CONFIG_CLOCK_CONTROL_MCHP_PIC32CX_BZ2    clock_control_mchp_pic32cx_bz2.c)
+zephyr_library_sources_ifdef(CONFIG_CLOCK_CONTROL_MCHP_PIC32CX_BZ3    clock_control_mchp_pic32cx_bz3.c)
 zephyr_library_sources_ifdef(CONFIG_CLOCK_CONTROL_MCHP_PIC32CX_BZ6    clock_control_mchp_pic32cx_bz6.c)
 zephyr_library_sources_ifdef(CONFIG_CLOCK_CONTROL_MCUX_CCM            clock_control_mcux_ccm.c)
 zephyr_library_sources_ifdef(CONFIG_CLOCK_CONTROL_MCUX_CCM_REV2       clock_control_mcux_ccm_rev2.c)

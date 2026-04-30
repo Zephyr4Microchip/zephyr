@@ -46,21 +46,29 @@ config CLOCK_CONTROL_MCHP_PIC32CK_SG_GC
 	help
 	  Enable clock controller driver for Microchip PIC32CK SG/GC SoC family.
 
-# Symbol for enabling clock driver for a family
 config CLOCK_CONTROL_MCHP_PIC32CX_BZ2
 	bool
 	default y
 	depends on DT_HAS_MICROCHIP_PIC32CX_BZ2_CLOCK_ENABLED
+	select CLOCK_CONTROL_MCHP_COMMON
 	help
-	  This symbol define clock driver for Microchip PIC32CX_BZ2 family.
+	  Enable clock controller driver for Microchip PIC32CX_BZ2 family.
 
-# Symbol for enabling clock driver for a family
+config CLOCK_CONTROL_MCHP_PIC32CX_BZ3
+	bool
+	default y
+	depends on DT_HAS_MICROCHIP_PIC32CX_BZ3_CLOCK_ENABLED
+	select CLOCK_CONTROL_MCHP_COMMON
+	help
+	  Enable clock controller driver for Microchip PIC32CX_BZ3 family.
+
 config CLOCK_CONTROL_MCHP_PIC32CX_BZ6
 	bool
 	default y
 	depends on DT_HAS_MICROCHIP_PIC32CX_BZ6_CLOCK_ENABLED
+	select CLOCK_CONTROL_MCHP_COMMON
 	help
-	  This symbol define clock driver for Microchip PIC32CX_BZ6 family.
+	  Enable clock controller driver for Microchip PIC32CX_BZ6 family.
 
 if CLOCK_CONTROL_MCHP_COMMON
 

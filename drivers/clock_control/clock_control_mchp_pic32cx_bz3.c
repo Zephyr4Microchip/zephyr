@@ -5,8 +5,8 @@
  */
 
 /**
- * @file clock_mchp_pic32cx_bz6.c
- * @brief Clock control driver for pic32cx_bz6 family devices.
+ * @file clock_mchp_pic32cx_bz3.c
+ * @brief Clock control driver for pic32cx_bz3 family devices.
  */
 
 #include <stdbool.h>
@@ -18,7 +18,7 @@
 /******************************************************************************
  * @brief Macro definitions
  *****************************************************************************/
-#define DT_DRV_COMPAT microchip_pic32cx_bz6_clock
+#define DT_DRV_COMPAT microchip_pic32cx_bz3_clock
 #define CLOCK_NODE    DT_NODELABEL(clock)
 
 #define CLOCK_ON      1
@@ -32,7 +32,7 @@
 #define FRC_FREQ_BY_250  32000
 #define POSC_FREQ        16000000
 #define POSC_FREQ_BY_500 32000
-#define SPLL3_FREQ       128000000
+#define SPLL3_FREQ       64000000
 
 /* number of refclk input pins, to store their frequencies */
 #define REFI_IO_COUNT 6
@@ -68,13 +68,13 @@
 #define CLOCK_MCHP_SYSCLK_ID_MAX     (0)
 #define CLOCK_MCHP_SPLL1_ID_MAX      (0)
 #define CLOCK_MCHP_SPLL2_ID_MAX      (0)
-#define CLOCK_MCHP_PBCLK_ID_MAX      (5)
+#define CLOCK_MCHP_PBCLK_ID_MAX      (2)
 #define CLOCK_MCHP_REFCLK_ID_MAX     (5)
-#define CLOCK_MCHP_GCLKPERIPH_ID_MAX (37)
+#define CLOCK_MCHP_GCLKPERIPH_ID_MAX (31)
 
-#define CLOCK_MCHP_PBCLK_OFFSET_MAX      (0x1B0)
-#define CLOCK_MCHP_REFCLK_OFFSET_MAX     (0x140)
-#define CLOCK_MCHP_GCLKPERIPH_OFFSET_MAX (0xB0)
+#define CLOCK_MCHP_PBCLK_OFFSET_MAX      (0x150)
+#define CLOCK_MCHP_REFCLK_OFFSET_MAX     (0x110)
+#define CLOCK_MCHP_GCLKPERIPH_OFFSET_MAX (0x90)
 
 #define CLOCK_MCHP_GCLKPERIPH_BITPOS_MAX (28)
 
@@ -212,8 +212,8 @@ void clock_spll2_config(cru_registers_t *cru_regs, uint8_t src, uint8_t post_div
  */
 void clock_pbclk_config(cru_registers_t *cru_regs, uint32_t subsys_val, uint8_t div)
 {
-	clock_mchp_subsys_t subsys;
 	__IO uint32_t *reg;
+	clock_mchp_subsys_t subsys;
 
 	subsys.val = subsys_val;
 	reg = (__IO uint32_t *)((uint32_t)cru_regs + subsys.bits.offset);
@@ -622,7 +622,7 @@ static uint32_t clock_get_rate_refclk(clock_mchp_data_t *data, cru_registers_t *
 		break;
 	case CLOCK_MCHP_REFCLK_SRC_SPLL3:
 		refclk_src_freq =
-			((cru_regs->CRU_CLKSTAT & CRU_CLKSTAT_SPLLRDY_Msk) == 0) ? 0 : SPLL3_FREQ;
+			((cru_regs->CRU_CLKSTAT & CRU_CLKSTAT_SPLL3RDY_Msk) == 0) ? 0 : SPLL3_FREQ;
 		break;
 	case CLOCK_MCHP_REFCLK_SRC_PBCLK1:
 		clock_mchp_subsys_t src_subsys;
@@ -885,7 +885,7 @@ static enum clock_control_status clock_mchp_get_status(const struct device *dev,
 			clkstat_mask = CRU_CLKSTAT_SPLL1RDY_Msk;
 			break;
 		case SUBSYS_TYPE_SPLL3:
-			clkstat_mask = CRU_CLKSTAT_SPLLRDY_Msk;
+			clkstat_mask = CRU_CLKSTAT_SPLL3RDY_Msk;
 			break;
 		case SUBSYS_TYPE_LPRC:
 			clkstat_mask = CRU_CLKSTAT_LPRCRDY_Msk;
@@ -1224,62 +1224,31 @@ static int clock_mchp_configure(const struct device *dev, clock_control_subsys_t
 /**
  * @brief clock driver initialization function.
  */
-static void clock_rf_Write_reg(uint8_t addr, uint16_t value)
-{
-	BLE_REGS->BLE_SPI_REG_ADDR = addr;
-	BLE_REGS->BLE_SPI_WR_DATA = value;
-	BLE_REGS->BLE_RFPWRMGMT |= 0x00100000U;
-	while ((BLE_REGS->BLE_RFPWRMGMT & 0x00100000U) != 0U) {
-		/* Do nothing */
-	}
-}
-
 static int clock_mchp_init(const struct device *dev)
 {
 	/* check CLDO ready */
 	while ((CFG_REGS->CFG_MISCSTAT & CFG_MISCSTAT_CLDORDY_Msk) == 0U) {
 		/* Nothing to do */
 	}
-	clock_rf_Write_reg(0x27U, 0x2078U);
 
-	/* Current Oscillator is 8MHz FRC or 16MHz POSC */
-	if ((CRU_REGS->CRU_OSCCON & CRU_OSCCON_COSC_Msk) != CRU_OSCCON_COSC_SPLL) {
-		/* Setup 128MHz PLL */
-		clock_rf_Write_reg(0x2EU, 0x4328U);
-
-		/* MISRAC 2012 deviation block start
-		 * MISRA C-2012 Rule 11.1 deviated 1 time.
-		 *     Deviation record ID -  H3_MISRAC_2012_R_11_1_DR_1
-		 * Configure Prefetch, Wait States by calling the ROM function whose address is
-		 *     available at address 0xF2D0
-		 */
-#if (CONFIG_SYS_CLOCK_HW_CYCLES_PER_SEC == 64000000)
-		typedef void (*FUNC_PCHE_SETUP)(uint32_t setup);
-		(void)((FUNC_PCHE_SETUP)(*(uint32_t *)0xF2D0))(
-			(PCHE_REGS->PCHE_CHECON & (~(PCHE_CHECON_PFMWS_Msk | PCHE_CHECON_ADRWS_Msk |
-						     PCHE_CHECON_PREFEN_Msk))) |
-			(PCHE_CHECON_PFMWS(1) | PCHE_CHECON_PREFEN(1) | PCHE_CHECON_ADRWS(1)));
-#elif (CONFIG_SYS_CLOCK_HW_CYCLES_PER_SEC == 128000000)
-		typedef void (*FUNC_PCHE_SETUP)(uint32_t setup);
-		(void)((FUNC_PCHE_SETUP)(*(uint32_t *)0xF2D0))(
-			(PCHE_REGS->PCHE_CHECON & (~(PCHE_CHECON_PFMWS_Msk | PCHE_CHECON_ADRWS_Msk |
-						     PCHE_CHECON_PREFEN_Msk))) |
-			(PCHE_CHECON_PFMWS(4) | PCHE_CHECON_PREFEN(1) | PCHE_CHECON_ADRWS(1)));
-#else
-#error "SYS_CLOCK_HW_CYCLES_PER_SEC value is not supported"
-#endif
-	}
+#ifdef SOC_SERIES_PIC32CX_BZ3
 	/* programming 4ms delay -  programming subsys_xtal_ready_delay */
 	/* check xtal spec for delay required */
+	BTZBSYS_REGS->BTZBSYS_SUBSYS_CNTRL_REG1 =
+		((BTZBSYS_REGS->BTZBSYS_SUBSYS_CNTRL_REG1 &
+		  ~BTZBSYS_SUBSYS_CNTRL_REG1_subsys_xtal_ready_delay_Msk) |
+		 ((0x01UL) << BTZBSYS_SUBSYS_CNTRL_REG1_subsys_xtal_ready_delay_Pos));
+#endif
+
 	/* wait for crystal ready */
 	while ((BTZBSYS_REGS->BTZBSYS_SUBSYS_STATUS_REG1 &
 		BTZBSYS_SUBSYS_STATUS_REG1_xtal_ready_out_Msk) !=
 	       BTZBSYS_SUBSYS_STATUS_REG1_xtal_ready_out_Msk) {
 		/* Nothing to do */
 	}
-	CFG_REGS->CFG_SYSKEY = 0x00000000U; /* Write junk to lock it if it is already unlocked */
-	CFG_REGS->CFG_SYSKEY = 0xAA996655U;
-	CFG_REGS->CFG_SYSKEY = 0x556699AAU;
+	CFG_REGS->CFG_SYSKEY = 0x00000000; /* Write junk to lock it if it is already unlocked */
+	CFG_REGS->CFG_SYSKEY = 0xAA996655;
+	CFG_REGS->CFG_SYSKEY = 0x556699AA;
 	CRU_REGS->CRU_OSCCON = 0x200U; /* switch to XO */
 
 	/* Enable oscillator switch from COSC to NOSC */
@@ -1294,10 +1263,17 @@ static int clock_mchp_init(const struct device *dev)
 	BLE_REGS->BLE_DPLL_RG2 |= 0x02U;
 
 	/* set PLL_enable */
-	BLE_REGS->BLE_DPLL_RG2 &= ((uint8_t)~(0x02U));
+	BLE_REGS->BLE_DPLL_RG2 &= (uint16_t)(~(0x02U));
 
 	/* Set MISC[24]=0, CLKGEN_PLLRST = 0 */
 	CFG_REGS->CFG_MISCSTAT &= 0x00FFFFFFU;
+#ifdef SOC_SERIES_PIC32CX_BZ3
+	/* Setting CPU QoS and FC QoS to same priority */
+	CFG_REGS->CFG_CFGPGQOS =
+		(CFG_REGS->CFG_CFGPGQOS & ~(CFG_CFGPGQOS_FCQOS_Msk | CFG_CFGPGQOS_CPUQOS_Msk)) |
+		((0x03UL << CFG_CFGPGQOS_FCQOS_Pos) | (0x03UL << CFG_CFGPGQOS_CPUQOS_Pos));
+#endif
+
 	/* programming delay for pll lock - 500 us */
 	/* 32 us steps - check pll spec for final value */
 	BTZBSYS_REGS->BTZBSYS_SUBSYS_CNTRL_REG3 =
@@ -1322,11 +1298,11 @@ static int clock_mchp_init(const struct device *dev)
 			    DT_ENUM_IDX(DT_NODELABEL(sysclk), sysclk_new_osc));
 
 #if (CONFIG_SYS_CLOCK_HW_CYCLES_PER_SEC == 64000000)
-	clock_spll1_config(cru_regs, 2);
+	clock_spll1_config(cru_regs, 1);
 	clock_spll2_config(cru_regs, CRU_SPLLCON_SPLL_BYP_FRC_Val,
 			   CRU_SPLLCON_SPLLPOSTDIV2_DIV_1_Val);
-#elif (CONFIG_SYS_CLOCK_HW_CYCLES_PER_SEC == 128000000)
-	clock_spll1_config(cru_regs, 1);
+#elif (CONFIG_SYS_CLOCK_HW_CYCLES_PER_SEC == 32000000)
+	clock_spll1_config(cru_regs, 2);
 	clock_spll2_config(cru_regs, CRU_SPLLCON_SPLL_BYP_FRC_Val,
 			   CRU_SPLLCON_SPLLPOSTDIV2_DIV_1_Val);
 #else
@@ -1352,25 +1328,8 @@ static int clock_mchp_init(const struct device *dev)
 	/* set aclb_reset_n[24] */
 	BTZBSYS_REGS->BTZBSYS_SUBSYS_CNTRL_REG0 |= 0x01000000U;
 
-	/* Power down the UPLL */
-	CRU_REGS->CRU_UPLLCON = CRU_UPLLCON_UPLLPWDN_Msk;
-
-	/* Power down the EPLL */
-	CRU_REGS->CRU_EPLLCON = CRU_EPLLCON_EPLLPWDN_Msk;
-
 	/* Lock system since done with clock configuration */
 	CFG_REGS->CFG_SYSKEY = 0x33333333U;
-
-	/* For the case: ROM code runs as 128Mhz already, but application code runs
-	 * a lower system clock
-	 */
-#if (CONFIG_SYS_CLOCK_HW_CYCLES_PER_SEC == 64000000)
-	typedef void (*FUNC_PCHE_SETUP)(uint32_t setup);
-	(void)((FUNC_PCHE_SETUP)(*(uint32_t *)0xF2D0))(
-		(PCHE_REGS->PCHE_CHECON &
-		 (~(PCHE_CHECON_PFMWS_Msk | PCHE_CHECON_ADRWS_Msk | PCHE_CHECON_PREFEN_Msk))) |
-		(PCHE_CHECON_PFMWS(1) | PCHE_CHECON_PREFEN(1) | PCHE_CHECON_ADRWS(1)));
-#endif
 
 	return CLOCK_SUCCESS;
 }
