@@ -19,6 +19,15 @@
 		};
 	};
 
+	sercom1_spi_default: sercom1_spi_default {
+		group1 {
+			pinmux = <PIN_DIRECT_MODE>,
+				<PIN_DIRECT_MODE>,
+				<PIN_DIRECT_MODE>,
+				<PIN_DIRECT_MODE>;
+		};
+	};
+
 	tcc0_pwm_default: tcc0_pwm_default {
 		group1 {
 			pinmux = <PB3_TCC0WO1_OUT>;
@@ -60,7 +69,6 @@
 			pinmux = <PB5_TC3WO1_OUT>;
 		};
 	};
-
 
 	tc3_pwm_16bit: tc3_pwm_16bit {
 		group1 {
