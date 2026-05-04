@@ -50,6 +50,7 @@ LOG_MODULE_REGISTER(uart_mchp_sercom_g1, CONFIG_UART_LOG_LEVEL);
  * peripheral.
  */
 #if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2) ||                                            \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ3) ||                                        \
 	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
 
 typedef struct mchp_uart_clock {
@@ -76,6 +77,18 @@ typedef struct mchp_uart_clock {
 #define UART_MCHP_ENABLE_MODULE(regs)                                                              \
 	if (regs == SERCOM0_REGS) {                                                                \
 		CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_SER1MD_Msk;                                        \
+	}
+#elif defined(CONFIG_SOC_SERIES_PIC32CX_BZ3)
+#define UART_MCHP_ENABLE_MODULE(regs)                                                              \
+	if (regs == SERCOM0_REGS) {                                                                \
+		CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_SER0MD_Msk;                                        \
+	} else if (regs == SERCOM1_REGS) {                                                         \
+		CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_SER1MD_Msk;                                        \
+	}
+#elif defined(CONFIG_SOC_SERIES_PIC32CX_BZ36)
+#define UART_MCHP_ENABLE_MODULE(regs)                                                              \
+	if (regs == SERCOM0_REGS) {                                                                \
+		CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_SER0MD_Msk;                                        \
 	}
 #elif defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
 #define UART_MCHP_ENABLE_MODULE(regs)                                                              \
@@ -1037,7 +1050,8 @@ static int uart_mchp_init(const struct device *dev)
 	int retval = UART_SUCCESS;
 
 #if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2) ||                                            \
-defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ3) ||                                        \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
 	/* Enable the GCLK and Peripheral Module */
 	clock_control_on(cfg->uart_clock.clock_dev, cfg->uart_clock.gclk_sys);
 	if ((retval != UART_SUCCESS) && (retval != -EALREADY)) {
