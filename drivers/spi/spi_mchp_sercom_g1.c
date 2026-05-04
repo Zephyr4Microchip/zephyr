@@ -89,6 +89,11 @@ LOG_MODULE_REGISTER(spi_mchp_sercom_g1);
 	} else if (regs == SERCOM2_REGS) {                                                         \
 		CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_SER3MD_Msk;                                        \
 	}
+#elif defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ3)
+#define ENABLE_SPI_MODULE(regs)                                                                    \
+	if (regs == SERCOM1_REGS) {                                                                \
+		CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_SER1MD_Msk;                                        \
+	}
 #elif defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
 #define ENABLE_SPI_MODULE(regs)                                                                    \
 	if (regs == SERCOM4_REGS) {                                                                \
@@ -122,6 +127,7 @@ typedef struct mchp_spi_reg_config {
  * peripheral.
  */
 #if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2) ||                                            \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ3) ||                                        \
 	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
 typedef struct mchp_spi_clock {
 	/* Clock driver */
@@ -262,6 +268,7 @@ static inline int spi_slave_mode(const mchp_spi_reg_config_t *spi_reg_cfg)
 {
 	/* Clear the MODE bit field and set it to SPI Slave mode */
 #if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2) ||                                            \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ3) ||                                        \
 	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
 	spi_reg_cfg->regs->SPIS.SERCOM_CTRLA =
 		(spi_reg_cfg->regs->SPIS.SERCOM_CTRLA & ~SERCOM_SPIS_CTRLA_MODE_Msk) |
@@ -2136,6 +2143,7 @@ static int spi_mchp_init(const struct device *dev)
 		}
 
 #if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2) ||                                            \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ3) ||                                        \
 	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
 		ENABLE_SPI_MODULE(spi_reg_cfg->regs);
 #else
@@ -2254,6 +2262,7 @@ static DEVICE_API(spi, spi_mchp_api) = {
 
 /* Do the peripheral clock related configuration */
 #if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2) ||                                            \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ3) ||                                        \
 	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
 #define SPI_MCHP_CLOCK_DEFN(n)                                                                     \
 	.spi_clock.clock_dev = DEVICE_DT_GET(DT_NODELABEL(clock)),                                 \
