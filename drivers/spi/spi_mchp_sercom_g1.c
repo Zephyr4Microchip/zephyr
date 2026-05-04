@@ -39,6 +39,11 @@ LOG_MODULE_REGISTER(spi_mchp_sercom_g1);
 	} else if (regs == SERCOM2_REGS) {                                                         \
 		CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_SER3MD_Msk;                                        \
 	}
+#elif defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ3)
+#define ENABLE_SPI_MODULE(regs)                                                                    \
+	if (regs == SERCOM1_REGS) {                                                                \
+		CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_SER1MD_Msk;                                        \
+	}
 #elif defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
 #define ENABLE_SPI_MODULE(regs)                                                                    \
 	if (regs == SERCOM4_REGS) {                                                                \
@@ -54,6 +59,7 @@ struct mchp_spi_reg_config {
 };
 
 #if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2) ||                                            \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ3) ||                                        \
 	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
 struct mchp_spi_clock {
 	const struct device *clock_dev;
@@ -300,8 +306,9 @@ static int spi_mchp_configure(const struct device *dev, const struct spi_config 
 		spi->SERCOM_CTRLB |= SERCOM_SPI_CTRLB_SSDE_Msk;
 		/* Enable the Immediate buffer overflow*/
 		spi->SERCOM_CTRLA |= SERCOM_SPI_CTRLA_IBON_Msk;
-		
+
 #if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2) ||                                            \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ3) ||                                        \
 	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
 		spi->SERCOM_CTRLA |= SERCOM_SPIS_CTRLA_RUNSTDBY_Msk;
 #endif
@@ -309,7 +316,6 @@ static int spi_mchp_configure(const struct device *dev, const struct spi_config 
 		/*Set the SPI Slave Mode*/
 		spi->SERCOM_CTRLA = (spi->SERCOM_CTRLA & ~SERCOM_SPI_CTRLA_MODE_Msk) |
 				    SERCOM_SPI_CTRLA_MODE_SPI_SLAVE;
-
 	}
 #endif /* CONFIG_SPI_SLAVE */
 
@@ -1122,8 +1128,9 @@ static int spi_mchp_init(const struct device *dev)
 		return retval;
 	}
 #if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2) ||                                            \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ3) ||                                        \
 	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
-		ENABLE_SPI_MODULE(spi_reg_cfg->regs);
+	ENABLE_SPI_MODULE(spi_reg_cfg->regs);
 #else
 	retval = clock_control_on(cfg->spi_clock.clock_dev, cfg->spi_clock.mclk_sys);
 	if ((retval < 0) && (retval != -EALREADY)) {
@@ -1190,6 +1197,7 @@ static DEVICE_API(spi, spi_mchp_api) = {
 #define SPI_MCHP_IRQ_HANDLER(n)
 #endif /* CONFIG_SPI_MCHP_INTERRUPT_DRIVEN_ASYNC  */
 #if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2) ||                                            \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ3) ||                                        \
 	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
 #define SPI_MCHP_CLOCK_DEFN(n)                                                                     \
 	.spi_clock.clock_dev = DEVICE_DT_GET(DT_NODELABEL(clock)),                                 \
