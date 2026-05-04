@@ -76,6 +76,7 @@ struct dma_mchp_dev_config {
 	/* Pointer to the clock device used for controlling the DMA's clock. */
 	const struct device *clock_dev;
 #if !defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2) &&                                           \
+	!defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ3) &&                                       \
 	!defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
 	/* Contains the clock control configuration for the DMA subsystem. */
 	clock_control_subsys_t mclk_sys;
@@ -162,10 +163,11 @@ static int8_t dmac_ch_set_trig_src_n_dir(dmac_registers_t *dmac_reg, uint8_t cha
 		   (channel_direction == PERIPHERAL_TO_MEMORY)) {
 		/* One peripheral trigger per beat */
 #if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2) ||                                            \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ3) ||                                        \
 	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
-			dmac_reg->CHANNEL[channel].DMAC_CHCTRLA = DMAC_CHCTRLA_TRIGACT_BURST |
-								  DMAC_CHCTRLA_TRIGSRC(trig_src) |
-								  DMAC_CHCTRLA_RUNSTDBY_Msk;
+		dmac_reg->CHANNEL[channel].DMAC_CHCTRLA = DMAC_CHCTRLA_TRIGACT_BURST |
+							  DMAC_CHCTRLA_TRIGSRC(trig_src) |
+							  DMAC_CHCTRLA_RUNSTDBY_Msk;
 #else
 		dmac_reg->CHANNEL[channel].DMAC_CHCTRLA =
 			DMAC_CHCTRLA_TRIGACT_BURST | DMAC_CHCTRLA_TRIGSRC(trig_src);
@@ -942,6 +944,7 @@ static int dma_mchp_init(const struct device *dev)
 	int ret;
 
 #if !defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2) &&                                           \
+	!defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ3) &&                                       \
 	!defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
 	/* Enable DMA clock */
 	ret = clock_control_on(dev_cfg->clock_dev, dev_cfg->mclk_sys);
@@ -1031,6 +1034,7 @@ static DEVICE_API(dma, dma_mchp_api) = {
 
 /* DMA device configuration structure. */
 #if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2) ||                                            \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ3) ||                                        \
 	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
 #define DMA_MCHP_CONFIG_DEFN(n)                                                                    \
 	static const struct dma_mchp_dev_config dma_mchp_dev_config_##n = {                        \
