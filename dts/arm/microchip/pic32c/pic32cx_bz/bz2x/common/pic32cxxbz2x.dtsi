@@ -242,7 +242,7 @@
 		};
 
 		tcc0: tcc@40002400 {
-			compatible = "microchip,tcc-g1-pwm";
+			compatible = "microchip,tcc-g1";
 			status = "disabled";
 			reg = <0x40002400 0x400>;
 			interrupts = <16 6>;
@@ -251,7 +251,7 @@
 		};
 
 		tcc1: tcc@40002800 {
-			compatible = "microchip,tcc-g1-pwm";
+			compatible = "microchip,tcc-g1";
 			status = "disabled";
 			reg = <0x40002800 0x400>;
 			interrupts = <17 6>;
@@ -260,7 +260,7 @@
 		};
 
 		tcc2: tcc@40002c00 {
-			compatible = "microchip,tcc-g1-pwm";
+			compatible = "microchip,tcc-g1";
 			status = "disabled";
 			reg = <0x40002c00 0x400>;
 			interrupts = <18 6>;
@@ -269,39 +269,51 @@
 		};
 
 		tc0: tc@40001400 {
-			compatible = "microchip,tc-g1-pwm";
+			compatible = "microchip,tc-g1";
 			status = "disabled";
 			reg = <0x40001400 0x400>;
 			interrupts = <19 6>;
 			clocks = <&gclkperiph CLOCK_MCHP_GCLKPERIPH_ID_GCLK_TC0>;
 			clock-names = "gclk";
+			max-bit-width = <16>;
+			prescaler = <1>;
+			channels = <2>;
 		};
 
 		tc1: tc@40001800 {
-			compatible = "microchip,tc-g1-pwm";
+			compatible = "microchip,tc-g1";
 			status = "disabled";
 			reg = <0x40001800 0x400>;
 			interrupts = <20 6>;
 			clocks = <&gclkperiph CLOCK_MCHP_GCLKPERIPH_ID_GCLK_TC1>;
 			clock-names = "gclk";
+			max-bit-width = <16>;
+			prescaler = <1>;
+			channels = <2>;
 		};
 
 		tc2: tc@40001c00 {
-			compatible = "microchip,tc-g1-pwm";
+			compatible = "microchip,tc-g1";
 			status = "disabled";
 			reg = <0x40001c00 0x400>;
 			interrupts = <21 6>;
 			clocks = <&gclkperiph CLOCK_MCHP_GCLKPERIPH_ID_GCLK_TC2>;
 			clock-names = "gclk";
+			max-bit-width = <16>;
+			prescaler = <1>;
+			channels = <2>;
 		};
 
 		tc3: tc@40002000 {
-			compatible = "microchip,tc-g1-pwm";
+			compatible = "microchip,tc-g1";
 			status = "disabled";
 			reg = <0x40002000 0x400>;
 			interrupts = <22 6>;
 			clocks = <&gclkperiph CLOCK_MCHP_GCLKPERIPH_ID_GCLK_TC3>;
 			clock-names = "gclk";
+			max-bit-width = <16>;
+			prescaler = <1>;
+			channels = <2>;
 		};
 	};
 	bt_hci_microchip: bt_hci_microchip {
