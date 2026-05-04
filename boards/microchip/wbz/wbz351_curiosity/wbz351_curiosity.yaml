@@ -14,5 +14,6 @@ supported:
   - dma
   - pinctrl
   - pwm
+  - spi
   - uart
 vendor: microchip
