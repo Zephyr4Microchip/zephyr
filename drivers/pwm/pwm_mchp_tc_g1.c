@@ -124,6 +124,7 @@ typedef struct {
 } pwm_mchp_data_t;
 
 #if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2) ||                                            \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ3) ||                                        \
 	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
 typedef struct mchp_counter_clock {
 	/* Clock driver */
@@ -784,6 +785,7 @@ static int tc_init(const pwm_mchp_config_t *const mchp_pwm_cfg)
 		}
 
 #if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2) ||                                            \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ3) ||                                        \
 	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
 		if (max_bit_width == BIT_MODE_8) {
 			PWM_MODE8(pwm_reg)->TC_CTRLA |= TC_CTRLA_RUNSTDBY_Msk;
@@ -860,6 +862,47 @@ static int tc_enable_module(const struct device *pwm_dev, bool enable_32bit_mode
 		}
 	} else if ((tc_registers_t *)mchp_pwm_cfg->regs == TC3_REGS) {
 		CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_TC3MD_Msk;
+	} else {
+		ret_val = -1;
+	}
+
+	return ret_val;
+}
+
+#elif defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ3)
+static int tc_enable_module(const struct device *pwm_dev, bool enable_32bit_mode)
+{
+	int ret_val = 0;
+	const pwm_mchp_config_t *const mchp_pwm_cfg = pwm_dev->config;
+
+	if ((tc_registers_t *)mchp_pwm_cfg->regs == TC0_REGS) {
+		CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_TC0MD_Msk;
+		if (enable_32bit_mode) {
+			CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_TC1MD_Msk;
+		}
+	} else if ((tc_registers_t *)mchp_pwm_cfg->regs == TC1_REGS) {
+		CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_TC1MD_Msk;
+	} else if ((tc_registers_t *)mchp_pwm_cfg->regs == TC2_REGS) {
+		CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_TC2MD_Msk;
+		if (enable_32bit_mode) {
+			CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_TC3MD_Msk;
+		}
+	} else if ((tc_registers_t *)mchp_pwm_cfg->regs == TC3_REGS) {
+		CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_TC3MD_Msk;
+	} else if ((tc_registers_t *)mchp_pwm_cfg->regs == TC4_REGS) {
+		CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_TC4MD_Msk;
+		if (enable_32bit_mode) {
+			CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_TC5MD_Msk;
+		}
+	} else if ((tc_registers_t *)mchp_pwm_cfg->regs == TC5_REGS) {
+		CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_TC5MD_Msk;
+	} else if ((tc_registers_t *)mchp_pwm_cfg->regs == TC6_REGS) {
+		CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_TC6MD_Msk;
+		if (enable_32bit_mode) {
+			CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_TC7MD_Msk;
+		}
+	} else if ((tc_registers_t *)mchp_pwm_cfg->regs == TC7_REGS) {
+		CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_TC7MD_Msk;
 	} else {
 		ret_val = -1;
 	}
@@ -1077,6 +1120,7 @@ static int pwm_mchp_init(const struct device *pwm_dev)
 			break;
 		}
 #if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2) ||                                            \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ3) ||                                        \
 	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
 		ret_val = tc_enable_module(pwm_dev, (mchp_pwm_cfg->max_bit_width == 32));
 		if (ret_val < 0) {
@@ -1171,6 +1215,7 @@ static int pwm_mchp_init(const struct device *pwm_dev)
 
 /* clang-format off */
 #if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2) ||                                            \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ3) ||                                        \
 	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
 #define GET_THE_CLIENT_GCLOCK_IF_AVAILABLE(n)						\
 	COND_CODE_1(DT_INST_CLOCKS_HAS_NAME(n, client_gclk),                \
