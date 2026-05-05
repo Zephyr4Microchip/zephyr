@@ -58,6 +58,7 @@ struct rtc_mchp_time {
 
 /* Clock configuration structure for RTC. */
 #if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2) ||                                            \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ3) ||                                        \
 	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
 
 struct rtc_mchp_clock {
@@ -837,8 +838,9 @@ static int rtc_mchp_init(const struct device *dev)
 	}
 
 #if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2) ||                                            \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ3) ||                                        \
 	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
-		RTC_MCHP_ENABLE_MODULE();
+	RTC_MCHP_ENABLE_MODULE();
 #else
 	/* On Main clock for RTC */
 	ret = clock_control_on(cfg->rtc_clock.clock_dev, cfg->rtc_clock.mclk_sys);
@@ -897,6 +899,7 @@ static DEVICE_API(rtc, rtc_mchp_api) = {
 
 /* RTC driver clock configuration for instance n */
 #if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2) ||                                            \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ3) ||                                        \
 	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
 #define RTC_MCHP_CLOCK_DEFN(n)                                                                     \
 	.rtc_clock.clock_dev = DEVICE_DT_GET(DT_NODELABEL(clock)),                                 \
