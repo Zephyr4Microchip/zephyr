@@ -5,6 +5,7 @@
  */
 
 #include <arm/armv7-m.dtsi>
+#include <zephyr/dt-bindings/clock/mchp_pic32cx_bz3_clock.h>
 
 / {
 	chosen {
@@ -25,6 +26,143 @@
 	};
 
 	soc {
+		clock: clock@44000000 {
+			compatible = "microchip,pic32cx-bz3-clock";
+			reg =	<
+			0x44000000 0x500
+			0x44000A00 0x200>;// cfg, cru
+			posc: posc {
+				compatible = "microchip,pic32cx-bz-posc";
+				posc-en = <1>;
+			};
+			sosc: sosc {
+				compatible = "microchip,pic32cx-bz-sosc";
+				sosc-en = <1>;
+			};
+			sysclk: sysclk {
+				compatible = "microchip,pic32cx-bz-sysclk";
+				sysclk-frc-div = <1>;
+				sysclk-new-osc = "spll1";
+			};
+			pbclk: pbclk {
+				compatible = "microchip,pic32cx-bz-pbclk";
+				pbclk3 {
+					subsystem = <CLOCK_MCHP_PBCLK_ID_3>;
+					pbclk-div = <9>;
+					pbclk-en = <1>;
+				};
+			};
+			refclk: refclk {
+				compatible = "microchip,pic32cx-bz-refclk";
+				refclk1 {
+					subsystem = <CLOCK_MCHP_REFCLK_ID_1>;
+					refclk-src-sel = "spll1";
+					refclk-en = <1>;
+				};
+			};
+			gclkperiph: gclkperiph {
+				compatible = "microchip,pic32cx-bz-gclkperiph";
+				#clock-cells = <1>;
+				gclkperiph_eic {
+					subsystem = <CLOCK_MCHP_GCLKPERIPH_ID_GCLK_EIC>;
+					gclkperiph-src-sel = "refclk_1";
+				};
+				gclkperiph_sercom0 {
+					subsystem = <CLOCK_MCHP_GCLKPERIPH_ID_GCLK_SERCOM0_CORE>;
+					gclkperiph-src-sel = "refclk_1";
+				};
+				gclkperiph_sercom1 {
+					subsystem = <CLOCK_MCHP_GCLKPERIPH_ID_GCLK_SERCOM1_CORE>;
+					gclkperiph-src-sel = "refclk_1";
+				};
+				gclkperiph_sercom2 {
+					subsystem = <CLOCK_MCHP_GCLKPERIPH_ID_GCLK_SERCOM2_CORE>;
+					gclkperiph-src-sel = "refclk_1";
+				};
+				gclkperiph_tcc0 {
+					subsystem = <CLOCK_MCHP_GCLKPERIPH_ID_GCLK_TCC0>;
+					gclkperiph-src-sel = "refclk_1";
+				};
+				gclkperiph_tcc1 {
+					subsystem = <CLOCK_MCHP_GCLKPERIPH_ID_GCLK_TCC1>;
+					gclkperiph-src-sel = "refclk_1";
+				};
+				gclkperiph_tcc2 {
+					subsystem = <CLOCK_MCHP_GCLKPERIPH_ID_GCLK_TCC2>;
+					gclkperiph-src-sel = "refclk_1";
+				};
+				gclkperiph_tc0 {
+					subsystem = <CLOCK_MCHP_GCLKPERIPH_ID_GCLK_TC0>;
+					gclkperiph-src-sel = "refclk_1";
+				};
+				gclkperiph_tc1 {
+					subsystem = <CLOCK_MCHP_GCLKPERIPH_ID_GCLK_TC1>;
+					gclkperiph-src-sel = "refclk_1";
+				};
+				gclkperiph_tc2 {
+					subsystem = <CLOCK_MCHP_GCLKPERIPH_ID_GCLK_TC2>;
+					gclkperiph-src-sel = "refclk_1";
+				};
+				gclkperiph_tc3 {
+					subsystem = <CLOCK_MCHP_GCLKPERIPH_ID_GCLK_TC3>;
+					gclkperiph-src-sel = "refclk_1";
+				};
+				gclkperiph_tc4 {
+					subsystem = <CLOCK_MCHP_GCLKPERIPH_ID_GCLK_TC4>;
+					gclkperiph-src-sel = "refclk_1";
+				};
+				gclkperiph_tc5 {
+					subsystem = <CLOCK_MCHP_GCLKPERIPH_ID_GCLK_TC5>;
+					gclkperiph-src-sel = "refclk_1";
+				};
+				gclkperiph_tc6 {
+					subsystem = <CLOCK_MCHP_GCLKPERIPH_ID_GCLK_TC6>;
+					gclkperiph-src-sel = "refclk_1";
+				};
+				gclkperiph_tc7 {
+					subsystem = <CLOCK_MCHP_GCLKPERIPH_ID_GCLK_TC7>;
+					gclkperiph-src-sel = "refclk_1";
+				};
+				gclkperiph_ac {
+					subsystem = <CLOCK_MCHP_GCLKPERIPH_ID_GCLK_AC>;
+					gclkperiph-src-sel = "refclk_1";
+				};
+			};
+			wdtclk: wdtclk {
+				compatible = "microchip,pic32cx-bz-wdtclk";
+				#clock-cells = <1>;
+				wdtclk-run-mode-clock-sel = "lprc";
+			};
+			vbkpclk: vbkpclk {
+				compatible = "microchip,pic32cx-bz-vbkpclk";
+				vbkpclk-32kc-src-sel = "sosc";
+			};
+			dswdtclk: dswdtclk {
+				compatible = "microchip,pic32cx-bz-dswdtclk";
+			};
+			lpclk: lpclk {
+				compatible = "microchip,pic32cx-bz-lpclk";
+				lpclk-div-modifier = "div_by_1.024";
+			};
+			/* 1 KHz for Clock/Calendar mode */
+			/*
+			 *rtcclk: rtcclk {
+			 *	compatible = "microchip,pic32cx-bz-rtcclk";
+			 *	#clock-cells = <1>;
+			 *	rtcclk-counter-mode-sel = "raw_32k";
+			 *	rtcclk-vbkp-div-sel = "div_by_31.25";
+			 *	rtcclk-vbkp-1k-32k-sel = "div_by_vbkp_div";
+			 *};
+			 */
+			/* 32 KHz for Counter mode */
+			rtcclk: rtcclk {
+				compatible = "microchip,pic32cx-bz-rtcclk";
+				#clock-cells = <1>;
+				rtcclk-counter-mode-sel = "raw_32k";
+				rtcclk-vbkp-div-sel = "div_by_31.25";
+				rtcclk-vbkp-1k-32k-sel = "32khz";
+			};
+		};
 		nvmctrl: nvmctrl@44000600  {
 			compatible = "microchip,nvmctrl-g2-flash";
 			reg = <0x44000600 0x110>;
