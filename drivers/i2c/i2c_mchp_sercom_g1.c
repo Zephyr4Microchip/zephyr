@@ -49,6 +49,12 @@ LOG_MODULE_REGISTER(i2c_mchp_sercom_g1, CONFIG_I2C_LOG_LEVEL);
 	} else if (((const struct i2c_mchp_dev_config *)(dev)->config)->regs == SERCOM2_REGS) {    \
 		CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_SER3MD_Msk;                                        \
 	}
+#elif defined(CONFIG_SOC_PIC32CX5109BZ31048)
+#define I2C_MCHP_ENABLE_MODULE(dev)                                                                \
+	if (((const struct i2c_mchp_dev_config *)(dev)->config)->regs == SERCOM2_REGS) {           \
+		CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_SER2MD_Msk;                                        \
+	}
+#endif
 #elif defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
 #define I2C_MCHP_ENABLE_MODULE(dev)                                                                \
 	if (((const struct i2c_mchp_dev_config *)(dev)->config)->regs == SERCOM1_REGS) {           \
@@ -64,6 +70,7 @@ enum i2c_mchp_target_cmd {
 };
 
 #if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2) ||                                            \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ3) ||                                        \
 	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
 struct i2c_mchp_clock {
 	const struct device *clock_dev;
@@ -1806,6 +1813,7 @@ static int i2c_set_apply_bitrate(const struct device *dev, uint32_t config)
 		bitrate = MHZ(1);
 		break;
 #if !defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2) &&                                           \
+	!defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ3) &&                                       \
 	!defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
 	case I2C_SPEED_HIGH:
 		bitrate = MHZ(3.4);
@@ -1876,10 +1884,8 @@ static int i2c_mchp_init(const struct device *dev)
 		return retval;
 	}
 #if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2) ||                                            \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ3) ||                                        \
 	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
-	if (retval == -EALREADY) {
-		retval = I2C_MCHP_SUCCESS;
-	}
 	I2C_MCHP_ENABLE_MODULE(dev);
 #else
 	retval = clock_control_on(cfg->i2c_clock.clock_dev, cfg->i2c_clock.mclk_sys);
