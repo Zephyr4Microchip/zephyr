@@ -366,6 +366,9 @@
 			prescaler = <1>;
 			channels = <2>;
 		};
+	bt_hci_microchip: bt_hci_microchip {
+		compatible = "microchip,pic32cx-bz-bt-hci";
+		status = "disabled";
 	};
 };
 
