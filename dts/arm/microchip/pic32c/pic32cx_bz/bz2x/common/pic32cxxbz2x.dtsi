@@ -110,6 +110,10 @@
 					subsystem = <CLOCK_MCHP_GCLKPERIPH_ID_GCLK_TC3>;
 					gclkperiph-src-sel = "refclk_1";
 				};
+				gclkperiph_ac {
+					subsystem = <CLOCK_MCHP_GCLKPERIPH_ID_GCLK_AC>;
+					gclkperiph-src-sel = "refclk_1";
+				};
 			};
 			wdtclk: wdtclk {
 				compatible = "microchip,pic32cx-bz-wdtclk";
@@ -317,6 +321,16 @@
 			prescaler = <1>;
 			channels = <2>;
 		};
+
+		ac: ac@42001c00 {
+			compatible = "microchip,ac-g1-comparator";
+			status = "disabled";
+			reg = <0x42001c00 0x24>;
+			interrupts = <24 6>;
+			clocks = <&gclkperiph CLOCK_MCHP_GCLKPERIPH_ID_GCLK_AC>;
+			clock-names = "gclk";
+		};
+
 	};
 	bt_hci_microchip: bt_hci_microchip {
 		compatible = "microchip,pic32cx-bz-bt-hci";
