@@ -246,6 +246,16 @@
 			reg = <0x44000a00 0x400>;
 		};
 
+		rtc: rtc@42010000 {
+			compatible = "microchip,rtc-g1";
+			status = "disabled";
+			reg = <0x42010000 0x81>;
+			interrupts = <0 6>;
+			prescaler = <1>;
+			clocks = <&rtcclk CLOCK_MCHP_RTCCLK_ID>;
+			clock-names = "rtcclk";
+		};
+
 		tcc0: tcc@40003400 {
 			compatible = "microchip,tcc-g1";
 			status = "disabled";
