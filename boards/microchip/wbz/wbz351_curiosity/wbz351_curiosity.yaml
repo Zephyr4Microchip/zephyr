@@ -12,6 +12,7 @@ flash: 512
 ram: 96
 supported:
   - dma
+  - flash
   - gpio
   - pinctrl
   - pwm
