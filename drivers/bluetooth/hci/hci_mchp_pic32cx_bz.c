@@ -46,6 +46,8 @@ static struct k_sem mchp_hci_sem;
 
 #if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2)
 #define EXT_COMMON_MEMORY_SIZE (28 * 1024)
+#elif defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ3)
+#define EXT_COMMON_MEMORY_SIZE (31 * 1024)
 #elif defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
 #define EXT_COMMON_MEMORY_SIZE (31 * 1024)
 #endif
@@ -54,7 +56,8 @@ static struct k_sem mchp_hci_sem;
 #define __mchp_bt_section Z_GENERIC_SECTION(.mchp_bt)
 static uint8_t __mchp_bt_section s_btMem[EXT_COMMON_MEMORY_SIZE];
 
-#elif defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
+#elif defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ3) ||                                          \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
 static uint8_t *s_btMem;
 
 #else
@@ -272,7 +275,8 @@ static int mchp_hci_drv_init(const struct device *dev)
 	if (!IB_GetAntennaGain(&btSysCfg.antennaGain)) {
 		btSysCfg.antennaGain = CONFIG_CUSTOM_ANTENNA_GAIN;
 	}
-#ifdef CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6
+#if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ3) ||                                            \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
 	btSysCfg.adcTimingValid = IB_GetAdcTiming(&btSysCfg.adcTiming08, &btSysCfg.adcTiming51);
 #endif
 
@@ -280,7 +284,8 @@ static int mchp_hci_drv_init(const struct device *dev)
 	osalAPIList.osal_sem_post = osal_sem_post;
 	osalAPIList.osal_sem_postISR = osal_sem_post;
 
-#ifdef CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6
+#if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ3) ||                                            \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
 	s_btMem = k_malloc(EXT_COMMON_MEMORY_SIZE);
 	if (s_btMem == NULL) {
 		LOG_ERR("EXT_COMMON_MEMORY k_malloc fail\n");
@@ -298,7 +303,8 @@ static int mchp_hci_drv_init(const struct device *dev)
 	/* Initialize BLE Stack */
 	BT_SYS_Init(&mchp_hci_sem, &osalAPIList, &btOption, &btSysCfg);
 
-#ifdef CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2
+#if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2) ||                                            \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ3)
 	BT_SYS_UpgradeBleVersion(BT_SYS_BLE_VER_6_0);
 #endif
 
