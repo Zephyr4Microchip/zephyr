@@ -145,6 +145,10 @@ static void comparator_print_reg(const struct device *dev)
 	LOG_DBG("%-20s: 0x%08x", "AC_COMPCTRL[0]", (uint32_t)AC_REG->AC_COMPCTRL[0]);
 	LOG_DBG("%-20s: 0x%08x", "AC_COMPCTRL[1]", (uint32_t)AC_REG->AC_COMPCTRL[1]);
 	LOG_DBG("%-20s: 0x%08x", "AC_SYNCBUSY", (uint32_t)AC_REG->AC_SYNCBUSY);
+#if !defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2) &&                                           \
+	!defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ3) &&                                       \
+	!defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
+#endif
 	LOG_DBG("%-20s: 0x%04x", "AC_CALIB", AC_REG->AC_CALIB);
 	LOG_DBG("===================================================");
 }
@@ -264,6 +268,9 @@ static int ac_configure_channel(const struct device *dev)
 	/* Set Filter length */
 	AC_REG->AC_COMPCTRL[channel_id] |= AC_COMPCTRL_FLEN(channel_config->filter_length);
 
+#if !defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2) &&                                           \
+	!defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ3) &&                                       \
+	!defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
 	if (channel_config->single_shot_mode == false) {
 		/* Enable hysterisis */
 		AC_REG->AC_COMPCTRL[channel_id] |=
@@ -278,6 +285,7 @@ static int ac_configure_channel(const struct device *dev)
 
 	/* Set Comparator speed */
 	AC_REG->AC_COMPCTRL[channel_id] |= AC_COMPCTRL_SPEED(AC_COMPCTRL_SPEED_HIGH_Val);
+#endif
 
 	/* Run in standby if enabled */
 	if (channel_config->run_standby == true) {
@@ -467,6 +475,11 @@ static int comparator_mchp_init(const struct device *dev)
 		return ret;
 	}
 
+#if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2) ||                                            \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ3) ||                                        \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
+	CFG_REGS->CFG_PMD1 &= ~CFG_PMD1_ACMD_Msk;
+#else
 	/* Turn on MCLK for AC */
 	ret = clock_control_on(dev_cfg->comparator_clock.clock_dev,
 			       dev_cfg->comparator_clock.mclk_sys);
@@ -481,6 +494,7 @@ static int comparator_mchp_init(const struct device *dev)
 		LOG_ERR("Failed to apply pinctrl state: %d", ret);
 		return ret;
 	}
+#endif
 
 	/* Reset the comparator peripheral */
 	AC_REG->AC_CTRLA = AC_CTRLA_SWRST_Msk;
@@ -539,6 +553,34 @@ static DEVICE_API(comparator, comparator_mchp_api) = {
 				(), n);             \
 	}
 
+#if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2) ||                                            \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ3) ||                                        \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
+#define COMPARATOR_MCHP_CONFIG_DEFN(n)                                                             \
+	static void comparator_mchp_config_##n(const struct device *dev);                          \
+	static const struct comparator_mchp_dev_config comparator_mchp_cfg_##n = {                 \
+		.regs = (ac_registers_t *)DT_INST_REG_ADDR(n),                                     \
+		.config_func = comparator_mchp_config_##n,                                         \
+		.pcfg = PINCTRL_DT_INST_DEV_CONFIG_GET(n),                                         \
+		.comparator_clock.clock_dev = DEVICE_DT_GET(DT_NODELABEL(clock)),                  \
+		.comparator_clock.gclk_sys =                                                       \
+			(void *)(DT_INST_CLOCKS_CELL_BY_NAME(n, gclk, subsystem)),                 \
+		.channel_config = {                                                                \
+			.channel_id = DT_PROP_OR(DT_DRV_INST(n), comparator_channel, 0),           \
+			.pos_input = DT_ENUM_IDX_OR(DT_DRV_INST(n), positive_mux_input, 0),        \
+			.neg_input = DT_ENUM_IDX_OR(DT_DRV_INST(n), negative_mux_input, 0),        \
+			.output_mode = DT_ENUM_IDX_OR(DT_DRV_INST(n), output_mode, 0),             \
+			.filter_length = DT_ENUM_IDX_OR(DT_DRV_INST(n), filter_length, 0),         \
+			.hysteresis_level = DT_ENUM_IDX_OR(DT_DRV_INST(n), hysteresis_level, 0),   \
+			.vddana_scale_value = DT_PROP_OR(DT_DRV_INST(n), vddana_scale_value, 0),   \
+			.single_shot_mode = DT_PROP_OR(DT_DRV_INST(n), single_shot_mode, 0),       \
+			.hysteresis_enable = DT_PROP_OR(DT_DRV_INST(n), hysteresis_enable, 0),     \
+			.run_standby = DT_PROP_OR(DT_DRV_INST(n), run_standby, 0),                 \
+			.event_input_enable = DT_PROP_OR(DT_DRV_INST(n), event_input_enable, 0),   \
+			.event_output_enable = DT_PROP_OR(DT_DRV_INST(n), event_output_enable, 0), \
+			.swap_inputs = DT_PROP_OR(DT_DRV_INST(n), swap_inputs, 0),                 \
+		}}
+#else
 #define COMPARATOR_MCHP_CONFIG_DEFN(n)                                                             \
 	static void comparator_mchp_config_##n(const struct device *dev);                          \
 	static const struct comparator_mchp_dev_config comparator_mchp_cfg_##n = {                 \
@@ -565,6 +607,7 @@ static DEVICE_API(comparator, comparator_mchp_api) = {
 			.event_output_enable = DT_PROP_OR(DT_DRV_INST(n), event_output_enable, 0), \
 			.swap_inputs = DT_PROP_OR(DT_DRV_INST(n), swap_inputs, 0),                 \
 		}}
+#endif
 
 #define COMPARATOR_MCHP_DEVICE_INIT(n)                                                             \
 	PINCTRL_DT_INST_DEFINE(n);                                                                 \
