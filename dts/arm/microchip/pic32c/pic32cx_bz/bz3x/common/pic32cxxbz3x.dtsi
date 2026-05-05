@@ -240,6 +240,12 @@
 			status = "disabled";
 		};
 
+		rcon: rcon@44000a00 {
+			compatible = "microchip,rcon-g1-reset";
+			status = "okay";
+			reg = <0x44000a00 0x400>;
+		};
+
 		tcc0: tcc@40003400 {
 			compatible = "microchip,tcc-g1";
 			status = "disabled";
