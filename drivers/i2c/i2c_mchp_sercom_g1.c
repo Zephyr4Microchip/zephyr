@@ -199,7 +199,7 @@ LOG_MODULE_REGISTER(i2c_mchp_sercom_g1, CONFIG_I2C_LOG_LEVEL);
  * @param dev Pointer to the device structure for the I2C peripheral.
  */
 #if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2)
-#define I2C_MCHP_ENABLE_CLOCK(dev)                                                                 \
+#define I2C_MCHP_ENABLE_MODULE(dev)                                                                \
 	clock_control_on(((const i2c_mchp_dev_config_t *)(dev->config))->i2c_clock.clock_dev,      \
 			 (((i2c_mchp_dev_config_t *)(dev->config))->i2c_clock.gclk_sys));          \
 	if (((const i2c_mchp_dev_config_t *)(dev->config))->regs == SERCOM1_REGS) {                \
@@ -207,8 +207,14 @@ LOG_MODULE_REGISTER(i2c_mchp_sercom_g1, CONFIG_I2C_LOG_LEVEL);
 	} else if (((const i2c_mchp_dev_config_t *)(dev->config))->regs == SERCOM2_REGS) {         \
 		CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_SER3MD_Msk;                                        \
 	}
+#elif defined(CONFIG_SOC_PIC32CX5109BZ31048)
+#define I2C_MCHP_ENABLE_MODULE(dev)                                                                \
+	if (((const struct i2c_mchp_dev_config *)(dev)->config)->regs == SERCOM2_REGS) {           \
+		CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_SER2MD_Msk;                                        \
+	}
+#endif
 #elif defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
-#define I2C_MCHP_ENABLE_CLOCK(dev)                                                                 \
+#define I2C_MCHP_ENABLE_MODULE(dev)                                                                \
 	clock_control_on(((const i2c_mchp_dev_config_t *)(dev->config))->i2c_clock.clock_dev,      \
 			 (((i2c_mchp_dev_config_t *)(dev->config))->i2c_clock.gclk_sys));          \
 	if (((const i2c_mchp_dev_config_t *)(dev->config))->regs == SERCOM1_REGS) {                \
@@ -454,6 +460,7 @@ typedef enum {
  * @brief Structure to hold device clock configuration.
  */
 #if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2) ||                                            \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ3) ||                                        \
 	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
 typedef struct i2c_mchp_clock {
 
@@ -2917,6 +2924,7 @@ static int i2c_set_apply_bitrate(const struct device *dev, uint32_t config)
 		bitrate = MHZ(1);
 		break;
 #if !defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2) &&                                           \
+	!defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ3) &&                                       \
 	!defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
 	case I2C_SPEED_HIGH:
 		bitrate = MHZ(3.4);
@@ -3031,7 +3039,13 @@ static int i2c_mchp_init(const struct device *dev)
 	int retval;
 
 	/* Enable the GCLK clock for the specified I2C instance */
+#if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2) ||                                            \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ3) ||                                        \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
+	I2C_MCHP_ENABLE_MODULE(dev);
+#else
 	I2C_MCHP_ENABLE_CLOCK(dev);
+#endif
 
 	/* Reset all I2C registers*/
 	i2c_swrst(dev);
