@@ -55,6 +55,7 @@
 		led2 = &led2;
 		sw0 = &button0;
 		rtc = &rtc;
+		watchdog0 = &wdog;
 	};
 };
 
@@ -221,4 +222,8 @@
 	output-mode = "async";
 	filter-length = "off";
 	run-standby;
+};
+
+&wdog {
+	status = "okay";
 };
