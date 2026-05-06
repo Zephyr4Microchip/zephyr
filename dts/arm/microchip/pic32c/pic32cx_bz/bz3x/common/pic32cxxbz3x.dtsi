@@ -24,7 +24,18 @@
 			reg = <0>;
 			#address-cells = <1>;
 			#size-cells = <1>;
+			cpu-power-states = <&sleep>;
 		};
+
+		power-states {
+			sleep: suspend-to-idle {
+				compatible = "zephyr,power-state";
+				power-state-name = "suspend-to-idle";
+				min-residency-us = <5000>;
+				exit-latency-us = <2200>;
+			};
+		};
+
 	};
 
 	soc {

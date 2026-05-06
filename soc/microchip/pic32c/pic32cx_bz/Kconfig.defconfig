@@ -38,6 +38,6 @@ config PM_DEVICE_LOG_LEVEL
 	default 0 if PM
 
 config ENABLE_PMU_BUCK_MODE
-	default y if PM
+	default y if PM && !SOC_SERIES_PIC32CX_BZ3
 
 rsource "*/Kconfig.defconfig"
