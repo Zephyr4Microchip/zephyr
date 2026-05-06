@@ -263,10 +263,18 @@ config HWINFO_AMBIQ
 	  Enable AMBIQ hwinfo driver
 
 config HWINFO_MCHP_G1
-	bool "Microchip hwinfo"
+	bool "Microchip hwinfo G1"
 	default y
 	depends on DT_HAS_MICROCHIP_HWINFO_G1_ENABLED || \
 		   DT_HAS_MICROCHIP_RSTC_G1_RESET_ENABLED
+	select HWINFO_HAS_DRIVER
+	help
+	  Enable mchp hwinfo driver
+
+config HWINFO_MCHP_G2
+	bool "Microchip hwinfo G2"
+	default y
+	depends on DT_HAS_MICROCHIP_HWINFO_G2_ENABLED
 	select HWINFO_HAS_DRIVER
 	help
 	  Enable mchp hwinfo driver
