@@ -175,6 +175,10 @@
 			clocks = <&gclkperiph 0>;
 			clock-names = "gclk";
 		};
+		hwinfo: device_id@41000018 {
+			compatible = "microchip,hwinfo-g2";
+			reg = <0x41000018 0x4>;
+		};
 		nvmctrl: nvmctrl@44000600  {
 			compatible = "microchip,nvmctrl-g2-flash";
 			reg = <0x44000600 0x110>;
