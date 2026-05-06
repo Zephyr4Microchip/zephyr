@@ -11,7 +11,7 @@ toolchain:
 flash: 512
 ram: 96
 supported:
-  - ble
+  - adc
   - comparator
   - dma
   - flash
