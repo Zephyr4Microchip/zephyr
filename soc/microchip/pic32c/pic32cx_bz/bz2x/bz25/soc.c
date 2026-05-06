@@ -90,7 +90,10 @@ void soc_early_init_hook(void)
 	/* Enable the FEM module control for HPA module. */
 	RF_HpaInit();
 #endif
+}
 
+void soc_late_init_hook(void)
+{
 #ifdef CONFIG_ENABLE_PMU_BUCK_MODE
 	/* Set Power mode of the system */
 	PMU_Set_Mode(PMU_MODE_BUCK_PWM);
