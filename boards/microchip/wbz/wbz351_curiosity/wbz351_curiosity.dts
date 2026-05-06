@@ -53,3 +53,127 @@
  *	dma-names = "rx", "tx";
  *};
  */
+
+&tcc0 {
+	status = "disabled";
+	compatible = "microchip,tcc-g1-pwm";
+	#pwm-cells = <3>;
+	pinctrl-0 = <&tcc0_pwm_default>;
+	pinctrl-names = "default";
+	max-bit-width = <24>;
+	prescaler = <1>;
+	channels = <6>;
+};
+
+&tcc1 {
+	status = "disabled";
+	compatible = "microchip,tcc-g1-pwm";
+	#pwm-cells = <3>;
+	pinctrl-0 = <&tcc1_pwm_default>;
+	pinctrl-names = "default";
+	max-bit-width = <24>;
+	prescaler = <1>;
+	channels = <6>;
+};
+
+&tcc2 {
+	status = "disabled";
+	compatible = "microchip,tcc-g1-pwm";
+	#pwm-cells = <3>;
+	pinctrl-0 = <&tcc2_pwm_default>;
+	pinctrl-names = "default";
+	max-bit-width = <16>;
+	prescaler = <256>;
+	channels = <2>;
+};
+
+/* TCC: In 16-bit/32-bit mode, the pulse value is written to CC[1]. This is because they are in MPWM
+ *		mode. In MPWM mode, the wave output will can be observed in WO[1]
+ */
+&tc0 {
+	status = "disabled";
+	compatible = "microchip,tc-g1-pwm";
+	#pwm-cells = <3>;
+	pinctrl-0 = <&tc0_pwm_default>;
+	pinctrl-names = "default";
+	max-bit-width = <16>;
+	prescaler = <256>;
+	channels = <2>;
+};
+
+&tc1 {
+	status = "disabled";
+	compatible = "microchip,tc-g1-pwm";
+	#pwm-cells = <3>;
+	pinctrl-0 = <&tc1_pwm_default>;
+	pinctrl-names = "default";
+	max-bit-width = <16>;
+	prescaler = <256>;
+	channels = <2>;
+};
+
+&tc2 {
+	status = "disabled";
+	compatible = "microchip,tc-g1-pwm";
+	#pwm-cells = <3>;
+	pinctrl-0 = <&tc2_pwm_default>;
+	pinctrl-names = "default";
+	max-bit-width = <16>;
+	prescaler = <256>;
+	channels = <2>;
+};
+
+&tc3 {
+	status = "disabled";
+	compatible = "microchip,tc-g1-pwm";
+	#pwm-cells = <3>;
+	pinctrl-0 = <&tc3_pwm_default>;
+	pinctrl-names = "default";
+	max-bit-width = <16>;
+	prescaler = <256>;
+	channels = <2>;
+};
+
+&tc4 {
+	status = "disabled";
+	compatible = "microchip,tc-g1-pwm";
+	#pwm-cells = <3>;
+	pinctrl-0 = <&tc4_pwm_default>;
+	pinctrl-names = "default";
+	max-bit-width = <16>;
+	prescaler = <256>;
+	channels = <2>;
+};
+
+&tc5 {
+	status = "disabled";
+	compatible = "microchip,tc-g1-pwm";
+	#pwm-cells = <3>;
+	pinctrl-0 = <&tc5_pwm_default>;
+	pinctrl-names = "default";
+	max-bit-width = <16>;
+	prescaler = <256>;
+	channels = <2>;
+};
+
+&tc6 {
+	status = "disabled";
+	compatible = "microchip,tc-g1-pwm";
+	#pwm-cells = <3>;
+	pinctrl-0 = <&tc6_pwm_default>;
+	pinctrl-names = "default";
+	max-bit-width = <16>;
+	prescaler = <256>;
+	channels = <2>;
+};
+
+&tc7 {
+	status = "disabled";
+	compatible = "microchip,tc-g1-pwm";
+	#pwm-cells = <3>;
+	pinctrl-0 = <&tc7_pwm_default>;
+	pinctrl-names = "default";
+	max-bit-width = <16>;
+	prescaler = <256>;
+	channels = <2>;
+};
