@@ -8,3 +8,12 @@ config WDT_MCHP_G1
 	select HAS_WDT_DISABLE_AT_BOOT
 	help
 	  Enable WDT driver for Microchip G1 IPs.
+
+config WDT_MCHP_G2
+	bool "Microchip G2 Watchdog (WDT) Driver"
+	default y
+	depends on DT_HAS_MICROCHIP_WDT_G2_ENABLED
+	select HAS_WDT_DISABLE_AT_BOOT
+	select HAS_WDT_NO_CALLBACKS
+	help
+	  Enable WDT driver for Microchip G2 IPs.
