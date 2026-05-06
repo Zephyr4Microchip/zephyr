@@ -85,7 +85,10 @@ void soc_early_init_hook(void)
 
 	/* CM4 SW Reset Enabled */
 	CFG_REGS->CFG_MISCSTAT |= 0x8000;
+}
 
+void soc_late_init_hook(void)
+{
 #ifdef CONFIG_ENABLE_PMU_BUCK_MODE
 	/* Set Power mode of the system */
 	PMU_Set_Mode(PMU_MODE_BUCK_PWM);
