@@ -175,6 +175,15 @@
 			clocks = <&gclkperiph 0>;
 			clock-names = "gclk";
 		};
+		eic: eic@40000800 {
+			compatible = "microchip,eic-g2-intc";
+			reg = <0x40000800 0x3c>;
+			interrupts = <1 6>;
+			clocks = <&gclkperiph CLOCK_MCHP_GCLKPERIPH_ID_GCLK_EIC>;
+			clock-names = "gclk";
+			low-power-mode;
+			status = "disabled";
+		};
 		hwinfo: device_id@41000018 {
 			compatible = "microchip,hwinfo-g2";
 			reg = <0x41000018 0x4>;
