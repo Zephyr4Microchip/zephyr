@@ -1,0 +1,30 @@
+# Copyright (c) 2025 Microchip Technology Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+description: |
+  Microchip External Interrupt Controller for g2 peripherals
+
+  Group g2 EIC driver supports following hardware peripherals:
+    - module name="EIC" id="U2254" version="3.0.0"
+
+compatible: "microchip,eic-g2-intc"
+
+include:
+  - name: base.yaml
+  - name: pinctrl-device.yaml
+
+properties:
+  reg:
+    required: true
+    description: |
+      Specifies the base address and size of the register
+
+  interrupts:
+    required: true
+    description: |
+      Specifies the interrupt line in the NVIC
+
+  low-power-mode:
+    type: boolean
+    description: |
+      Enables low power mode for eic peripheral
