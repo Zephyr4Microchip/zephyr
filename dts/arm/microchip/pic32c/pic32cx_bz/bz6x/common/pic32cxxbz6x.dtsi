@@ -8,7 +8,7 @@
 #include <zephyr/dt-bindings/gpio/gpio.h>
 #include <zephyr/dt-bindings/pwm/pwm.h>
 #include <zephyr/dt-bindings/clock/mchp_pic32cx_bz6_clock.h>
-
+#include <zephyr/dt-bindings/adc/adc.h>
 / {
 	chosen {
 		zephyr,flash-controller = &nvmctrl;
@@ -483,6 +483,22 @@
 			clock-names = "gclk";
 		};
 
+		adc: adc@44001500 {
+			compatible = "microchip,adc-g2";
+			reg = <0x44001500 0xb64>;
+			interrupts = <35 6>;
+			/*
+			 * shared ADC module clock = adcsel / conclkdiv / adcdiv
+			 */
+			adcsel = "pbclk";
+			conclkdiv = <2>;
+			adcdiv = <2>;
+			num-channels = <19>;
+			fract = "integer";
+			/* Internal Bandgap reference voltage */
+			vref-mv = <3300>;
+			#io-channel-cells = <1>;
+		};
 	};
 
 	bt_hci_microchip: bt_hci_microchip {
