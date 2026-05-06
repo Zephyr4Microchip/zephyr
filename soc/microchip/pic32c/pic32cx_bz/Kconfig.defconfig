@@ -6,9 +6,10 @@ config DEVICE_SUPPORT_REQUIRED
 	default y if (BT || HPA_SUPPORTED || ENABLE_PMU_BUCK_MODE || IEEE802154)
 
 config FPU
-	default y if BT
+	default y if (BT || PM)
 
 config IDLE_STACK_SIZE
+	default 1024 if PM
 	default 512 if BT
 
 config MAIN_STACK_SIZE
@@ -31,5 +32,12 @@ config BT_BUF_ACL_TX_COUNT
 
 config BT_BUF_EVT_RX_COUNT
 	default 11 if BT
+
+# To avoid error logs being printed periodically when BT does not allowed entering sleep mode
+config PM_DEVICE_LOG_LEVEL
+	default 0 if PM
+
+config ENABLE_PMU_BUCK_MODE
+	default y if PM
 
 rsource "*/Kconfig.defconfig"
