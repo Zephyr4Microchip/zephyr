@@ -55,6 +55,7 @@
 		led2 = &led2;
 		sw0 = &button0;
 		rtc = &rtc;
+		watchdog0 = &wdog;
 	};
 };
 
@@ -318,4 +319,8 @@
 	filter-length = "off";
 	interrupt-enable;
 	run-standby;
+};
+
+&wdog {
+	status = "okay";
 };
