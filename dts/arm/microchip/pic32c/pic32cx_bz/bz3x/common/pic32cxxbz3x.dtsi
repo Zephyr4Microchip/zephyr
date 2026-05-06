@@ -421,6 +421,18 @@
 			vref-mv = <3300>;
 			#io-channel-cells = <1>;
 		};
+
+		wdog: watchdog@44000500 {
+			compatible = "microchip,wdt-g2";
+			status = "disabled";
+			reg = <0x44000500 0x10>;
+			clocks = <&wdtclk CLOCK_MCHP_WDTCLK_ID>;
+			clock-names = "wdtclk";
+			max-installable-timeout-count = <1>;
+			max-timeout-window = <1048576>;	/**< milliseconds */
+			max-timeout-window-mode = <786432>; /**< milliseconds */
+			min-window-limit = <1>;/**< milliseconds */
+		};
 	};
 
 	bt_hci_microchip: bt_hci_microchip {
