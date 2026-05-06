@@ -302,3 +302,18 @@
 	prescaler = <256>;
 	channels = <2>;
 };
+
+&ac {
+	status = "disabled";
+	compatible = "microchip,ac-g1-comparator";
+	comparator-channel = <0>;
+	/*
+	 * AC_AIN3 = RB1 (AN)
+	 */
+	positive-mux-input = "pin3";
+	negative-mux-input = "bandgap";
+	vddana-scale-value = <1>;
+	output-mode = "async";
+	filter-length = "off";
+	run-standby;
+};
