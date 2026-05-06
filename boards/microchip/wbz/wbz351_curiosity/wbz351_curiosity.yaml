@@ -13,5 +13,6 @@ ram: 96
 supported:
   - dma
   - pinctrl
+  - pwm
   - uart
 vendor: microchip
