@@ -15,6 +15,7 @@ supported:
   - ble
   - comparator
   - dma
+  - eic
   - flash
   - gpio
   - pinctrl
