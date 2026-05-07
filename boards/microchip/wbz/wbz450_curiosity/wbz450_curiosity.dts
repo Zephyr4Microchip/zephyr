@@ -22,6 +22,7 @@
 		zephyr,bt-hci = &bt_hci_microchip;
 		zephyr,bt-c2h-uart = &sercom0;
 		zephyr,ieee802154 = &ieee802154;
+		zephyr,cortex-m-idle-timer = &rtc;
 	};
 
 	leds {
@@ -121,12 +122,21 @@
 	status = "okay";
 };
 
+/*
+ *&rtc {
+ *	compatible = "microchip,rtc-g1";
+ *	status = "okay";
+ *	prescaler = <1024>;
+ *	alarms-count = <2>;
+ *	cal-constant = <1048576>;  (8192 * 128 = 1048576)
+ *};
+ */
+
 &rtc {
-	compatible = "microchip,rtc-g1";
+	compatible = "microchip,rtc-g1-counter";
 	status = "okay";
-	prescaler = <1024>;
-	alarms-count = <2>;
-	cal-constant = <1048576>;  /*(8192 * 128 = 1048576)*/
+	max-bit-width = <32>;
+	prescaler = <1>;
 };
 
 &tcc0 {
@@ -222,6 +232,39 @@
 	output-mode = "async";
 	filter-length = "off";
 	run-standby;
+};
+
+&porta {
+	/* GPIO_CNPUSET = 0x0018; pull up PA3, PA4 (if low power clock source is POSC)
+	 * GPIO_CNPDSET = 0x0600; Pull up PA9, PA10(red and green led)
+	 */
+	sleep-sosc {
+		status = "disabled";
+		gpio-hog;
+		gpios = <9 GPIO_PULL_DOWN>,
+			<10 GPIO_PULL_DOWN>;
+		input;
+	};
+	sleep-posc {
+		status = "disabled";
+		gpio-hog;
+		gpios = <3 GPIO_PULL_UP>,
+			<4 GPIO_PULL_UP>,
+			<9 GPIO_PULL_DOWN>,
+			<10 GPIO_PULL_DOWN>;
+		input;
+	};
+};
+
+&portb {
+	/* GPIO_CNPDSET = 0x0060; pull down RB5 (LEDs) , RTS */
+	sleep {
+		status = "disabled";
+		gpio-hog;
+		gpios = <5 GPIO_PULL_DOWN>,
+			<6 GPIO_PULL_DOWN>;
+		input;
+	};
 };
 
 &wdog {
