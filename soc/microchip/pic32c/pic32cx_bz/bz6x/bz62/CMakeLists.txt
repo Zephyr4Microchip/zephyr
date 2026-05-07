@@ -3,6 +3,11 @@
 
 zephyr_include_directories(.)
 
+zephyr_sources_ifdef(CONFIG_PM
+  ../common/power.c
+  ../common/device_sleep.c
+  )
+
 zephyr_library_sources(system_config.c)
 
 zephyr_library_sources(soc.c)

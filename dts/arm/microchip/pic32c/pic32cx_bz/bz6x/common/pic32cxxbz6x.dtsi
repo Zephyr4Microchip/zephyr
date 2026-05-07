@@ -24,7 +24,18 @@
 			reg = <0>;
 			#address-cells = <1>;
 			#size-cells = <1>;
+			cpu-power-states = <&sleep>;
 		};
+
+		power-states {
+			sleep: suspend-to-idle {
+				compatible = "zephyr,power-state";
+				power-state-name = "suspend-to-idle";
+				min-residency-us = <5000>;
+				exit-latency-us = <2700>;
+			};
+		};
+
 	};
 
 	soc {
@@ -161,19 +172,32 @@
 			};
 			vbkpclk: vbkpclk {
 				compatible = "microchip,pic32cx-bz-vbkpclk";
+				vbkpclk-32kc-src-sel = "sosc";
 			};
 			dswdtclk: dswdtclk {
 				compatible = "microchip,pic32cx-bz-dswdtclk";
 			};
 			lpclk: lpclk {
 				compatible = "microchip,pic32cx-bz-lpclk";
+				lpclk-div-modifier = "div_by_1.024";
 			};
+			/* 1 KHz for Clock/Calendar mode */
+			/*
+			 *rtcclk: rtcclk {
+			 *	compatible = "microchip,pic32cx-bz-rtcclk";
+			 *	#clock-cells = <1>;
+			 *	rtcclk-counter-mode-sel = "raw_32k";
+			 *	rtcclk-vbkp-div-sel = "div_by_31.25";
+			 *	rtcclk-vbkp-1k-32k-sel = "div_by_vbkp_div";
+			 *};
+			 */
+			/* 32 KHz for Counter mode */
 			rtcclk: rtcclk {
 				compatible = "microchip,pic32cx-bz-rtcclk";
 				#clock-cells = <1>;
 				rtcclk-counter-mode-sel = "raw_32k";
 				rtcclk-vbkp-div-sel = "div_by_31.25";
-				rtcclk-vbkp-1k-32k-sel = "div_by_vbkp_div";
+				rtcclk-vbkp-1k-32k-sel = "32khz";
 			};
 		};
 		dmac: dmac@41004000 {
