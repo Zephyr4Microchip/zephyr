@@ -23,6 +23,7 @@
 		zephyr,bt-hci = &bt_hci_microchip;
 		zephyr,bt-c2h-uart = &sercom0;
 		zephyr,ieee802154 = &ieee802154;
+		zephyr,cortex-m-idle-timer = &rtc;
 	};
 
 	leds {
@@ -181,12 +182,21 @@
 	status = "okay";
 };
 
+/*
+ *&rtc {
+ *	compatible = "microchip,rtc-g1";
+ *	status = "okay";
+ *	prescaler = <1024>;
+ *	alarms-count = <2>;
+ *	cal-constant = <1048576>;  (8192 * 128 = 1048576)
+ *};
+ */
+
 &rtc {
-	compatible = "microchip,rtc-g1";
+	compatible = "microchip,rtc-g1-counter";
 	status = "okay";
-	prescaler = <1024>;
-	alarms-count = <2>;
-	cal-constant = <1048576>;  /*(8192 * 128 = 1048576)*/
+	max-bit-width = <32>;
+	prescaler = <1>;
 };
 
 &tcc0 {
@@ -282,6 +292,52 @@
 	output-mode = "async";
 	filter-length = "off";
 	run-standby;
+};
+
+&porta {
+	/* GPIO_CNPUSET = 0x1FF5; Except PA1 (QSPI Data), PA3, the others are pulled up
+	 * GPIO_CNPDSET = 0x0008; PA3 is Pulled down: SERCOM 0-RTS
+	 */
+	sleep {
+		status = "disabled";
+		gpio-hog;
+		gpios = <0 GPIO_PULL_UP>,
+			<2 GPIO_PULL_UP>,
+			<4 GPIO_PULL_UP>,
+			<5 GPIO_PULL_UP>,
+			<6 GPIO_PULL_UP>,
+			<7 GPIO_PULL_UP>,
+			<8 GPIO_PULL_UP>,
+			<9 GPIO_PULL_UP>,
+			<10 GPIO_PULL_UP>,
+			<11 GPIO_PULL_UP>,
+			<12 GPIO_PULL_UP>,
+			<3 GPIO_PULL_DOWN>;
+		input;
+	};
+};
+
+&portb {
+	/* GPIO_CNPUSET = 0xF886; PB1, PB2, PB7(User LED), PB11(QSPI_SCK),
+	 *                        PB12 (QSPI DATA1), PB13(QSPI DATA0) are pulled high
+	 * GPIO_CNPDSET = 0x0029; pull down PB0, PB3, PB5 (LEDs)
+	 */
+	sleep {
+		status = "disabled";
+		gpio-hog;
+		gpios = <1 GPIO_PULL_UP>,
+			<2 GPIO_PULL_UP>,
+			<7 GPIO_PULL_UP>,
+			<11 GPIO_PULL_UP>,
+			<12 GPIO_PULL_UP>,
+			<13 GPIO_PULL_UP>,
+			<14 GPIO_PULL_UP>,
+			<15 GPIO_PULL_UP>,
+			<0 GPIO_PULL_DOWN>,
+			<3 GPIO_PULL_DOWN>,
+			<5 GPIO_PULL_DOWN>;
+		input;
+	};
 };
 
 &wdog {
