@@ -24,11 +24,20 @@ LOG_MODULE_REGISTER(counter_mchp_tcc_g1, CONFIG_COUNTER_LOG_LEVEL);
 #define DELAY_US                          (1U)
 #define COMPARE_IRQ_LINE_MAX              (6U)
 
+#if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2) ||                                            \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ3) ||                                        \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
+struct mchp_counter_clock {
+	const struct device *clock_dev;
+	clock_control_subsys_t periph_async_clk;
+};
+#else
 struct mchp_counter_clock {
 	const struct device *clock_dev;
 	clock_control_subsys_t host_core_sync_clk;
 	clock_control_subsys_t periph_async_clk;
 };
+#endif
 
 struct tcc_counter_irq_map {
 	const uint32_t ovf_irq_line;                        /* Overflow interrupt number */
@@ -156,6 +165,12 @@ static void tcc_counter_init(tcc_registers_t *const p_regs, uint32_t prescaler,
 			     TCC_EVCTRL_TCEI(0U) | TCC_EVCTRL_OVFEO(0U) | TCC_EVCTRL_MCEO0(0U) |
 			     TCC_EVCTRL_MCEO1(0U) | TCC_EVCTRL_MCEO2(0U) | TCC_EVCTRL_MCEO3(0U) |
 			     TCC_EVCTRL_MCEO4(0U) | TCC_EVCTRL_MCEO5(0U);
+
+#if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2) ||                                            \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ3) ||                                        \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
+	p_regs->TCC_CTRLA |= TCC_CTRLA_RUNSTDBY(1U);
+#endif
 
 	tcc_counter_wait_sync(&p_regs->TCC_SYNCBUSY, ALL_TCC_SYNC_BITS);
 }
@@ -304,6 +319,26 @@ static uint32_t tcc_counter_ticks_diff(uint32_t cnt_val_1, uint32_t cnt_val_2, u
 	return (diff < wrap_diff) ? diff : wrap_diff;
 }
 
+#if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2) ||                                            \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ3) ||                                        \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
+static int tcc_enable_module(const struct device *dev)
+{
+	const struct counter_mchp_dev_config *const cfg = dev->config;
+
+	if ((tcc_registers_t *)cfg->regs == TCC0_REGS) {
+		CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_TCC0MD_Msk;
+	} else if ((tcc_registers_t *)cfg->regs == TCC1_REGS) {
+		CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_TCC1MD_Msk;
+	} else if ((tcc_registers_t *)cfg->regs == TCC2_REGS) {
+		CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_TCC2MD_Msk;
+	} else {
+		return -1;
+	}
+
+	return 0;
+}
+#endif
 static int32_t counter_mchp_start(const struct device *const dev)
 {
 	const struct counter_mchp_dev_config *const cfg = dev->config;
@@ -572,6 +607,15 @@ static int32_t counter_mchp_init(const struct device *const dev)
 	const struct counter_mchp_dev_config *const cfg = dev->config;
 	const struct mchp_counter_clock *const clk = &cfg->counter_clock;
 
+#if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2) ||                                            \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ3) ||                                        \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
+	ret_val = tcc_enable_module(dev);
+	if ((ret_val < 0) && (ret_val != -EALREADY)) {
+		LOG_ERR("%s : module enable failed", __func__);
+		return COUNTER_RET_FAILED;
+	}
+#else
 	/* Enable host synchronous core clock */
 	ret_val = clock_control_on(clk->clock_dev, clk->host_core_sync_clk);
 
@@ -579,6 +623,7 @@ static int32_t counter_mchp_init(const struct device *const dev)
 		LOG_ERR("%s : Unable to initialize host clock", __func__);
 		return ret_val;
 	}
+#endif
 
 	/* Enable peripheral asynchronous clock */
 	ret_val = clock_control_on(clk->clock_dev, clk->periph_async_clk);
@@ -595,6 +640,63 @@ static int32_t counter_mchp_init(const struct device *const dev)
 	return ret_val;
 }
 
+#if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2) ||                                            \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ3) ||                                        \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
+static void counter_mchp_irq_handle(const struct device *const dev)
+{
+	uint32_t status;
+	uint32_t cc_value = 0u;
+	uint8_t channel = 0xFF;
+	struct counter_mchp_dev_data *const data = dev->data;
+	const struct counter_mchp_dev_config *const cfg = dev->config;
+	tcc_registers_t *const p_regs = cfg->regs;
+	counter_alarm_callback_t cb = NULL;
+
+	status = p_regs->TCC_INTFLAG;
+	/* Clear interrupt flags */
+	p_regs->TCC_INTFLAG = TCC_INTFLAG_Msk;
+	(void)p_regs->TCC_INTFLAG;
+
+	if (data->late_alarm_flag) {
+		channel = data->late_alarm_channel;
+	} else if (status & TCC_INTFLAG_MC0_Msk) {
+		channel = 0;
+	} else if (status & TCC_INTFLAG_MC1_Msk) {
+		channel = 1;
+	} else if (status & TCC_INTFLAG_MC2_Msk) {
+		channel = 2;
+	} else if (status & TCC_INTFLAG_MC3_Msk) {
+		channel = 3;
+	} else if (status & TCC_INTFLAG_MC4_Msk) {
+		channel = 4;
+	} else if (status & TCC_INTFLAG_MC5_Msk) {
+		channel = 5;
+	}
+
+	if (channel != 0xFF) {
+		cb = data->channel_data[channel].callback;
+		/* Immediate interrupt trigger */
+		if (data->late_alarm_flag && data->late_alarm_channel == channel) {
+			data->late_alarm_flag = false;
+		} else {
+			tcc_counter_alarm_irq_clear(p_regs, channel);
+		}
+
+		data->channel_data[channel].callback = NULL;
+		cc_value = data->channel_data[channel].compare_value;
+		if (cb != NULL) {
+			cb(dev, channel, cc_value, data->channel_data[channel].user_data);
+		}
+	}
+
+	if (status & TCC_INTFLAG_OVF_Msk) {
+		if (data->top_cb) {
+			data->top_cb(dev, data->top_user_data);
+		}
+	}
+}
+#else
 static inline void counter_mchp_irq_0_handle(const struct device *const dev)
 {
 	struct counter_mchp_dev_data *const data = dev->data;
@@ -677,6 +779,7 @@ static inline void counter_mchp_irq_6_handle(const struct device *const dev)
 {
 	counter_mchp_channel_irq_handle(dev, 5);
 }
+#endif
 
 static DEVICE_API(counter, counter_mchp_api) = {
 	.start = counter_mchp_start,
@@ -693,19 +796,37 @@ static DEVICE_API(counter, counter_mchp_api) = {
 };
 
 /* clang-format off */
+#if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2) ||                                            \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ3) ||                                        \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
+#define COUNTER_MCHP_CLOCK_ASSIGN(n)						\
+	.counter_clock.clock_dev = DEVICE_DT_GET(DT_NODELABEL(clock)),      \
+	.counter_clock.periph_async_clk =					\
+		(void *)(DT_INST_CLOCKS_CELL_BY_NAME(n, gclk, subsystem)),
+#else
 #define COUNTER_MCHP_CLOCK_ASSIGN(n)						\
 	.counter_clock.clock_dev = DEVICE_DT_GET(DT_NODELABEL(clock)),		\
 	.counter_clock.host_core_sync_clk =					\
 		(void *)(DT_INST_CLOCKS_CELL_BY_NAME(n, mclk, subsystem)),	\
 	.counter_clock.periph_async_clk =					\
 		(void *)(DT_INST_CLOCKS_CELL_BY_NAME(n, gclk, subsystem)),
+#endif
 
-
+#if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2) ||                                            \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ3) ||                                        \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
+#define COUNTER_MCHP_IRQ_HANDLER(n)							\
+	static void counter_mchp_config_##n(const struct device *dev)			\
+	{										\
+		MCHP_COUNTER_IRQ_CONNECT(0, n);			\
+	}
+#else
 #define COUNTER_MCHP_IRQ_HANDLER(n)							\
 	static void counter_mchp_config_##n(const struct device *dev)			\
 	{										\
 		 LISTIFY(DT_NUM_IRQS(DT_DRV_INST(n)), MCHP_COUNTER_IRQ_CONNECT, (;), n)	\
 	}
+#endif
 
 /* This macro calculates the number of IRQs for the given instance of the Microchip TCC g1
  * counter by subtracting 1 from the total number of IRQs ( First IRQ is for OVF).
@@ -720,6 +841,17 @@ static DEVICE_API(counter, counter_mchp_api) = {
  * of a Microchip counter device. The structure maps IRQs to channels based on
  * the number of compare/capture channels (`CC_NUMS`) for the device instance.
  */
+#if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2) ||                                            \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ3) ||                                        \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
+#define COUNTER_MCHP_IRQ_MAP_VAR(n)					\
+	static struct tcc_counter_irq_map counter_mchp_irq_map_##n = {		\
+		.ovf_irq_line = DT_INST_IRQ_BY_IDX(n, 0, irq),			\
+		.comp_irq_line = {						\
+			LISTIFY((DT_NUM_IRQS(DT_DRV_INST(n)),		\
+			COUNTER_MCHP_COMP_IRQ_IDX,				\
+			(,), n) }}
+#else
 #define COUNTER_MCHP_IRQ_MAP_VAR(n)						\
 	static struct tcc_counter_irq_map counter_mchp_irq_map_##n = {		\
 		.ovf_irq_line = DT_INST_IRQ_BY_IDX(n, 0, irq),			\
@@ -727,9 +859,31 @@ static DEVICE_API(counter, counter_mchp_api) = {
 			LISTIFY(UTIL_DEC(DT_NUM_IRQS(DT_DRV_INST(n))),		\
 			COUNTER_MCHP_COMP_IRQ_IDX,				\
 			(,), n) }}
+#endif
+
 /* UTIL_DEC is used above so that the total number of the irqs is reduced
  * as the first one is for the overflow
  */
+
+#if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2) ||                                            \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ3) ||                                        \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
+#define COUNTER_MCHP_CONFIG_VAR(n)                                                              \
+	static const struct counter_mchp_dev_config counter_mchp_dev_config_##n = {		\
+		.info = {.max_top_value =                                                       \
+				 ((uint32_t)((1ULL << COUNTER_MCHP_MAX_BIT_WIDTH(n)) - 1)),     \
+			 .freq = 0u,                                                            \
+			 .flags = COUNTER_CONFIG_INFO_COUNT_UP,                                 \
+			 .channels = DT_INST_PROP(n, channels)},                                \
+		.regs = (tcc_registers_t *)DT_INST_REG_ADDR(n),                                 \
+		COUNTER_MCHP_CLOCK_ASSIGN(n)							\
+		.channel_irq_map = &counter_mchp_irq_map_##n,					\
+		.max_bit_width = COUNTER_MCHP_MAX_BIT_WIDTH(n),                                 \
+		.prescaler = DT_INST_PROP_OR(n, prescaler, 1),                                  \
+		.max_channels = DT_INST_PROP_OR(n, channels, 0),				\
+		.irq_config_func = &counter_mchp_config_##n,                                    \
+	};
+#else
 #define COUNTER_MCHP_CONFIG_VAR(n)                                                              \
 	static const struct counter_mchp_dev_config counter_mchp_dev_config_##n = {		\
 		.info = {.max_top_value =                                                       \
@@ -745,12 +899,19 @@ static DEVICE_API(counter, counter_mchp_api) = {
 		.max_channels = DT_INST_PROP_OR(n, channels, 0),				\
 		.irq_config_func = &counter_mchp_config_##n,                                    \
 	};
+#endif
 
 /*
  * This macro creates a static array of channel data structures for the specified
  * instance of a Microchip counter device. The size of the array is determined
  * by the number of compare/capture channels (`CC_NUMS`) for the device instance.
  */
+#if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2) ||                                            \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ3) ||                                        \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
+#define COUNTER_MCHP_CHANNEL_DATA_VAR(n)                                                           \
+	static struct counter_mchp_ch_data counter_mchp_channel_data_##n[DT_INST_PROP(n, channels)];
+#else
 #define COUNTER_MCHP_CHANNEL_DATA_VAR(n)                                                           \
 	static struct counter_mchp_ch_data counter_mchp_channel_data_##n[COUNTER_MCHP_CC_NUMS(n)];
 
@@ -763,6 +924,20 @@ static DEVICE_API(counter, counter_mchp_api) = {
  * counter device instance and enables the IRQ. The IRQ number and priority are
  * retrieved from the device tree.
  */
+#if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2) ||                                            \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ3) ||                                        \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
+#define MCHP_COUNTER_IRQ_CONNECT(m, n)								\
+	COND_CODE_1(DT_IRQ_HAS_IDX(DT_DRV_INST(n), m),						\
+	(											\
+		do {										\
+			IRQ_CONNECT(DT_INST_IRQ_BY_IDX(n, m, irq),				\
+				DT_INST_IRQ_BY_IDX(n, m, priority),				\
+				counter_mchp_irq_handle, DEVICE_DT_INST_GET(n), 0);	\
+			irq_enable(DT_INST_IRQ_BY_IDX(n, m, irq));				\
+		} while (false);								\
+	), ())
+#else
 #define MCHP_COUNTER_IRQ_CONNECT(m, n)								\
 	COND_CODE_1(DT_IRQ_HAS_IDX(DT_DRV_INST(n), m),						\
 	(											\
@@ -773,6 +948,7 @@ static DEVICE_API(counter, counter_mchp_api) = {
 			irq_enable(DT_INST_IRQ_BY_IDX(n, m, irq));				\
 		} while (false);								\
 	), ())
+#endif
 
 #define COUNTER_MCHP_DEVICE_INIT_FUNC(n)	\
 	COUNTER_MCHP_IRQ_MAP_VAR(n);            \
