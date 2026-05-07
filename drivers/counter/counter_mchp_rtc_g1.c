@@ -52,6 +52,21 @@ LOG_MODULE_REGISTER(counter_mchp_rtc_g1, CONFIG_COUNTER_LOG_LEVEL);
  * This structure contains the clock configuration parameters for the Counter
  * peripheral.
  */
+#if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2) ||                                            \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ3) ||                                        \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
+typedef struct mchp_counter_clock {
+	/* Clock driver */
+	const struct device *clock_dev;
+
+	/* Generic clock subsystem. */
+	clock_control_subsys_t periph_async_clk;
+
+} counter_mchp_clock_t;
+
+#define RTC_MCHP_ENABLE_MODULE() CFG_REGS->CFG_PMD1 &= ~CFG_PMD1_RTCCMD_Msk; /* enable RTCC */
+
+#else
 typedef struct mchp_counter_clock {
 	/* Clock driver */
 	const struct device *clock_dev;
@@ -63,6 +78,7 @@ typedef struct mchp_counter_clock {
 	clock_control_subsys_t periph_async_clk;
 
 } counter_mchp_clock_t;
+#endif
 
 typedef struct rtc_counter_irq_map {
 	/* Overflow channel */
@@ -1431,12 +1447,18 @@ static int32_t counter_mchp_init(const struct device *const dev)
 		ret_status = COUNTER_RET_FAILED;
 	}
 
+#if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2) ||                                            \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ3) ||                                        \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
+
+#else
 	/* Enable host synchronous core clock */
 	ret_status = clock_control_on(clk->clock_dev, clk->host_core_sync_clk);
 	if ((ret_status < 0) && (ret_status != -EALREADY)) {
 		LOG_ERR("%s : Unable to initialize host clock", __func__);
 		ret_status = COUNTER_RET_FAILED;
 	}
+#endif
 
 	/* Enable peripheral asynchronous clock */
 	if (ret_status != COUNTER_RET_FAILED) {
@@ -1446,6 +1468,12 @@ static int32_t counter_mchp_init(const struct device *const dev)
 			ret_status = COUNTER_RET_FAILED;
 		}
 	}
+
+#if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2) ||                                            \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ3) ||                                        \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
+	RTC_MCHP_ENABLE_MODULE();
+#endif
 
 	/* Initialize counter peripheral */
 	if (ret_status != COUNTER_RET_FAILED) {
@@ -1635,6 +1663,18 @@ static DEVICE_API(counter, counter_mchp_api) = {
  *		 and peripheral asynchronous clock configurations based on the presence
  *		 of relevant device tree properties.
  */
+#if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2) ||                                            \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ3) ||                                        \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
+#define COUNTER_MCHP_CLOCK_ASSIGN(n)							\
+	.counter_clock.clock_dev = DEVICE_DT_GET(DT_NODELABEL(clock)),			\
+	COND_CODE_1(									\
+		DT_NODE_EXISTS(DT_INST_CLOCKS_CTLR_BY_NAME(n, rtcclk)),			\
+		(.counter_clock.periph_async_clk =					\
+		(void *)DT_INST_CLOCKS_CELL_BY_NAME(n, rtcclk, subsystem),),	\
+		()									\
+	)
+#else
 #define COUNTER_MCHP_CLOCK_ASSIGN(n)							\
 	.counter_clock.clock_dev = DEVICE_DT_GET(DT_NODELABEL(clock)),			\
 	.counter_clock.host_core_sync_clk =						\
@@ -1645,6 +1685,7 @@ static DEVICE_API(counter, counter_mchp_api) = {
 			(void *)DT_INST_CLOCKS_CELL_BY_NAME(n, rtcclk, subsystem),),	\
 		()									\
 	)
+#endif
 
 /*
  * @brief Define the configuration structure for a Microchip counter device.
