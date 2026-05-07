@@ -41,14 +41,6 @@
 		};
 	};
 
-	pwmleds {
-		compatible = "pwm-leds";
-		pwm_led0: pwm_led_0 {
-			status = "okay";
-			pwms = <&tc0 1 PWM_MSEC(20) 0>;
-		};
-	};
-
 	buttons {
 		compatible = "gpio-keys";
 		button0: button_0 {
@@ -64,7 +56,6 @@
 		led2 = &led2;
 		sw0 = &button0;
 		rtc = &rtc;
-		pwm-led0 = &pwm_led0;
 	};
 };
 
@@ -264,7 +255,7 @@
 
 
 &tc0 {
-	status = "okay";
+	status = "disabled";
 	compatible = "microchip,tc-g1-pwm";
 	#pwm-cells = <3>;
 	pinctrl-0 = <&tc0_pwm_default>;
