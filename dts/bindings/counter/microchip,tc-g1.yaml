@@ -1,8 +1,11 @@
 # Copyright (c) 2025 Microchip Technology Inc.
 # SPDX-License-Identifier: Apache-2.0
+title: Microchip TC g1 peripheral.
 
 description: |
-  Microchip TC g1 peripherals are used for creating the PWM output on different channels
+  Microchip TC g1 peripheral.
+
+  It is used for creating the PWM output on different channels
   as well as used as a timer/counter.
   This yaml supports the following peripherals
     - tc-u2249 (3.0.0)
@@ -45,11 +48,6 @@ properties:
 
   prescaler:
     type: int
-    description: |
-      Timer prescaler values.
-
-      The prescaler divides the input clock frequency to
-      achieve the desired timer frequency.
     enum:
       - 1
       - 2
@@ -59,6 +57,11 @@ properties:
       - 64
       - 256
       - 1024
+    description: |
+      Timer prescaler values.
+
+      The prescaler divides the input clock frequency to
+      achieve the desired timer frequency.
 
   channels:
     type: int
@@ -69,6 +72,10 @@ properties:
   max-bit-width:
     type: int
     required: true
+    enum:
+      - 8
+      - 16
+      - 32
     description: |
       Maximum bit width supported by the PWM counter.
 
@@ -76,7 +83,3 @@ properties:
       in the device tree should reflect the maximum supported by the hardware
       instance. It should only be overridden after consulting the relevant family
       datasheet to ensure compatibility.
-    enum:
-      - 8
-      - 16
-      - 32

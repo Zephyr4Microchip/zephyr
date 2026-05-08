@@ -1,6 +1,8 @@
 # Copyright (c) 2025 Microchip Technology Inc.
 # SPDX-License-Identifier: Apache-2.0
 
+title: Microchip ADC G1 Driver
+
 description: |
   Binding for the Microchip ADC driver supporting Group G1 peripherals.
 
@@ -34,13 +36,6 @@ properties:
     description: |
       Clock name corresponding to the `clocks` entry.
 
-  vref-mv:
-    type: int
-    description: |
-      ADC reference voltage in millivolts.
-
-      This should match the reference selected in hardware or software config.
-
   prescaler:
     type: int
     required: true
@@ -53,7 +48,6 @@ properties:
   num-channels:
     type: int
     required: true
-    default: 23
     description: |
       Number of input channels supported by this ADC instance.
 
@@ -62,11 +56,29 @@ properties:
     description: |
       Specifies that each io-channel uses a single cell (input index).
 
-  calib-offset:
-    type: int
-    enum: [0, 14]
+  nvm-calib:
+    type: phandle
+    required: true
     description: |
-      Bit offset of the BIASCOMP field in NVM software calibration region.
+      Phandle to the NVM software calibration area containing
+      ADC factory calibration values.
+
+  calib-mapping:
+    type: array
+    required: true
+    description: |
+      Calibration mapping entries describing how values are extracted
+      from the NVM calibration area and programmed into the ADC CALIB
+      register.
+
+      Each entry consists of three cells in the form:
+      <adc_bit nvm_bit mask>.
+
+  calib-mapping-names:
+    type: string-array
+    description: |
+      Names of ADC calibration fields corresponding one-to-one with
+      the entries in calib-mapping.
 
 io-channel-cells:
   - input

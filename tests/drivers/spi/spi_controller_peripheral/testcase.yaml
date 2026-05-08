@@ -15,6 +15,7 @@ common:
     - nrf54h20dk/nrf54h20/cpurad
     - nrf54h20dk/nrf54h20/cpuppr
     - ophelia4ev/nrf54l15/cpuapp
+    - sam_e54_xpro
 
 tests:
   drivers.spi.spi_mode0:
@@ -69,6 +70,7 @@ tests:
       - nrf54l20pdk/nrf54l20/cpuapp
       - nrf54lm20dk/nrf54lm20a/cpuapp
       - ophelia4ev/nrf54l15/cpuapp
+      - sam_e54_xpro
 
   drivers.spi.spis_fast:
     # SPIS120 instance occupies P6 which is not available on nRF54H20 DK pin headers

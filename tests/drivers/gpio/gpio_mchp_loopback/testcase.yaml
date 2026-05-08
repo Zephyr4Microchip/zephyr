@@ -1,0 +1,10 @@
+tests:
+  drivers.gpio.gpio_mchp_loopback:
+    tags:
+      - drivers
+      - gpio
+    depends_on: gpio
+    min_flash: 48
+    harness: ztest
+    harness_config:
+      fixture: gpio_loopback

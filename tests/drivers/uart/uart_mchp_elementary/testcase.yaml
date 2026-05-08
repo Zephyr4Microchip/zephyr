@@ -1,0 +1,11 @@
+tests:
+  drivers.uart.uart_mchp_elementary:
+    tags: drivers uart
+    depends_on: gpio
+    harness: ztest
+    harness_config:
+      fixture: gpio_loopback
+    platform_allow:
+      - sam_e54_xpro
+      - pic32cx_sg41_cult
+      - pic32cx_sg61_cult

@@ -1,0 +1,9 @@
+/*
+* Copyright (c) 2025 Microchip Technologies Inc.
+*
+* SPDX-License-Identifier: Apache-2.0
+*/
+
+&trng {
+	status = "okay";
+};

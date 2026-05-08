@@ -1,0 +1,16 @@
+/*
+ * Copyright (c) 2026 Microchip Technology Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+#include <zephyr/dt-bindings/gpio/gpio.h>
+
+/*connect the PB08 to PB07 for the test*/
+
+/ {
+	zephyr,user {
+		input-gpios = <&portb 8 GPIO_ACTIVE_LOW>;  /* EXT1.7 */
+		output-gpios = <&portb 7 GPIO_ACTIVE_LOW>; /* EXT1.9 */
+	};
+};

@@ -1,13 +1,50 @@
-# Copyright (c) 2025 Microchip Technology Inc.
+# Copyright (c) 2025-2026 Microchip Technology Inc.
 # SPDX-License-Identifier: Apache-2.0
 
-# Symbol for enabling clock driver for a family
+config CLOCK_CONTROL_MCHP_COMMON
+	bool
+	help
+	  Common options for Microchip clock control drivers.
+
 config CLOCK_CONTROL_MCHP_SAM_D5X_E5X
+	bool "Microchip SAM D5X/E5X clock controller Support"
+	depends on DT_HAS_MICROCHIP_SAM_D5X_E5X_CLOCK_ENABLED
+	default y
+	select CLOCK_CONTROL_MCHP_COMMON
+	help
+	  Enable clock controller driver for Microchip SAM D5X/E5X SoC family.
+
+config CLOCK_CONTROL_MCHP_PIC32CM_JH
 	bool
 	default y
-	depends on DT_HAS_MICROCHIP_SAM_D5X_E5X_CLOCK_ENABLED
+	depends on DT_HAS_MICROCHIP_PIC32CM_JH_CLOCK_ENABLED
+	select CLOCK_CONTROL_MCHP_COMMON
 	help
-	  This symbol define clock driver for Microchip SAM_D5X_E5X family.
+	  Enable clock controller driver for Microchip PIC32CM_JH family.
+
+config CLOCK_CONTROL_MCHP_PIC32CM_PL
+	bool
+	default y
+	depends on DT_HAS_MICROCHIP_PIC32CM_PL_CLOCK_ENABLED
+	select CLOCK_CONTROL_MCHP_COMMON
+	help
+	  Enable clock controller driver for Microchip PIC32CM_PL family.
+
+config CLOCK_CONTROL_MCHP_PIC32CZ_CA
+	bool
+	default y
+	depends on DT_HAS_MICROCHIP_PIC32CZ_CA_CLOCK_ENABLED
+	select CLOCK_CONTROL_MCHP_COMMON
+	help
+	  Enable clock controller driver for Microchip PIC32CZ_CA family.
+
+config CLOCK_CONTROL_MCHP_PIC32CK_SG_GC
+	bool
+	default y
+	depends on DT_HAS_MICROCHIP_PIC32CK_SG_GC_CLOCK_ENABLED
+	select CLOCK_CONTROL_MCHP_COMMON
+	help
+	  Enable clock controller driver for Microchip PIC32CK SG/GC SoC family.
 
 # Symbol for enabling clock driver for a family
 config CLOCK_CONTROL_MCHP_PIC32CX_BZ2
@@ -25,16 +62,7 @@ config CLOCK_CONTROL_MCHP_PIC32CX_BZ6
 	help
 	  This symbol define clock driver for Microchip PIC32CX_BZ6 family.
 
-# Define menu symbol for configuring clock features
-menuconfig CLOCK_CONTROL_MCHP
-	bool "Microchip clock controller driver"
-	default y
-	depends on CLOCK_CONTROL_MCHP_SAM_D5X_E5X || CLOCK_CONTROL_MCHP_PIC32CX_BZ2 || CLOCK_CONTROL_MCHP_PIC32CX_BZ6
-	help
-	  Enable support for Microchip clock controller driver.
-
-# Common features for all SOC families
-if CLOCK_CONTROL_MCHP
+if CLOCK_CONTROL_MCHP_COMMON
 
 config CLOCK_CONTROL_MCHP_CONFIG_BOOTUP
 	bool "Bootup clock configuration"
@@ -54,19 +82,26 @@ config CLOCK_CONTROL_MCHP_ASYNC_ON
 	help
 	  This option enables async on API.
 
-# Enable get rate API. Since, clock rate for multiple levels of clock sources are to be
-# calculated, this feature consumes some program size, and can be optional.
 config CLOCK_CONTROL_MCHP_GET_RATE
 	bool "Get clock rate"
 	default y
 	help
-	  This option enables get rate API.
+	  Enable support for retrieving the clock rate. This may increase
+	  code size, depending on the depth of clock source hierarchy.
 
 config CLOCK_CONTROL_MCHP_SET_RATE
 	bool "Set clock rate"
 	default n
 	depends on CLOCK_CONTROL_MCHP_GET_RATE
 	help
-	  This option enables set rate API.
+	  This option enables set rate API. This may increase
+	  code size, depending on the depth of clock source hierarchy.
 
-endif # CLOCK_CONTROL_MCHP
+config CLOCK_CONTROL_MCHP_GCLK_PINOUT
+	bool "Output the clock on  GCLK IO Pin"
+	default n
+	help
+	  This option enables the feature of outputting the clock on the gclk io pin.
+	  This may increase code size, depending on the depth of clock source hierarchy.
+
+endif # CLOCK_CONTROL_MCHP_COMMON

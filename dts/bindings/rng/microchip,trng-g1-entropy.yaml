@@ -1,6 +1,8 @@
 # Copyright (c) 2025, Microchip Technologies Inc.
 # SPDX-License-Identifier: Apache-2.0
 
+title: Microchip TRNG G1 entropy driver
+
 description: |
   Microchip TRNG driver bindings.
 
@@ -25,4 +27,4 @@ properties:
       - 1
     default: 1
     description: |
-      Enable (1) or disable (0) runstandby mode for TRNG.
+      Enable (1) or disable (0) run in standby mode for TRNG.

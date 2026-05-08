@@ -11,14 +11,28 @@
 
 #include <zephyr/devicetree.h>
 
-#define SRAM0_NODE DT_NODELABEL(sram0)
+#define SRAM0_NODE DT_CHOSEN(zephyr_sram)
 #define SRAM0_BASE DT_REG_ADDR(SRAM0_NODE)
 #define SRAM0_SIZE DT_REG_SIZE(SRAM0_NODE)
 
 /**
  * @brief Initialize (clear) the SRAM region defined by DT node sram0.
+ *
+ * After reset, SRAM content (data + ECC bits) is random and ECC is enabled by default.
+ * Any 8-bit or 16-bit write may trigger single or double ECC errors due to the internal
+ * read-modify-write of 32-bit words. Therefore, the SRAM must be initialized before use
+ * to ensure ECC correctness.
+ *
+ * This function performs 32-bit writes to clear the entire SRAM safely.
+ * It is intended for reuse across all SoCs that feature ECC-enabled SRAM.
+ *
+ * @note
+ * This SRAM initialization is specific to device families with ECC-enabled SRAM
+ * and should not be included in the generic architecture configuration.
+ * The function is best invoked from the soc_reset_hook of the relevant device family,
+ * which is called before stack initialization and before transitioning to C code.
  */
-static void ram_initialize(void)
+static void soc_mchp_sram_ecc_initialization(void)
 {
 	volatile uint32_t *ram_start = (uint32_t *)SRAM0_BASE;
 	volatile uint32_t *ram_end = (uint32_t *)(SRAM0_BASE + SRAM0_SIZE);
@@ -35,5 +49,5 @@ static void ram_initialize(void)
  */
 void soc_reset_hook(void)
 {
-	ram_initialize();
+	soc_mchp_sram_ecc_initialization();
 }

@@ -6,7 +6,7 @@
 
 /**
  * @file flash_mchp_nvmctrl_g1.c
- * @brief Flash driver for Microchip NVMCTRL G1 IP.
+ * @brief G1 Flash driver for NVMCTRL peripheral.
  *
  * Implements Zephyr Flash API support with basic flash memory
  * operations.
@@ -45,11 +45,19 @@ LOG_MODULE_REGISTER(flash_mchp_nvmctrl_g1);
 /* Base address of the SoC non-volatile flash. */
 #define SOC_NV_FLASH_BASE_ADDRESS DT_REG_ADDR(SOC_NV_FLASH_NODE)
 
+/* Default size of a flash write block in bytes */
+#define FLASH_WRITE_BLOCK_SIZE_DEFAULT 8
+
 /* Write block size of the SoC non-volatile flash, in bytes. */
-#define SOC_NV_FLASH_WRITE_BLOCK_SIZE DT_PROP(SOC_NV_FLASH_NODE, write_block_size)
+#define SOC_NV_FLASH_WRITE_BLOCK_SIZE                                                              \
+	DT_PROP_OR(SOC_NV_FLASH_NODE, write_block_size, FLASH_WRITE_BLOCK_SIZE_DEFAULT)
+
+/* Default size of a flash erase block in bytes */
+#define FLASH_ERASE_BLOCK_SIZE_DEFAULT 8192
 
 /* Erase block size of the SoC non-volatile flash, in bytes. */
-#define SOC_NV_FLASH_ERASE_BLOCK_SIZE DT_PROP(SOC_NV_FLASH_NODE, erase_block_size)
+#define SOC_NV_FLASH_ERASE_BLOCK_SIZE                                                              \
+	DT_PROP_OR(SOC_NV_FLASH_NODE, erase_block_size, FLASH_ERASE_BLOCK_SIZE_DEFAULT)
 
 /* Device tree node identifier for the user row region of SoC non-volatile flash. */
 #define SOC_NV_USERROW_NODE DT_INST(1, soc_nv_flash)
@@ -79,18 +87,10 @@ LOG_MODULE_REGISTER(flash_mchp_nvmctrl_g1);
 #define FLASH_MCHP_PAGE_SIZE 0x200
 
 /* Device config */
-#define DEV_CFG(dev) ((const flash_mchp_dev_config_t *const)(dev)->config)
+#define DEV_CFG(dev) ((const struct flash_mchp_dev_config *const)(dev)->config)
 
 /* NVMCTRL Register */
-#define NVM_REGS ((const flash_mchp_dev_config_t *)(dev)->config)->regs
-
-/**< Enable this for getting the debug prints. */
-/*#define FLASH_DBG_MODE*/
-#ifdef FLASH_DBG_MODE
-#define DBG_FLASH(format, ...) printf(format, ##__VA_ARGS__)
-#else
-#define DBG_FLASH(format, ...)
-#endif /*FLASH_DBG_MODE*/
+#define NVM_REGS ((const struct flash_mchp_dev_config *)(dev)->config)->regs
 
 /** @brief Default value of flash memory after an erase operation. */
 #define FLASH_ERASE_DEFAULT_VALUE 0xFF
@@ -114,121 +114,83 @@ LOG_MODULE_REGISTER(flash_mchp_nvmctrl_g1);
  */
 #define FLASH_MEMORY(a) ((uint32_t *)((uint8_t *)((a) + SOC_NV_FLASH_BASE_ADDRESS)))
 
-/**
- * @brief Type definition for the flash lock.
- *
- * This macro defines the type of the lock used to protect access to the flash APIs.
- */
-#define FLASH_MCHP_LOCK_TYPE struct k_mutex
+/* Timeout values for WAIT_FOR macro */
+#define TIMEOUT_VALUE_US 100000
 
-/**
- * @brief Timeout duration for acquiring the flash lock.
- *
- * This macro defines the timeout duration for acquiring the flash lock.
- * The timeout is specified in milliseconds.
- */
-#define FLASH_MCHP_LOCK_TIMEOUT K_MSEC(10)
-
-/**
- * @brief Initialize the flash lock.
- *
- * This macro initializes the flash lock.
- *
- * @param p_lock Pointer to the lock to be initialized.
- */
-#define FLASH_MCHP_DATA_MUTEX_INIT(p_lock) k_mutex_init(p_lock)
-
-/**
- * @brief Acquire the flash lock.
- *
- * This macro acquires the flash lock. If the lock is not available, the
- * function will wait for the specified timeout duration.
- *
- * @param p_lock Pointer to the lock to be acquired.
- * @return 0 if the lock was successfully acquired, or a negative error code.
- */
-#define FLASH_MCHP_DATA_LOCK(p_lock) k_mutex_lock(p_lock, FLASH_MCHP_LOCK_TIMEOUT)
-
-/**
- * @brief Release the flash lock.
- *
- * This macro releases the flash lock.
- *
- * @param p_lock Pointer to the lock to be released.
- * @return 0 if the lock was successfully released, or a negative error code.
- */
-#define FLASH_MCHP_DATA_UNLOCK(p_lock) k_mutex_unlock(p_lock)
+#define DELAY_US 2
 
 /*******************************************
- * Enum and typedefs
+ * Enums and Structs
  *******************************************/
 /**
  * @struct flash_mchp_clock
  * @brief Structure to hold device clock configuration.
  */
-typedef struct flash_mchp_clock {
-	const struct device *clock_dev;  /**< Clock driver */
-	clock_control_subsys_t mclk_sys; /**< Main clock subsystem. */
-} flash_mchp_clock_t;
+struct flash_mchp_clock {
+
+	/* Clock driver */
+	const struct device *clock_dev;
+
+	/* Main clock subsystem. */
+	clock_control_subsys_t mclk_sys;
+};
 
 /**
  * @struct flash_mchp_dev_data
  * @brief Structure to hold flash device data.
  */
-typedef struct flash_mchp_dev_data {
+struct flash_mchp_dev_data {
 
-	/**< Pointer to the Flash device instance. */
+	/* Pointer to the Flash device instance. */
 	const struct device *dev;
 
-	/**< Semaphore lock for flash APIs operations */
-	FLASH_MCHP_LOCK_TYPE flash_data_lock;
+	/* Semaphore lock for flash APIs operations */
+	struct k_mutex flash_data_lock;
 
-	/**< Stores the current interrupt flag status */
+	/* Stores the current interrupt flag status */
 	volatile uint16_t interrupt_flag_status;
-
-} flash_mchp_dev_data_t;
+};
 
 /**
  * @struct flash_mchp_dev_config
  * @brief Structure to hold flash device configuration.
  */
-typedef struct flash_mchp_dev_config {
+struct flash_mchp_dev_config {
 
-	/**< HAL for flash */
+	/* Pointer to Flash peripheral registers */
 	nvmctrl_registers_t *regs;
 
-	/**< Flash base address */
+	/* Flash base address */
 	uint32_t base_addr;
 
-	/**< Flash clock control */
-	flash_mchp_clock_t flash_clock;
+	/* Flash clock control */
+	struct flash_mchp_clock flash_clock;
 
-	/**< Function to configure IRQ */
+	/* Function to configure IRQ */
 	void (*irq_config_func)(const struct device *dev);
 
-	/**< Flash memory parameters */
+	/* Flash memory parameters */
 	struct flash_parameters flash_param;
 
 #ifdef CONFIG_FLASH_PAGE_LAYOUT
-	/**< Flash pages layouts */
+	/* Flash pages layouts */
 	struct flash_pages_layout flash_layout;
 #endif /* CONFIG_FLASH_PAGE_LAYOUT */
-
-} flash_mchp_dev_config_t;
+};
 
 /**
- * @enum flash_mchp_write_mode_t
+ * @enum flash_mchp_write_mode
  * @brief Enumeration for Flash write modes.
  *
  * This enumeration defines the different write modes available for the
  * Flash. Each mode specifies how data is written to the non-volatile memory.
  */
-typedef enum {
-	NVMCTRL_WMODE_MAN, /**< Manual Write Mode */
-	NVMCTRL_WMODE_ADW, /**< Automatic Double Word Write Mode */
-	NVMCTRL_WMODE_AQW, /**< Automatic Quad Word Write Mode */
-	NVMCTRL_WMODE_AP   /**< Automatic Page Write Mode */
-} flash_mchp_write_mode_t;
+enum flash_mchp_write_mode {
+	NVMCTRL_WMODE_MAN, /* Manual Write Mode */
+	NVMCTRL_WMODE_ADW, /* Automatic Double Word Write Mode */
+	NVMCTRL_WMODE_AQW, /* Automatic Quad Word Write Mode */
+	NVMCTRL_WMODE_AP   /* Automatic Page Write Mode */
+};
 
 /*******************************************
  * Helper functions
@@ -274,10 +236,10 @@ static inline void flash_enable_auto_wait_state(const struct device *dev)
  */
 static inline void flash_interrupt_enable(const struct device *dev)
 {
-	uint16_t interrupt_enable_flag = NVMCTRL_INTENSET_ADDRE_Msk | NVMCTRL_INTENSET_PROGE_Msk |
-					 NVMCTRL_INTENSET_LOCKE_Msk | NVMCTRL_INTENSET_NVME_Msk;
+	const uint16_t enable_mask = NVMCTRL_INTENSET_ADDRE_Msk | NVMCTRL_INTENSET_PROGE_Msk |
+				     NVMCTRL_INTENSET_LOCKE_Msk | NVMCTRL_INTENSET_NVME_Msk;
 
-	NVM_REGS->NVMCTRL_INTENSET = interrupt_enable_flag;
+	NVM_REGS->NVMCTRL_INTENSET = enable_mask;
 }
 
 /**
@@ -306,12 +268,16 @@ static void flash_controller_init(const struct device *dev)
  * @param dev Pointer to the device structure representing the flash controller.
  * @param mode Write mode to set for the NVMCTRL.
  */
-static inline void flash_set_write_mode(const struct device *dev, flash_mchp_write_mode_t mode)
+static inline void flash_set_write_mode(const struct device *dev, enum flash_mchp_write_mode mode)
 {
-	uint16_t mode_value = FLASH_SET_WMODE(mode);
+	uint16_t reg = NVM_REGS->NVMCTRL_CTRLA;
 
-	NVM_REGS->NVMCTRL_CTRLA =
-		(uint16_t)((NVM_REGS->NVMCTRL_CTRLA & (~NVMCTRL_CTRLA_WMODE_Msk)) | mode_value);
+	/* Clear the write mode bits and set the new mode */
+	reg &= ~NVMCTRL_CTRLA_WMODE_Msk;
+	reg |= FLASH_SET_WMODE(mode);
+
+	/* Write back the updated value */
+	NVM_REGS->NVMCTRL_CTRLA = reg;
 }
 
 /**
@@ -328,7 +294,7 @@ static inline void flash_set_write_mode(const struct device *dev, flash_mchp_wri
  */
 static inline void flash_clear_interrupt_flag(const struct device *dev)
 {
-	flash_mchp_dev_data_t *mchp_flash_data = dev->data;
+	struct flash_mchp_dev_data *mchp_flash_data = dev->data;
 
 	mchp_flash_data->interrupt_flag_status = NVM_REGS->NVMCTRL_INTFLAG;
 
@@ -351,7 +317,7 @@ static int flash_get_interrupt_status_error(const struct device *dev)
 {
 	int ret = FLASH_MCHP_SUCCESS;
 
-	flash_mchp_dev_data_t *mchp_flash_data = dev->data;
+	struct flash_mchp_dev_data *mchp_flash_data = dev->data;
 	uint16_t status = mchp_flash_data->interrupt_flag_status;
 
 	/* Combine all error masks */
@@ -379,8 +345,11 @@ static int flash_get_interrupt_status_error(const struct device *dev)
  */
 static inline void flash_status_ready_wait(const struct device *dev)
 {
-	while (((NVM_REGS->NVMCTRL_STATUS & NVMCTRL_STATUS_READY_Msk) == 0)) {
-		DBG_FLASH("NVM controller is busy programming or erasing.");
+	/* Wait until the NVM controller is ready */
+	if (!WAIT_FOR(((NVM_REGS->NVMCTRL_STATUS & NVMCTRL_STATUS_READY_Msk) ==
+		       NVMCTRL_STATUS_READY_Msk),
+		      TIMEOUT_VALUE_US, k_busy_wait(DELAY_US))) {
+		LOG_ERR("NVMCTRL_STATUS_READY wait timed out");
 	}
 }
 
@@ -393,7 +362,7 @@ static inline void flash_status_ready_wait(const struct device *dev)
  * @param dev Pointer to the device structure representing the flash controller.
  * @param command The flash controller command to execute (e.g., erase, unlock, write).
  */
-static inline void flash_process_command(const struct device *dev, uint32_t command)
+static inline void flash_process_command(const struct device *dev, uint16_t command)
 {
 	NVM_REGS->NVMCTRL_CTRLB = command | NVMCTRL_CTRLB_CMDEX_KEY;
 }
@@ -427,7 +396,7 @@ static inline void flash_pagebuffer_clear(const struct device *dev)
  */
 static int flash_doubleword_write(const struct device *dev, const void *data, uint32_t address)
 {
-	int ret = FLASH_MCHP_SUCCESS;
+	int ret = EINVAL;
 	uint8_t num_words = FLASH_MCHP_DOUBLE_WORD_SIZE / sizeof(uint32_t);
 	const uint32_t *src = (const uint32_t *)data;
 	uint32_t *dst = FLASH_MEMORY(address);
@@ -466,7 +435,7 @@ static int flash_doubleword_write(const struct device *dev, const void *data, ui
  */
 static int flash_quadword_write(const struct device *dev, const void *data, uint32_t address)
 {
-	int ret = FLASH_MCHP_SUCCESS;
+	int ret = EINVAL;
 	uint8_t num_words = FLASH_MCHP_QUAD_WORD_SIZE / sizeof(uint32_t);
 	const uint32_t *src = (const uint32_t *)data;
 	uint32_t *dst = FLASH_MEMORY(address);
@@ -505,7 +474,7 @@ static int flash_quadword_write(const struct device *dev, const void *data, uint
  */
 static int flash_erase_block(const struct device *dev, uint32_t address)
 {
-	int ret = FLASH_MCHP_SUCCESS;
+	int ret = EINVAL;
 
 	/* Set address and command */
 	NVM_REGS->NVMCTRL_ADDR = address;
@@ -535,7 +504,7 @@ static int flash_erase_block(const struct device *dev, uint32_t address)
  */
 static int flash_page_write(const struct device *dev, const void *data, uint32_t address)
 {
-	int ret = FLASH_MCHP_SUCCESS;
+	int ret = EINVAL;
 	uint8_t num_words = FLASH_MCHP_PAGE_SIZE / sizeof(uint32_t);
 	const uint32_t *src = (const uint32_t *)data;
 	uint32_t *dst = FLASH_MEMORY(address);
@@ -572,22 +541,16 @@ static int flash_page_write(const struct device *dev, const void *data, uint32_t
  */
 static int flash_valid_range(off_t offset, size_t len)
 {
-	int ret = FLASH_MCHP_SUCCESS;
+	if (offset < 0) {
+		LOG_WRN("0x%lx: before start of flash", (long)offset);
+		return -EINVAL;
+	}
+	if ((offset + len) > SOC_NV_FLASH_SIZE) {
+		LOG_WRN("0x%lx: ends past the end of flash", (long)offset);
+		return -EINVAL;
+	}
 
-	do {
-		if (offset < 0) {
-			LOG_WRN("0x%lx: before start of flash", (long)offset);
-			ret = -EINVAL;
-			break;
-		}
-		if ((offset + len) > SOC_NV_FLASH_SIZE) {
-			LOG_WRN("0x%lx: ends past the end of flash", (long)offset);
-			ret = -EINVAL;
-			break;
-		}
-	} while (0);
-
-	return ret;
+	return FLASH_MCHP_SUCCESS;
 }
 
 #ifdef CONFIG_FLASH_HAS_UNALIGNED_WRITE
@@ -609,38 +572,39 @@ static int flash_valid_range(off_t offset, size_t len)
 static int flash_handle_unaligned_start(const struct device *dev, off_t *offset,
 					const uint8_t **buffer, size_t *len)
 {
-	int ret = FLASH_MCHP_SUCCESS;
-
-	if (flash_aligned(*offset, FLASH_MCHP_DOUBLE_WORD_SIZE) != FLASH_MCHP_SUCCESS) {
-
-		uint32_t aligned_addr = *offset & ~(FLASH_MCHP_DOUBLE_WORD_SIZE - 1);
-		uint8_t doubleword_buf[FLASH_MCHP_DOUBLE_WORD_SIZE];
-		size_t start_offset = (*offset - aligned_addr);
-		const uint8_t *src = (const uint8_t *)aligned_addr;
-		size_t bytes_to_update = ((*len) < (FLASH_MCHP_DOUBLE_WORD_SIZE - start_offset))
-						 ? (*len)
-						 : (FLASH_MCHP_DOUBLE_WORD_SIZE - start_offset);
-
-		/*  Read existing data. */
-		for (size_t i = 0; i < FLASH_MCHP_DOUBLE_WORD_SIZE; i++) {
-			doubleword_buf[i] = src[i];
-		}
-
-		/* Overwrite the relevant bytes. */
-		for (size_t i = 0; i < bytes_to_update; i++) {
-			doubleword_buf[start_offset + i] = (*buffer)[i];
-		}
-
-		ret = flash_doubleword_write(dev, doubleword_buf, aligned_addr);
-		if (ret != FLASH_MCHP_SUCCESS) {
-			LOG_ERR("double word write failed at 0x%lx", (long)aligned_addr);
-			return ret;
-		}
-
-		(*offset) += bytes_to_update;
-		(*buffer) += bytes_to_update;
-		(*len) -= bytes_to_update;
+	/* Offset is already aligned, nothing to do */
+	if (flash_aligned(*offset, FLASH_MCHP_DOUBLE_WORD_SIZE) == FLASH_MCHP_SUCCESS) {
+		return FLASH_MCHP_SUCCESS;
 	}
+
+	int ret = -EINVAL;
+	uint32_t aligned_addr = *offset & ~(FLASH_MCHP_DOUBLE_WORD_SIZE - 1);
+	uint8_t doubleword_buf[FLASH_MCHP_DOUBLE_WORD_SIZE];
+	size_t start_offset = (*offset - aligned_addr);
+	const uint8_t *src = (const uint8_t *)aligned_addr;
+	size_t bytes_to_update = ((*len) < (FLASH_MCHP_DOUBLE_WORD_SIZE - start_offset))
+					 ? (*len)
+					 : (FLASH_MCHP_DOUBLE_WORD_SIZE - start_offset);
+
+	/*  Read existing data. */
+	for (size_t i = 0; i < FLASH_MCHP_DOUBLE_WORD_SIZE; i++) {
+		doubleword_buf[i] = src[i];
+	}
+
+	/* Overwrite the relevant bytes. */
+	for (size_t i = 0; i < bytes_to_update; i++) {
+		doubleword_buf[start_offset + i] = (*buffer)[i];
+	}
+
+	ret = flash_doubleword_write(dev, doubleword_buf, aligned_addr);
+	if (ret != FLASH_MCHP_SUCCESS) {
+		LOG_ERR("double word write failed at 0x%lx", (long)aligned_addr);
+		return ret;
+	}
+
+	(*offset) += bytes_to_update;
+	(*buffer) += bytes_to_update;
+	(*len) -= bytes_to_update;
 
 	return ret;
 }
@@ -662,27 +626,24 @@ static int flash_handle_unaligned_start(const struct device *dev, off_t *offset,
 static int flash_handle_unaligned_end(const struct device *dev, off_t offset, const uint8_t *buffer,
 				      size_t len)
 {
-	int ret = FLASH_MCHP_SUCCESS;
+	int ret = -EINVAL;
+	uint32_t aligned_addr = offset;
+	uint8_t doubleword_buf[FLASH_MCHP_DOUBLE_WORD_SIZE];
+	const uint8_t *src = (const uint8_t *)aligned_addr;
 
-	if (len > 0) {
-		uint32_t aligned_addr = offset;
-		uint8_t doubleword_buf[FLASH_MCHP_DOUBLE_WORD_SIZE];
-		const uint8_t *src = (const uint8_t *)aligned_addr;
+	/* Read existing data */
+	for (size_t i = 0; i < FLASH_MCHP_DOUBLE_WORD_SIZE; i++) {
+		doubleword_buf[i] = src[i];
+	}
 
-		/* Read existing data */
-		for (size_t i = 0; i < FLASH_MCHP_DOUBLE_WORD_SIZE; i++) {
-			doubleword_buf[i] = src[i];
-		}
+	/* Overwrite the relevant bytes. */
+	for (size_t i = 0; i < len; i++) {
+		doubleword_buf[i] = buffer[i];
+	}
 
-		/* Overwrite the relevant bytes. */
-		for (size_t i = 0; i < len; i++) {
-			doubleword_buf[i] = buffer[i];
-		}
-
-		ret = flash_doubleword_write(dev, doubleword_buf, aligned_addr);
-		if (ret != FLASH_MCHP_SUCCESS) {
-			LOG_ERR("double word write failed at 0x%lx", (long)aligned_addr);
-		}
+	ret = flash_doubleword_write(dev, doubleword_buf, aligned_addr);
+	if (ret != FLASH_MCHP_SUCCESS) {
+		LOG_ERR("double word write failed at 0x%lx", (long)aligned_addr);
 	}
 
 	return ret;
@@ -690,123 +651,153 @@ static int flash_handle_unaligned_end(const struct device *dev, off_t offset, co
 #endif /*CONFIG_FLASH_HAS_UNALIGNED_WRITE*/
 
 /**
- * @brief Writes data to flash memory, handling both aligned and unaligned writes.
+ * @brief Write data to flash memory in blocks as specified by the device tree.
  *
- * This function writes a buffer of data to flash memory at the specified offset.
- * It attempts to use the most efficient write size possible (page, quad-word, double-word)
- * for aligned regions. If CONFIG_FLASH_HAS_UNALIGNED_WRITE is enabled, it also handles
- * unaligned start and end regions using read-modify-write operations.
- * The function locks the flash data structure during the operation to ensure thread safety,
- * and verifies the written data for correctness.
+ * This function writes data to flash memory using the block size defined
+ * in the device tree (such as 8, 16, or 512 bytes). It checks alignment and
+ * remaining data length, and writes each block in turn, updating the offset and
+ * buffer pointer as it goes. If a write fails, it stops and returns an error.
  *
- * @param dev    Pointer to the device structure representing the flash controller.
- * @param offset Offset in flash memory where the write should begin (relative to base address).
- * @param data   Pointer to the buffer containing the data to be written.
- * @param len    Number of bytes to write from the buffer.
+ * @param dev    Pointer to the flash controller device.
+ * @param offset Pointer to the offset in flash memory to start writing.
+ * @param buffer Pointer to the data buffer pointer.
+ * @param len    Pointer to the number of bytes left to write.
  *
- * @return FLASH_MCHP_SUCCESS (0) on success,
- *         -EINVAL if alignment requirements are not met (when partial page write is not enabled),
- *         or a negative error code if a write or verification operation fails.
+ * @return FLASH_MCHP_SUCCESS (0) on success, or a negative error code if a write fails.
+ */
+static int flash_write_aligned_blocks(const struct device *dev, off_t *offset,
+				      const uint8_t **buffer, size_t *len)
+{
+	int ret = -EINVAL;
+
+	/* Writing 0 bytes shall succeed */
+	if (*len == 0) {
+		return FLASH_MCHP_SUCCESS;
+	}
+
+	/* Return error if data length is less than minimum write block size */
+	if (*len < FLASH_MCHP_DOUBLE_WORD_SIZE) {
+		return ret;
+	}
+
+	while (*len >= FLASH_MCHP_DOUBLE_WORD_SIZE) {
+
+		if ((*len >= FLASH_MCHP_PAGE_SIZE) &&
+		    (flash_aligned(*offset, FLASH_MCHP_PAGE_SIZE) == FLASH_MCHP_SUCCESS)) {
+			ret = flash_page_write(dev, *buffer, *offset);
+			if (ret != FLASH_MCHP_SUCCESS) {
+				LOG_ERR("page write failed at 0x%lx", (long)*offset);
+				break;
+			}
+			*offset += FLASH_MCHP_PAGE_SIZE;
+			*buffer += FLASH_MCHP_PAGE_SIZE;
+			*len -= FLASH_MCHP_PAGE_SIZE;
+			continue;
+		}
+
+		if ((*len >= FLASH_MCHP_QUAD_WORD_SIZE) &&
+		    (flash_aligned(*offset, FLASH_MCHP_QUAD_WORD_SIZE) == FLASH_MCHP_SUCCESS)) {
+			ret = flash_quadword_write(dev, *buffer, *offset);
+			if (ret != FLASH_MCHP_SUCCESS) {
+				LOG_ERR("quad word write failed at 0x%lx", (long)*offset);
+				break;
+			}
+			*offset += FLASH_MCHP_QUAD_WORD_SIZE;
+			*buffer += FLASH_MCHP_QUAD_WORD_SIZE;
+			*len -= FLASH_MCHP_QUAD_WORD_SIZE;
+			continue;
+		}
+
+		if ((*len >= FLASH_MCHP_DOUBLE_WORD_SIZE) &&
+		    (flash_aligned(*offset, FLASH_MCHP_DOUBLE_WORD_SIZE) == FLASH_MCHP_SUCCESS)) {
+			ret = flash_doubleword_write(dev, *buffer, *offset);
+			if (ret != FLASH_MCHP_SUCCESS) {
+				LOG_ERR("double word write failed at 0x%lx", (long)*offset);
+				break;
+			}
+			*offset += FLASH_MCHP_DOUBLE_WORD_SIZE;
+			*buffer += FLASH_MCHP_DOUBLE_WORD_SIZE;
+			*len -= FLASH_MCHP_DOUBLE_WORD_SIZE;
+			continue;
+		}
+
+		break;
+	}
+
+	return ret;
+}
+
+/**
+ * @brief Write data to flash memory, supporting both aligned and unaligned writes.
+ *
+ * This function writes data to flash memory at the given offset. It checks that the
+ * write is within a valid memory range and, if needed, handles unaligned start and end
+ * regions. For the main part of the write, it uses the write block size specified in
+ * the device tree (such as 8, 16, or 512 bytes). The function also locks the flash
+ * data structure during the operation to ensure thread safety.
+ *
+ * @param dev    Flash controller device pointer.
+ * @param offset Offset in flash memory to start writing.
+ * @param data   Pointer to the data buffer to write.
+ * @param len    Number of bytes to write.
+ *
+ * @return FLASH_MCHP_SUCCESS (0) on success, -EINVAL for alignment errors, or a negative error code
+ * on failure.
  */
 static int flash_mchp_write(const struct device *dev, off_t offset, const void *data, size_t len)
 {
-	int ret = FLASH_MCHP_SUCCESS;
-	flash_mchp_dev_data_t *mchp_flash_data = dev->data;
+	int ret = -EINVAL;
+	struct flash_mchp_dev_data *mchp_flash_data = dev->data;
 	const uint8_t *buffer = (const uint8_t *)data;
 
 	offset += DEV_CFG(dev)->base_addr;
 
-	FLASH_MCHP_DATA_LOCK(&mchp_flash_data->flash_data_lock);
+	ret = flash_valid_range(offset, len);
+	if (ret != FLASH_MCHP_SUCCESS) {
+		return ret;
+	}
 
-	do {
-		ret = flash_valid_range(offset, len);
-		if (ret != 0) {
-			break;
-		}
+#ifndef CONFIG_FLASH_HAS_UNALIGNED_WRITE
+	ret = flash_aligned(offset, SOC_NV_FLASH_WRITE_BLOCK_SIZE);
+	if (ret != FLASH_MCHP_SUCCESS) {
+		LOG_WRN("0x%lx: not on a write block boundary", (long)offset);
+		return ret;
+	}
 
-#ifdef CONFIG_FLASH_HAS_UNALIGNED_WRITE
-		/* Handle unaligned start */
-		ret = flash_handle_unaligned_start(dev, &offset, &buffer, &len);
-		if (ret != FLASH_MCHP_SUCCESS) {
-			break;
-		}
-#else
-		ret = flash_aligned(offset, SOC_NV_FLASH_WRITE_BLOCK_SIZE);
-		if (ret != FLASH_MCHP_SUCCESS) {
-			LOG_WRN("0x%lx: not on a write block boundary", (long)offset);
-			ret = -EINVAL;
-			break;
-		}
+	ret = flash_aligned(len, SOC_NV_FLASH_WRITE_BLOCK_SIZE);
+	if (ret != FLASH_MCHP_SUCCESS) {
+		LOG_WRN("%zu: not a integer number of write blocks", len);
+		return ret;
+	}
+#endif /*!CONFIG_FLASH_HAS_UNALIGNED_WRITE*/
 
-		ret = flash_aligned(len, SOC_NV_FLASH_WRITE_BLOCK_SIZE);
-		if (ret != FLASH_MCHP_SUCCESS) {
-			LOG_WRN("%zu: not a integer number of write blocks", len);
-			ret = -EINVAL;
-			break;
-		}
-#endif /*CONFIG_FLASH_HAS_UNALIGNED_WRITE*/
-
-		while (len >= FLASH_MCHP_DOUBLE_WORD_SIZE) {
-
-			/* 512-byte page write */
-			if ((len >= FLASH_MCHP_PAGE_SIZE) &&
-			    (flash_aligned(offset, FLASH_MCHP_PAGE_SIZE) == FLASH_MCHP_SUCCESS)) {
-				ret = flash_page_write(dev, buffer, offset);
-				if (ret != FLASH_MCHP_SUCCESS) {
-					LOG_ERR("page write failed at 0x%lx", (long)offset);
-					break;
-				}
-				offset += FLASH_MCHP_PAGE_SIZE;
-				buffer += FLASH_MCHP_PAGE_SIZE;
-				len -= FLASH_MCHP_PAGE_SIZE;
-				continue;
-			}
-
-			/* 16-byte quad-word write */
-			if ((len >= FLASH_MCHP_QUAD_WORD_SIZE) &&
-			    (flash_aligned(offset, FLASH_MCHP_QUAD_WORD_SIZE) ==
-			     FLASH_MCHP_SUCCESS)) {
-				ret = flash_quadword_write(dev, buffer, offset);
-				if (ret != FLASH_MCHP_SUCCESS) {
-					LOG_ERR("quad word write failed at 0x%lx", (long)offset);
-					break;
-				}
-				offset += FLASH_MCHP_QUAD_WORD_SIZE;
-				buffer += FLASH_MCHP_QUAD_WORD_SIZE;
-				len -= FLASH_MCHP_QUAD_WORD_SIZE;
-				continue;
-			}
-
-			/* 8-byte double-word write */
-			if ((len >= FLASH_MCHP_DOUBLE_WORD_SIZE) &&
-			    (flash_aligned(offset, FLASH_MCHP_DOUBLE_WORD_SIZE) ==
-			     FLASH_MCHP_SUCCESS)) {
-				ret = flash_doubleword_write(dev, buffer, offset);
-				if (ret != FLASH_MCHP_SUCCESS) {
-					LOG_ERR("double word write failed at 0x%lx", (long)offset);
-					break;
-				}
-				offset += FLASH_MCHP_DOUBLE_WORD_SIZE;
-				buffer += FLASH_MCHP_DOUBLE_WORD_SIZE;
-				len -= FLASH_MCHP_DOUBLE_WORD_SIZE;
-				continue;
-			}
-
-			break;
-		}
+	k_mutex_lock(&mchp_flash_data->flash_data_lock, K_MSEC(10));
 
 #ifdef CONFIG_FLASH_HAS_UNALIGNED_WRITE
-		/* Handle unaligned end */
-		if (ret == FLASH_MCHP_SUCCESS) {
-			ret = flash_handle_unaligned_end(dev, offset, buffer, len);
-			if (ret != FLASH_MCHP_SUCCESS) {
-				break;
-			}
-		}
-#endif /*CONFIG_FLASH_HAS_UNALIGNED_WRITE*/
-	} while (0);
+	/* Handle unaligned start */
+	ret = flash_handle_unaligned_start(dev, &offset, &buffer, &len);
+	if (ret != FLASH_MCHP_SUCCESS) {
+		k_mutex_unlock(&mchp_flash_data->flash_data_lock);
+		LOG_ERR("flash unaligned write at start failed: %d", ret);
+		return ret;
+	}
+#endif
 
-	FLASH_MCHP_DATA_UNLOCK(&mchp_flash_data->flash_data_lock);
+	ret = flash_write_aligned_blocks(dev, &offset, &buffer, &len);
+	if (ret != FLASH_MCHP_SUCCESS) {
+		k_mutex_unlock(&mchp_flash_data->flash_data_lock);
+		LOG_ERR("flash aligned write failed: %d", ret);
+		return ret;
+	}
+
+#ifdef CONFIG_FLASH_HAS_UNALIGNED_WRITE
+	/* Handle unaligned end */
+	if (len > 0) {
+		ret = flash_handle_unaligned_end(dev, offset, buffer, len);
+	}
+#endif /*CONFIG_FLASH_HAS_UNALIGNED_WRITE*/
+
+	k_mutex_unlock(&mchp_flash_data->flash_data_lock);
 
 	return ret;
 }
@@ -832,52 +823,47 @@ static int flash_mchp_write(const struct device *dev, off_t offset, const void *
  */
 static int flash_mchp_erase(const struct device *dev, off_t offset, size_t size)
 {
-	int ret = FLASH_MCHP_SUCCESS;
-	flash_mchp_dev_data_t *mchp_flash_data = dev->data;
+	int ret = -EINVAL;
+	struct flash_mchp_dev_data *mchp_flash_data = dev->data;
 	uint32_t page_size = SOC_NV_FLASH_ERASE_BLOCK_SIZE;
 
 	offset += DEV_CFG(dev)->base_addr;
 
-	FLASH_MCHP_DATA_LOCK(&mchp_flash_data->flash_data_lock);
+	ret = flash_valid_range(offset, size);
+	if (ret != FLASH_MCHP_SUCCESS) {
+		return ret;
+	}
 
-	do {
-		ret = flash_valid_range(offset, size);
+	ret = flash_aligned(offset, page_size);
+	if (ret != FLASH_MCHP_SUCCESS) {
+		LOG_WRN("0x%lx: not on a erase block boundary", (long)offset);
+		return ret;
+	}
+
+	ret = flash_aligned(size, page_size);
+	if (ret != FLASH_MCHP_SUCCESS) {
+		LOG_WRN("%zu: not a integer number of erase blocks", size);
+		return ret;
+	}
+
+	k_mutex_lock(&mchp_flash_data->flash_data_lock, K_MSEC(10));
+
+	while (size > 0U) {
+
+		/* Erase the block */
+		ret = flash_erase_block(dev, offset);
 		if (ret != FLASH_MCHP_SUCCESS) {
+			LOG_ERR("erase operation failed at 0x%lx", (long)offset);
+			ret = -EIO;
 			break;
 		}
 
-		ret = flash_aligned(offset, page_size);
-		if (ret != FLASH_MCHP_SUCCESS) {
-			LOG_WRN("0x%lx: not on a erase block boundary", (long)offset);
-			ret = -EINVAL;
-			break;
-		}
+		/* Update size and offset for the next pages */
+		size -= page_size;
+		offset += page_size;
+	}
 
-		ret = flash_aligned(size, page_size);
-		if (ret != FLASH_MCHP_SUCCESS) {
-			LOG_WRN("%zu: not a integer number of erase blocks", size);
-			ret = -EINVAL;
-			break;
-		}
-
-		while (size > 0U) {
-
-			/* Erase the block */
-			ret = flash_erase_block(dev, offset);
-			if (ret != FLASH_MCHP_SUCCESS) {
-				LOG_ERR("erase operation failed at 0x%lx", (long)offset);
-				ret = -EIO;
-				break;
-			}
-
-			/* Update size and offset for the next pages */
-			size -= page_size;
-			offset += page_size;
-		}
-
-	} while (0);
-
-	FLASH_MCHP_DATA_UNLOCK(&mchp_flash_data->flash_data_lock);
+	k_mutex_unlock(&mchp_flash_data->flash_data_lock);
 
 	return ret;
 }
@@ -898,22 +884,25 @@ static int flash_mchp_erase(const struct device *dev, off_t offset, size_t size)
  */
 static int flash_mchp_read(const struct device *dev, off_t offset, void *data, size_t len)
 {
-	int ret = FLASH_MCHP_SUCCESS;
+	int ret = -EINVAL;
+	struct flash_mchp_dev_data *mchp_flash_data = dev->data;
 	uint32_t flash_base_addr = DEV_CFG(dev)->base_addr;
 
-	do {
-		ret = flash_valid_range(offset, len);
-		if (ret != 0) {
-			break;
-		}
+	ret = flash_valid_range(offset, len);
+	if (ret != FLASH_MCHP_SUCCESS) {
+		return ret;
+	}
 
-		uint8_t *dst = (uint8_t *)data;
-		const uint8_t *src = (const uint8_t *)flash_base_addr + offset;
+	uint8_t *dst = (uint8_t *)data;
+	const uint8_t *src = (const uint8_t *)flash_base_addr + offset;
 
-		for (size_t i = 0; i < len; i++) {
-			dst[i] = src[i];
-		}
-	} while (0);
+	k_mutex_lock(&mchp_flash_data->flash_data_lock, K_MSEC(10));
+
+	for (size_t i = 0; i < len; i++) {
+		dst[i] = src[i];
+	}
+
+	k_mutex_unlock(&mchp_flash_data->flash_data_lock);
 
 	return ret;
 }
@@ -1002,7 +991,7 @@ static int flash_check_offset_user_range(uint32_t address)
  */
 static int flash_user_row_erase(const struct device *dev, uint32_t address)
 {
-	int ret = FLASH_MCHP_SUCCESS;
+	int ret = -EINVAL;
 
 	/* Set address and command */
 	NVM_REGS->NVMCTRL_ADDR = address;
@@ -1036,7 +1025,8 @@ static int flash_user_row_erase(const struct device *dev, uint32_t address)
 static int flash_ex_op_user_row_write(const struct device *dev, const uintptr_t in, void *out)
 {
 	ARG_UNUSED(out);
-	int ret = FLASH_MCHP_SUCCESS;
+	int ret = -EINVAL;
+	struct flash_mchp_dev_data *mchp_flash_data = dev->data;
 
 	const flash_mchp_ex_op_userrow_data_t *userrow_data =
 		(const flash_mchp_ex_op_userrow_data_t *)in;
@@ -1045,38 +1035,38 @@ static int flash_ex_op_user_row_write(const struct device *dev, const uintptr_t 
 	uint32_t address = userrow_data->offset + SOC_NV_USERROW_BASE_ADDR;
 	size_t len = userrow_data->data_len;
 
-	do {
-		ret = flash_aligned(address, SOC_NV_USERROW_WRITE_BLOCK_SIZE);
+	ret = flash_aligned(address, SOC_NV_USERROW_WRITE_BLOCK_SIZE);
+	if (ret != FLASH_MCHP_SUCCESS) {
+		LOG_WRN("0x%lx: not on a write block boundary", (long)address);
+		return ret;
+	}
+
+	ret = flash_aligned(len, SOC_NV_USERROW_WRITE_BLOCK_SIZE);
+	if (ret != FLASH_MCHP_SUCCESS) {
+		LOG_WRN("%zu: not a integer number of write blocks", len);
+		return ret;
+	}
+
+	ret = flash_check_offset_user_range(address);
+	if (ret != FLASH_MCHP_SUCCESS) {
+		return ret;
+	}
+
+	uint32_t num_quad_words = (len / SOC_NV_USERROW_WRITE_BLOCK_SIZE);
+
+	k_mutex_lock(&mchp_flash_data->flash_data_lock, K_MSEC(10));
+
+	for (uint32_t write_count = 0U; write_count < num_quad_words; write_count++) {
+		ret = flash_quadword_write(dev, buffer, address);
 		if (ret != FLASH_MCHP_SUCCESS) {
-			LOG_WRN("0x%lx: not on a write block boundary", (long)address);
-			ret = -EINVAL;
 			break;
 		}
 
-		ret = flash_aligned(len, SOC_NV_USERROW_WRITE_BLOCK_SIZE);
-		if (ret != FLASH_MCHP_SUCCESS) {
-			LOG_WRN("%zu: not a integer number of write blocks", len);
-			ret = -EINVAL;
-			break;
-		}
+		buffer += SOC_NV_USERROW_WRITE_BLOCK_SIZE;
+		address += SOC_NV_USERROW_WRITE_BLOCK_SIZE;
+	}
 
-		ret = flash_check_offset_user_range(address);
-		if (ret != FLASH_MCHP_SUCCESS) {
-			break;
-		}
-
-		uint32_t num_quad_words = (len / SOC_NV_USERROW_WRITE_BLOCK_SIZE);
-
-		for (uint32_t write_count = 0U; write_count < num_quad_words; write_count++) {
-			ret = flash_quadword_write(dev, buffer, address);
-			if (ret != FLASH_MCHP_SUCCESS) {
-				break;
-			}
-
-			buffer += SOC_NV_USERROW_WRITE_BLOCK_SIZE;
-			address += SOC_NV_USERROW_WRITE_BLOCK_SIZE;
-		}
-	} while (0);
+	k_mutex_unlock(&mchp_flash_data->flash_data_lock);
 
 	return ret;
 }
@@ -1101,7 +1091,10 @@ static int flash_ex_op_user_row_erase(const struct device *dev, const uintptr_t 
 	ARG_UNUSED(in);
 	ARG_UNUSED(out);
 
-	int ret = FLASH_MCHP_SUCCESS;
+	int ret = -EINVAL;
+	struct flash_mchp_dev_data *mchp_flash_data = dev->data;
+
+	k_mutex_lock(&mchp_flash_data->flash_data_lock, K_MSEC(10));
 
 	/* Erase the user page */
 	ret = flash_user_row_erase(dev, SOC_NV_USERROW_BASE_ADDR);
@@ -1109,6 +1102,8 @@ static int flash_ex_op_user_row_erase(const struct device *dev, const uintptr_t 
 		LOG_ERR("User page erase failed");
 		ret = -EIO;
 	}
+
+	k_mutex_unlock(&mchp_flash_data->flash_data_lock);
 
 	return ret;
 }
@@ -1129,7 +1124,7 @@ static int flash_ex_op_region_lock(const struct device *dev, const uintptr_t in,
 {
 	ARG_UNUSED(in);
 	ARG_UNUSED(out);
-	int ret = FLASH_MCHP_SUCCESS;
+	int ret = -EINVAL;
 
 	for (off_t offset = 0; offset < SOC_NV_FLASH_SIZE;
 	     offset += SOC_NV_FLASH_LOCK_REGION_SIZE) {
@@ -1164,7 +1159,7 @@ static int flash_ex_op_region_unlock(const struct device *dev, const uintptr_t i
 {
 	ARG_UNUSED(in);
 	ARG_UNUSED(out);
-	int ret = FLASH_MCHP_SUCCESS;
+	int ret = -EINVAL;
 
 	for (off_t offset = 0; offset < SOC_NV_FLASH_SIZE;
 	     offset += SOC_NV_FLASH_LOCK_REGION_SIZE) {
@@ -1200,7 +1195,7 @@ static int flash_ex_op_region_unlock(const struct device *dev, const uintptr_t i
  */
 static int flash_mchp_ex_op(const struct device *dev, uint16_t code, const uintptr_t in, void *out)
 {
-	int ret = FLASH_MCHP_SUCCESS;
+	int ret = -EINVAL;
 
 	switch (code) {
 	case FLASH_EX_OP_USER_ROW_ERASE:
@@ -1253,17 +1248,17 @@ static void flash_mchp_isr(const struct device *dev)
  */
 static int flash_mchp_init(const struct device *dev)
 {
-	int ret = FLASH_MCHP_SUCCESS;
+	int ret = -EINVAL;
 
-	const flash_mchp_dev_config_t *const mchp_flash_cfg = DEV_CFG(dev);
-	flash_mchp_dev_data_t *mchp_flash_data = dev->data;
+	const struct flash_mchp_dev_config *const mchp_flash_cfg = DEV_CFG(dev);
+	struct flash_mchp_dev_data *mchp_flash_data = dev->data;
 
 	ret = clock_control_on(mchp_flash_cfg->flash_clock.clock_dev,
 			       mchp_flash_cfg->flash_clock.mclk_sys);
 
 	if ((ret == FLASH_MCHP_SUCCESS) || (ret == -EALREADY)) {
 
-		FLASH_MCHP_DATA_MUTEX_INIT(&(mchp_flash_data->flash_data_lock));
+		k_mutex_init(&(mchp_flash_data->flash_data_lock));
 
 		mchp_flash_cfg->irq_config_func(dev);
 
@@ -1333,7 +1328,7 @@ static DEVICE_API(flash, flash_mchp_api) = {
  * @param n Instance number.
  */
 #define FLASH_MCHP_CONFIG_DEFN(n)                                                                  \
-	static const flash_mchp_dev_config_t flash_mchp_config_##n = {                             \
+	static const struct flash_mchp_dev_config flash_mchp_config_##n = {                        \
 		.regs = (nvmctrl_registers_t *)DT_INST_REG_ADDR(n),                                \
 		.base_addr = SOC_NV_FLASH_BASE_ADDRESS,                                            \
 		.flash_clock.clock_dev = DEVICE_DT_GET(DT_NODELABEL(clock)),                       \
@@ -1352,7 +1347,7 @@ static DEVICE_API(flash, flash_mchp_api) = {
  *
  * @param n Instance number.
  */
-#define FLASH_MCHP_DATA_DEFN(n) static flash_mchp_dev_data_t flash_mchp_data_##n
+#define FLASH_MCHP_DATA_DEFN(n) static struct flash_mchp_dev_data flash_mchp_data_##n
 
 /**
  * @brief Macro to define the device structure for a specific instance of the flash device.

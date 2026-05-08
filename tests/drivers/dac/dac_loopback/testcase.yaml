@@ -29,5 +29,8 @@ tests:
       - nucleo_g071rb
       - nucleo_wl55jc
       - lpcxpresso55s36
+      - sam_e54_xpro
+      - pic32cx_sg41_cult
+      - pic32cx_sg61_cult
     integration_platforms:
       - nucleo_f207zg

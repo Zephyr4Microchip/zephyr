@@ -23,6 +23,8 @@
 #error "Library does not support the specified device."
 #endif
 
+#include "samd5xe5x.h"
+
 #endif /* _ASMLANGUAGE */
 
 #endif /* SOC_MICROCHIP_SAM_D5X_E5X_ATSAME54_SOC_H_ */

@@ -1,13 +1,18 @@
 # Copyright (c) 2025 Microchip Technology Inc.
 # SPDX-License-Identifier: Apache-2.0
 
+config PINCTRL_MCHP_COMMON
+	bool "Microchip pin controller"
+	help
+	  Common options for Microchip pinctrl drivers.
+
 config PINCTRL_MCHP_PORT_G1
-	bool "Microchip PORT G1 pin controller driver"
+	bool
 	default y
 	depends on DT_HAS_MICROCHIP_PORT_G1_PINCTRL_ENABLED
+	select PINCTRL_MCHP_COMMON
 	help
 	  This option enables PINCTRL driver for group (g1) of PORT peripherals.
-
 
 config PINCTRL_MCHP_PPS_G1
 	bool "Microchip PPS G1 pin controller driver"
@@ -15,3 +20,22 @@ config PINCTRL_MCHP_PPS_G1
 	depends on DT_HAS_MICROCHIP_PPS_G1_PINCTRL_ENABLED
 	help
 	  This option enables PINCTRL driver for group (g2) of PPS peripherals.
+
+if PINCTRL_MCHP_COMMON
+
+config PIN_OPEN_DRAIN
+	bool "Support for open-drain option"
+	help
+	  This option enables Open drain configuration for the pin.
+
+config PIN_SLEW_RATE
+	bool "Support for slew-rate control"
+	help
+	  This option enables Slew rate for the pin.
+
+config PIN_DRIVE_STRENGTH
+	bool "Support for drive strength"
+	help
+	  This option enables Drive strength for the pin.
+
+endif # PINCTRL_MCHP_COMMON

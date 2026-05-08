@@ -1,0 +1,11 @@
+/*
+ * Copyright (c) 2026 Microchip Technology Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/*connect the PC22 to PC23 for the test*/
+
+dut: &sercom1 {
+	status = "okay";
+};

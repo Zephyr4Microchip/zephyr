@@ -11,6 +11,11 @@ zephyr_library_sources_ifdef(CONFIG_CLOCK_CONTROL_GD32                clock_cont
 zephyr_library_sources_ifdef(CONFIG_CLOCK_CONTROL_LITEX               clock_control_litex.c)
 zephyr_library_sources_ifdef(CONFIG_CLOCK_CONTROL_LPC11U6X            clock_control_lpc11u6x.c)
 zephyr_library_sources_ifdef(CONFIG_CLOCK_CONTROL_MCHP_XEC            clock_control_mchp_xec.c)
+zephyr_library_sources_ifdef(CONFIG_CLOCK_CONTROL_MCHP_PIC32CK_SG_GC  clock_control_mchp_pic32ck_sg_gc.c)
+zephyr_library_sources_ifdef(CONFIG_CLOCK_CONTROL_MCHP_PIC32CM_JH     clock_control_mchp_pic32cm_jh.c)
+zephyr_library_sources_ifdef(CONFIG_CLOCK_CONTROL_MCHP_PIC32CM_PL     clock_control_mchp_pic32cm_pl.c)
+
+zephyr_library_sources_ifdef(CONFIG_CLOCK_CONTROL_MCHP_PIC32CZ_CA     clock_control_mchp_pic32cz_ca.c)
 zephyr_library_sources_ifdef(CONFIG_CLOCK_CONTROL_MCHP_SAM_D5X_E5X    clock_control_mchp_sam_d5x_e5x.c)
 zephyr_library_sources_ifdef(CONFIG_CLOCK_CONTROL_MCHP_PIC32CX_BZ2    clock_control_mchp_pic32cx_bz2.c)
 zephyr_library_sources_ifdef(CONFIG_CLOCK_CONTROL_MCHP_PIC32CX_BZ6    clock_control_mchp_pic32cx_bz6.c)

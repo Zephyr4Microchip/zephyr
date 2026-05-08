@@ -1,0 +1,6 @@
+tests:
+  drivers.spi.spi_mchp_transceive:
+    tags: drivers spi
+    harness: ztest
+    harness_config:
+      fixture: spi_loopback
