@@ -16,4 +16,6 @@
 #error Library does not support the specified device.
 #endif
 
+#include "pic32cx_bz.h"
+
 #endif /* MICROCHIP_BZ3_SOC_H_ */
