@@ -93,6 +93,7 @@
 };
 
 /* sercom 4 uart mode for mikroBUS socket 1
+ * note: the pins used by sercom 4 uart are shared with qspi0
  *&sercom4 {
  *	status = "okay";
  *	compatible = "microchip,sercom-g1-uart";
@@ -158,7 +159,9 @@
 };
 */
 
-/* sercom 5 uart mode for mikroBUS socket 2  */
+/* sercom 5 uart mode for mikroBUS socket 2
+ * note: the pins used by sercom 5 uart are shared with qspi0
+ */
 &sercom5 {
 	status = "okay";
 	compatible = "microchip,sercom-g1-uart";
@@ -519,4 +522,35 @@
 
 &wdog {
 	status = "okay";
+};
+
+/* the pins used by qspi0 are shared with sercom 4 uart and sercom 5 uart */
+&qspi0 {
+	mspi_flash0: mspi-flash0@0 {
+		compatible = "microchip,sst26vf064b-flash","jedec,mspi-nor";
+
+		reg = <0>;
+		/* Addressing */
+		address-length = "ADDR_3_BYTE";
+
+		/* CE / command format */
+		ce-break-config = <0x800000 0>;          /* 8 MB device size */
+		command-length = "INSTR_1_BYTE";
+		mspi-ce-polarity = "MSPI_CE_ACTIVE_LOW";
+		mspi-cpp-mode = "MSPI_CPP_MODE_0";
+
+		/* I/O mode */
+		mspi-data-rate = "MSPI_DATA_RATE_SINGLE";
+		mspi-io-mode   = "MSPI_IO_MODE_SINGLE";
+
+		/* Clock */
+		mspi-max-frequency = <15000000>;         /* Safe default (can increase later) */
+
+		/* Read / Write commands */
+		read-command  = <0x03>;                  /* Normal Read */
+		rx-dummy = <0>;
+		tx-dummy = <0>;
+		write-command = <0x02>;                  /* Page Program */
+
+	};
 };
