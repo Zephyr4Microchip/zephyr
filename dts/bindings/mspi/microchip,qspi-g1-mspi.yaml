@@ -26,12 +26,10 @@ properties:
 
   clocks:
     type: phandle-array
-    required: true
     description: APB, AHB, and AHB2X in that order.
 
   clock-names:
     type: string-array
-    required: true
     enum: ["apb", "ahb", "ahb2x"]
 
   software-multiperipheral:
