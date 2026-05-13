@@ -1255,10 +1255,9 @@ static int uart_mchp_configure(const struct device *dev, const struct uart_confi
 			break;
 		}
 		dev_data->config_cache.baudrate = new_cfg->baudrate;
-
-		uart_enable(regs, is_clock_external, (cfg->run_in_standby_en == 1) ? true : false,
-			    true);
 	} while (0);
+
+	uart_enable(regs, is_clock_external, (cfg->run_in_standby_en == 1) ? true : false, true);
 
 	return retval;
 }
