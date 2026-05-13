@@ -39,6 +39,16 @@ LOG_MODULE_REGISTER(microchip_qspi_g1_mspi, CONFIG_MSPI_LOG_LEVEL);
 /* ===== Devicetree pinctrl hook for the QSPI node ===== */
 #define CLOCK_NODE DT_NODELABEL(clock)
 
+#if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2)
+#define MSPI_MCHP_ENABLE_MODULE() CFG_REGS->CFG_PMD1 &= ~CFG_PMD1_SQIMD_Msk;
+#elif defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ3)
+#define MSPI_MCHP_ENABLE_MODULE() CFG_REGS->CFG_PMD1 &= ~CFG_PMD1_QSPIMD_Msk;
+#elif defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
+#define MSPI_MCHP_ENABLE_MODULE()                                                                  \
+	CFG_REGS->CFG_PMD1 &= ~CFG_PMD1_SQIMD_Msk;                                                 \
+	GPIOB_REGS->GPIO_ANSELCLR = 0x800U;
+#endif
+
 typedef void (*irq_config_func_t)(const struct device *dev);
 static int mspi_mchp_qspi_init(const struct device *controller);
 
@@ -186,8 +196,11 @@ typedef struct { /* Also refer to struct mspi_ambiq_config in drivers\mspi\mspi_
 	const struct pinctrl_dev_config *pcfg;
 
 	irq_config_func_t irq_config_func;
+#if !defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2) &&                                           \
+	!defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ3) &&                                       \
+	!defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
 	mchp_mspi_clock_t mspi_clock;
-
+#endif
 	/* children of QSPI module */
 	const mspi_child_desc_t *child_desc;
 	uint16_t num_children;
@@ -362,6 +375,44 @@ static int check_cs_index_limit(uint32_t mask, const struct mspi_dev_id *dev_id,
  *         -ETIMEDOUT if clock rate retrieval times out,
  *         or a propagated error from the clock control driver.
  */
+#if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2) ||                                            \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ3) ||                                        \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
+static int set_mspi_baud(uint32_t mask, const struct mspi_dev_cfg *cfg,
+			 const mspi_sam_qspi_cfg_t *ccfg, qspi_registers_t *q)
+{
+	uint8_t ret = 0;
+	uint8_t baud = 0;
+	uint32_t qspi_clk_freq = 0;
+
+	ret = clock_control_get_rate(DEVICE_DT_GET(CLOCK_NODE),
+				     (clock_control_subsys_t)CLOCK_MCHP_PBCLK_ID_2, &qspi_clk_freq);
+	if (ret != 0) {
+		return ret;
+	}
+
+	if ((mask & MSPI_DEVICE_CONFIG_FREQUENCY) != 0) {
+		if (cfg->freq == 0 || cfg->freq > ccfg->mspicfg.max_freq) {
+			LOG_ERR("Invalid frequency");
+			return -EINVAL;
+		}
+		/* get baud rate */
+		baud = (uint8_t)((qspi_clk_freq / cfg->freq) - 1);
+
+		LOG_INF("QSPI controller clock freq = %d divided by 2", qspi_clk_freq);
+		LOG_INF("BAUD = %u", baud);
+		LOG_INF("QSPI device freq set to %d", cfg->freq);
+
+		if (baud == 0) {
+			LOG_ERR("Invalid frequency");
+			return -EINVAL;
+		}
+
+		qspi_set_baud(q, baud);
+	}
+	return 0;
+}
+#else
 static int set_mspi_baud(uint32_t mask, const struct mspi_dev_cfg *cfg,
 			 const mspi_sam_qspi_cfg_t *ccfg, qspi_registers_t *q)
 {
@@ -375,6 +426,7 @@ static int set_mspi_baud(uint32_t mask, const struct mspi_dev_cfg *cfg,
 	do {
 		ret = clock_control_get_rate(DEVICE_DT_GET(CLOCK_NODE), ccfg->mspi_clock.mclk_ahb,
 					     &ahb_clk_freq);
+
 		if (ret != 0) {
 			return ret;
 		}
@@ -400,7 +452,7 @@ static int set_mspi_baud(uint32_t mask, const struct mspi_dev_cfg *cfg,
 	}
 	return 0;
 }
-
+#endif
 /**
  * @brief Configure the MSPI data bus width (I/O mode).
  *
@@ -967,7 +1019,7 @@ static void mspi_mchp_isr(const void *arg)
 				if (ctx->callback_ctx->mspi_evt.evt_type ==
 				    MSPI_BUS_XFER_COMPLETE) {
 					/* Call the below callback function, if desired */
-					/* ctx->callback(ctx->callback_ctx); */
+					ctx->callback(ctx->callback_ctx);
 					/* Callback area,status set to 0 */
 					ctx->callback_ctx->mspi_evt.evt_data.status = 0;
 				}
@@ -1051,7 +1103,7 @@ static int mspi_mchp_register_callback(const struct device *controller,
 		return -ENOTSUP;
 	}
 	if ((controller == NULL) || (controller->config == NULL) || (controller->data == NULL) ||
-	    (dev_id == NULL) || (ctx == NULL)) {
+	    (dev_id == NULL)) {
 		return -ENOTSUP;
 	}
 
@@ -1218,10 +1270,13 @@ static int mspi_mchp_dev_config(const struct device *controller, const struct ms
 	}
 
 	/* ******Set DATA RATE****** */
+#if !defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2) &&                                           \
+	!defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ3) &&                                       \
+	!defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
 	uint8_t baud = 0;
 	uint32_t ahb2x_clk_freq = 0;
 	uint32_t tries = 200;
-
+#endif
 	if ((mask & MSPI_DEVICE_CONFIG_DATA_RATE) != 0) {
 		switch (cfg->data_rate) {
 		case MSPI_DATA_RATE_SINGLE:
@@ -1229,6 +1284,9 @@ static int mspi_mchp_dev_config(const struct device *controller, const struct ms
 			break;
 
 		case MSPI_DATA_RATE_S_S_D:
+#if !defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2) &&                                           \
+	!defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ3) &&                                       \
+	!defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
 			/* only in serial memory mode */
 			if (find_serial_mode_of_child(ccfg->child_desc, dev_id->dev_idx,
 						      ccfg->num_children) == true) {
@@ -1281,6 +1339,7 @@ static int mspi_mchp_dev_config(const struct device *controller, const struct ms
 				return -EINVAL;
 			}
 			/* only for readmemory instruction */
+#endif
 		case MSPI_DATA_RATE_S_D_D:
 		case MSPI_DATA_RATE_DUAL:
 		default:
@@ -2537,7 +2596,7 @@ static int mspi_mchp_transceive(const struct device *controller, const struct ms
 					      cfg->num_children) == false) {
 			/* SPI mode implementation */
 			LOG_INF("Implementing in SPI mode");
-			mspi_pio_spi_transceive(controller, xfer, cb, cb_ctx);
+			ret = mspi_pio_spi_transceive(controller, xfer, cb, cb_ctx);
 		} else {
 			LOG_INF("Implementing in MSPI mode");
 			ret = mspi_pio_serial_transceive(controller, xfer, cb, cb_ctx);
@@ -2551,12 +2610,21 @@ static int mspi_mchp_transceive(const struct device *controller, const struct ms
 	return ret;
 }
 
+static int mspi_mchp_get_channel_status(const struct device *controller, uint8_t ch)
+{
+	ARG_UNUSED(controller);
+	ARG_UNUSED(ch);
+
+	return 0;
+}
+
 /* ===== Driver API table (add other hooks in your full driver) ===== */
 static const struct mspi_driver_api mspi_sam_qspi_api = {
 	.config = mspi_mchp_config,
 	.dev_config = mspi_mchp_dev_config,
 	.transceive = mspi_mchp_transceive,
 	.register_callback = mspi_mchp_register_callback,
+	.get_channel_status = mspi_mchp_get_channel_status,
 };
 
 /* *
@@ -2618,7 +2686,11 @@ static int mspi_mchp_qspi_init(const struct device *controller)
 		LOG_WRN("Clocks not ready");
 		return -ENODEV;
 	}
-
+#if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2) ||                                            \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ3) ||                                        \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
+	MSPI_MCHP_ENABLE_MODULE();
+#else
 	ret = clock_control_on(device_clk, cfg->mspi_clock.mclk_apb);
 	if ((ret < 0) && (ret != -EALREADY)) {
 		if (locked == true) {
@@ -2647,6 +2719,7 @@ static int mspi_mchp_qspi_init(const struct device *controller)
 		LOG_ERR("Pin control apply state failed=%d", ret);
 		return ret;
 	}
+#endif
 
 	/* Reset the QSPI module */
 	qspi_swrst(q);
@@ -2786,6 +2859,33 @@ static int mspi_mchp_qspi_init(const struct device *controller)
  * allocates/initializes driver data, configures hardware resources and registers the device with
  * the OS.
  */
+#if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2) ||                                            \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ3) ||                                        \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
+#define MSPI_MCHP_DEVICE_INIT(inst)                                                                \
+	PINCTRL_DT_INST_DEFINE(inst);                                                              \
+	MSPI_MCHP_IRQ_HANDLER_DECL(inst)                                                           \
+	static mspi_sam_qspi_data_t mspi_sam_qspi_data_##inst = {                                  \
+		.dev_id = NULL,                                                                    \
+		.lock_init = Z_MUTEX_INITIALIZER(mspi_sam_qspi_data_##inst.lock_init),             \
+		.lock_dev = Z_MUTEX_INITIALIZER(mspi_sam_qspi_data_##inst.lock_dev),               \
+		.qspiObj = {0},                                                                    \
+	};                                                                                         \
+	static const mspi_sam_qspi_cfg_t mspi_sam_qspi_cfg_##inst = {                              \
+		.reg_cfg = {.regs = (qspi_registers_t *)DT_INST_REG_ADDR(0), .pads = 0},           \
+		.reg_size = DT_INST_REG_SIZE(inst),                                                \
+		.mspicfg = MSPI_MCHP_CONFIG(inst),                                                 \
+		.mspicfg.re_init = false,                                                          \
+		.pcfg = PINCTRL_DT_INST_DEV_CONFIG_GET(inst),                                      \
+		MSPI_MCHP_IRQ_HANDLER_FUNC(inst).child_desc = mspi_child_desc_##inst,              \
+		.num_children = ARRAY_SIZE(mspi_child_desc_##inst),                                \
+		.child_cfg = mspi_child_cfg_##inst,                                                \
+	};                                                                                         \
+	DEVICE_DT_INST_DEFINE(inst, mspi_mchp_qspi_init, NULL, &mspi_sam_qspi_data_##inst,         \
+			      &mspi_sam_qspi_cfg_##inst, POST_KERNEL,                              \
+			      CONFIG_KERNEL_INIT_PRIORITY_DEVICE, &mspi_sam_qspi_api);             \
+	MSPI_MCHP_IRQ_HANDLER(inst)
+#else
 #define MSPI_MCHP_DEVICE_INIT(inst)                                                                \
 	PINCTRL_DT_INST_DEFINE(inst);                                                              \
 	MSPI_MCHP_IRQ_HANDLER_DECL(inst)                                                           \
@@ -2821,6 +2921,6 @@ static int mspi_mchp_qspi_init(const struct device *controller)
 			      &mspi_sam_qspi_cfg_##inst, POST_KERNEL,                              \
 			      CONFIG_KERNEL_INIT_PRIORITY_DEVICE, &mspi_sam_qspi_api);             \
 	MSPI_MCHP_IRQ_HANDLER(inst)
-
+#endif
 DT_INST_FOREACH_STATUS_OKAY(MSPI_MCHP_GEN_CHILD_TABLES)
 DT_INST_FOREACH_STATUS_OKAY(MSPI_MCHP_DEVICE_INIT)
