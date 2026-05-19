@@ -346,3 +346,35 @@
 &wdog {
 	status = "okay";
 };
+
+&qspi0 {
+	status = "okay";
+
+	mspi_flash0: mspi-flash0@0 {
+		compatible = "microchip,sst26vf064b-flash";
+
+		reg = <0>;
+		/* Addressing */
+		address-length = "ADDR_3_BYTE";
+
+		/* CE / command format */
+		ce-break-config = <0x800000 0>;          /* 8 MB device size */
+		command-length = "INSTR_1_BYTE";
+		mspi-ce-polarity = "MSPI_CE_ACTIVE_LOW";
+		mspi-cpp-mode = "MSPI_CPP_MODE_0";
+
+		/* I/O mode */
+		mspi-data-rate = "MSPI_DATA_RATE_SINGLE";
+		mspi-io-mode   = "MSPI_IO_MODE_SINGLE";
+
+		/* Clock */
+		mspi-max-frequency = <25000000>;         /* Safe default (can increase later) */
+
+		/* Read / Write commands */
+		read-command  = <0x03>;                  /* Normal Read */
+		rx-dummy = <0>;
+		tx-dummy = <0>;
+		write-command = <0x02>;                  /* Page Program */
+
+	};
+};
