@@ -27,7 +27,11 @@ typedef enum mspi_ambiq_timing_param mspi_timing_param;
 #define MSPI_PORT 0
 #endif
 
-#if defined(CONFIG_SOC_FAMILY_MICROCHIP_SAM_D5X_E5X)
+#if defined(CONFIG_SOC_FAMILY_MICROCHIP_SAM_D5X_E5X) ||                                            \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2) ||                                        \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ3) ||                                        \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
+
 #define MSPI_TEST_DEV_CFG_MASK (MSPI_DEVICE_CONFIG_ALL & ~MSPI_DEVICE_CONFIG_DQS)
 #else
 #define MSPI_TEST_DEV_CFG_MASK MSPI_DEVICE_CONFIG_ALL
