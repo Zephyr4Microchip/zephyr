@@ -18,6 +18,7 @@ supported:
   - flash
   - gpio
   - i2c
+  - mspi
   - pinctrl
   - pwm
   - reset
