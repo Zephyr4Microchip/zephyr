@@ -237,6 +237,19 @@
 			#gpio-cells = <2>;
 		};
 
+		qspi0: qspi@42000000 {
+			compatible = "microchip,qspi-g1-mspi";
+			reg = <0x42000000 0x48>;
+			clock-frequency = <32000000>; /* max = max_pb2_clk/(1+1) */
+			#address-cells = <1>;
+			#size-cells = <0>;
+			duplex = "MSPI_HALF_DUPLEX";
+			interrupts = <29 6>;
+			interrupt-names = "irq";
+			op-mode = "MSPI_CONTROLLER";
+			status = "disabled";
+		};
+
 		sercom0: sercom@40000c00 {
 			compatible = "microchip,sercom-g1";
 			reg = <0x40000c00 0x31>;
