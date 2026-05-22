@@ -20,7 +20,6 @@ supported:
   - gpio
   - pinctrl
   - pwm
-  - reset
   - rtc
   - trng
   - uart

@@ -22,7 +22,6 @@ supported:
   - mspi
   - pinctrl
   - pwm
-  - reset
   - rtc
   - spi
   - trng
