@@ -28,7 +28,7 @@
  *******************************************/
 LOG_MODULE_REGISTER(hwinfo_mchp_g2, LOG_LEVEL_ERR);
 
-#define RCON_BASE_ADDR DT_REG_ADDR(DT_NODELABEL(rcon))
+#define RCON_BASE_ADDR DT_REG_ADDR_BY_IDX(DT_NODELABEL(clock), 1)
 
 #define DT_DRV_COMPAT microchip_hwinfo_g2
 
