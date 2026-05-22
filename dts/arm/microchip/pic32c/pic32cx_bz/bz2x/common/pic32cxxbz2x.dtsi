@@ -284,12 +284,6 @@
 			interrupts = <26 6>;
 		};
 
-		rcon: rcon@44000a00 {
-			compatible = "microchip,rcon-g1-reset";
-			status = "okay";
-			reg = <0x44000a00 0x400>;
-		};
-
 		rtc: rtc@42010000 {
 			compatible = "microchip,rtc-g1";
 			status = "disabled";
