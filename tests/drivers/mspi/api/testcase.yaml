@@ -7,10 +7,17 @@ tests:
       - drivers
       - mspi
       - api
-    filter: dt_compat_enabled("zephyr,mspi-emul-controller")
+    filter: dt_compat_enabled("zephyr,mspi-emul-controller") or
+            dt_compat_enabled("microchip,qspi-g1-mspi")
     harness: ztest
     platform_allow:
       - native_sim
+      - sam_e54_xpro
+      - wbz451_curiosity
+      - wbz451hpe_curiosity
+      - wbz351_curiosity
+      - wbz361_curiosity
+      - pic32wm_bz6204_curiosity
     integration_platforms:
       - native_sim
   drivers.mspi.api.ambiq:

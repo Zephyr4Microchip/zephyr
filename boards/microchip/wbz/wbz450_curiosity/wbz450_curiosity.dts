@@ -22,6 +22,7 @@
 		zephyr,bt-hci = &bt_hci_microchip;
 		zephyr,bt-c2h-uart = &sercom0;
 		zephyr,ieee802154 = &ieee802154;
+		zephyr,cortex-m-idle-timer = &rtc;
 	};
 
 	leds {
@@ -40,14 +41,6 @@
 		};
 	};
 
-	pwmleds {
-		compatible = "pwm-leds";
-		pwm_led0: pwm_led_0 {
-			status = "okay";
-			pwms = <&tc0 1 PWM_MSEC(20) 0>;
-		};
-	};
-
 	buttons {
 		compatible = "gpio-keys";
 		button0: button_0 {
@@ -63,7 +56,7 @@
 		led2 = &led2;
 		sw0 = &button0;
 		rtc = &rtc;
-		pwm-led0 = &pwm_led0;
+		watchdog0 = &wdog;
 	};
 };
 
@@ -129,12 +122,21 @@
 	status = "okay";
 };
 
+/*
+ *&rtc {
+ *	compatible = "microchip,rtc-g1";
+ *	status = "okay";
+ *	prescaler = <1024>;
+ *	alarms-count = <2>;
+ *	cal-constant = <1048576>;  (8192 * 128 = 1048576)
+ *};
+ */
+
 &rtc {
-	compatible = "microchip,rtc-g1";
+	compatible = "microchip,rtc-g1-counter";
 	status = "okay";
-	prescaler = <1024>;
-	alarms-count = <2>;
-	cal-constant = <1048576>;  /*(8192 * 128 = 1048576)*/
+	max-bit-width = <32>;
+	prescaler = <1>;
 };
 
 &tcc0 {
@@ -174,7 +176,7 @@
  *		mode. In MPWM mode, the wave output will can be observed in WO[1]
  */
 &tc0 {
-	status = "okay";
+	status = "disabled";
 	compatible = "microchip,tc-g1-pwm";
 	#pwm-cells = <3>;
 	pinctrl-0 = <&tc0_pwm_default>;
@@ -215,4 +217,58 @@
 	max-bit-width = <16>;
 	prescaler = <256>;
 	channels = <2>;
+};
+
+&ac {
+	status = "disabled";
+	compatible = "microchip,ac-g1-comparator";
+	comparator-channel = <0>;
+	/*
+	 * AC_AIN3 = RB1
+	 */
+	positive-mux-input = "pin3";
+	negative-mux-input = "bandgap";
+	vddana-scale-value = <1>;
+	interrupt-selection = "toggle";
+	output-mode = "async";
+	filter-length = "off";
+	interrupt-enable;
+	run-standby;
+};
+
+&porta {
+	/* GPIO_CNPUSET = 0x0018; pull up PA3, PA4 (if low power clock source is POSC)
+	 * GPIO_CNPDSET = 0x0600; Pull up PA9, PA10(red and green led)
+	 */
+	sleep-sosc {
+		status = "disabled";
+		gpio-hog;
+		gpios = <9 GPIO_PULL_DOWN>,
+			<10 GPIO_PULL_DOWN>;
+		input;
+	};
+	sleep-posc {
+		status = "disabled";
+		gpio-hog;
+		gpios = <3 GPIO_PULL_UP>,
+			<4 GPIO_PULL_UP>,
+			<9 GPIO_PULL_DOWN>,
+			<10 GPIO_PULL_DOWN>;
+		input;
+	};
+};
+
+&portb {
+	/* GPIO_CNPDSET = 0x0060; pull down RB5 (LEDs) , RTS */
+	sleep {
+		status = "disabled";
+		gpio-hog;
+		gpios = <5 GPIO_PULL_DOWN>,
+			<6 GPIO_PULL_DOWN>;
+		input;
+	};
+};
+
+&wdog {
+	status = "okay";
 };

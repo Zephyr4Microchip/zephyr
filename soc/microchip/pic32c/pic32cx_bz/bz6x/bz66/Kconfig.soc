@@ -16,9 +16,3 @@ config SOC_PIC32CX2051BZ66048
 
 config SOC
 	default "pic32cx2051bz66048" if SOC_PIC32CX2051BZ66048
-
-
-
-
-rsource "Kconfig.image_header"
-rsource "Kconfig.system_config"

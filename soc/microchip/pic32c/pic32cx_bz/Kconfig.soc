@@ -1,0 +1,30 @@
+# Copyright (c) 2025 Microchip Technology Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+config ENABLE_PMU_BUCK_MODE
+	bool "PMU Buck Mode support" if !SOC_SERIES_PIC32CX_BZ3
+
+config CUSTOM_ANTENNA_GAIN
+	int "Custom Antenna Gain (dBm)"
+	default 5 if SOC_SERIES_PIC32CX_BZ24
+	default 4 if HPA_SUPPORTED && SOC_SERIES_PIC32CX_BZ25
+	default 3
+	range -5 6
+
+choice LOW_POWER_CLOCK_SOURCE
+	prompt "Low Power/RTC Clock Source"
+	default LOW_POWER_CLOCK_SOURCE_SOSC
+	help
+	  Selection of the clock source in low power mode
+	  - LOW_POWER_CLOCK_SOURCE_POSC: better clock accuracy
+	  - LOW_POWER_CLOCK_SOURCE_SOSC: better current consumption, save around 200 uA
+
+	config LOW_POWER_CLOCK_SOURCE_POSC
+		bool "POSC"
+	config LOW_POWER_CLOCK_SOURCE_SOSC
+		bool "SOSC"
+endchoice
+
+rsource "*/Kconfig.soc"
+rsource "Kconfig.image_header"
+rsource "Kconfig.system_config"

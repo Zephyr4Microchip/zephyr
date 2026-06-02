@@ -1,0 +1,32 @@
+# Copyright (c) 2025 Microchip Technology Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+family:
+- name: microchip_pic32cx_bz2
+  series:
+  - name: bz25
+    socs:
+    - name: pic32cx1012bz25048
+
+  - name: bz24
+    socs:
+    - name: pic32cx1012bz24032
+- name: microchip_pic32cx_bz3
+  series:
+  - name: bz3
+    socs:
+    - name: pic32cx5109bz31048
+    - name: pic32cx5109bz31032
+  - name: bz36
+    socs:
+    - name: pic32cx5109bz36032
+    - name: pic32cx5109bz36048
+- name: microchip_pic32cx_bz6
+  series:
+  - name: bz62
+    socs:
+    - name: pic32cx2051bz62132
+    - name: pic32cx2051bz62064
+  - name: bz66
+    socs:
+    - name: pic32cx2051bz66048

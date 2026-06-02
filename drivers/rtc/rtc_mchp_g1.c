@@ -102,6 +102,7 @@ typedef struct rtc_mchp_time {
  * peripheral.
  */
 #if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2) ||                                            \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ3) ||                                        \
 	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
 typedef struct mchp_rtc_clock {
 
@@ -1324,6 +1325,7 @@ static int rtc_mchp_init(const struct device *dev)
 		}
 
 #if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2) ||                                            \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ3) ||                                        \
 	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
 		RTC_MCHP_ENABLE_MODULE();
 #else
@@ -1406,6 +1408,7 @@ static DEVICE_API(rtc, rtc_mchp_api) = {
  * instance.
  */
 #if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2) ||                                            \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ3) ||                                        \
 	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
 #define RTC_MCHP_CLOCK_DEFN(n)                                                                     \
 	.rtc_clock.clock_dev = DEVICE_DT_GET(DT_NODELABEL(clock)),                                 \
@@ -1455,7 +1458,7 @@ static DEVICE_API(rtc, rtc_mchp_api) = {
 #define RTC_MCHP_DEVICE_INIT(n)                                                                    \
 	IF_ENABLED(CONFIG_RTC_ALARM, (						\
 	static void rtc_mchp_irq_config_##n(const struct device *dev);		\
-))                                                     \
+))                                                      \
 	RTC_MCHP_CONFIG_DEFN(n);                                                                   \
 	static rtc_mchp_dev_data_t rtc_mchp_dev_data_##n;                                          \
 	DEVICE_DT_INST_DEFINE(n, rtc_mchp_init, NULL, &rtc_mchp_dev_data_##n,                      \

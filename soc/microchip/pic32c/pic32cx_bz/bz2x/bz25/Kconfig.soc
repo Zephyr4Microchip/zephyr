@@ -19,7 +19,3 @@ config SOC
 
 config HPA_SUPPORTED
 	bool
-
-
-
-rsource "Kconfig.system_config"
