@@ -191,14 +191,14 @@ LEDs and Buttons
 
 
 Temperature Sensor
-~~~~~~~~~~~~~~~~~~
+------------------
 
 - **U800 (MCP9700A)** connected to PD4 (AN10)
 - Enabled via jumper **J801**
 - Shared with XPRO CVD input
 
 QSPI Flash
-~~~~~~~~~~
+----------
 
 - **U801 (SST26VF064B, 64 Mbit)**
 - To enable QSPI:
@@ -206,8 +206,7 @@ QSPI Flash
 - Shares pins with other peripherals
 
 
-For detailed schematics, pin assignments, and signal descriptions, see the
-`PIC32-BZ6 Curiosity Board User’s Guide <https://ww1.microchip.com/downloads/aemDocuments/documents/WSG/ProductDocuments/UserGuides/PIC32-BZ6-Curiosity-Board-User-Guide-DS00006006.pdf>`_
+For detailed schematics, pin assignments, and signal descriptions, go to the reference document section below
 
 Programming and Debugging
 *************************
@@ -237,7 +236,7 @@ This section describes how to flash and debug applications on the Microchip Wire
      - PKOB4, PICkit Basic
 
 Flashing
-========
+--------
 
 Follow the steps below to build and flash your application:
 
@@ -264,7 +263,7 @@ Follow the steps below to build and flash your application:
 5. Ensure the flash process completes successfully. You should see confirmation messages in the terminal.
 
 Debugging
-=========
+---------
 
 To debug the PIC32WM_BZ6 application using Visual Studio Code:
 
@@ -336,7 +335,7 @@ To debug the PIC32WM_BZ6 application using Visual Studio Code:
 10. Confirm that the debugger hits the breakpoint in ``main.c``. Press **Continue** to proceed.
 
 References
-==========
+----------
 
 - `PIC32-BZ6 Curiosity Board Product Page <https://www.microchip.com/en-us/development-tool/ea81w68a>`_
 - `PIC32-BZ6 Curiosity Board User Guide <https://ww1.microchip.com/downloads/aemDocuments/documents/WSG/ProductDocuments/UserGuides/PIC32-BZ6-Curiosity-Board-User-Guide-DS00006006.pdf>`_
