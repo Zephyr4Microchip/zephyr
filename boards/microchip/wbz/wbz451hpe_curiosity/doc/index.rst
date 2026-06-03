@@ -180,7 +180,7 @@ For detailed schematics, pin assignments, and signal descriptions, see the  `WBZ
 Programming and Debugging
 *************************
 
-This section describes how to flash and debug applications on the Microchip Wireless WBZ451 Curiosity board using Zephyr.
+This section describes how to flash and debug applications on the Microchip Wireless WBZ451HPE Curiosity using Zephyr.
 
 **Supported Debuggers**
 
@@ -307,7 +307,6 @@ References
 ==========
 
 - `WBZ451HPE Curiosity Board Product Page <https://www.microchip.com/en-us/development-tool/ev79y91a>`_
-- `WBZ451HPE Curiosity Board User Guide <https://ww1.microchip.com/downloads/aemDocuments/documents/WSG/ProductDocuments/UserGuides/WBZ451HPE-Curiosity-Board-User-Guide-DS50003681.pdf>`_
 - `Hardware Design Files <https://ww1.microchip.com/downloads/aemDocuments/documents/WSG/ProductDocuments/BoardDesignFiles/WBZ451H-Curiosity-Board-Hardware-Design-Documentation.zip>`_
 - `PIC32CX-BZ2 and WBZ45 Family Data Sheet <https://ww1.microchip.com/downloads/aemDocuments/documents/WSG/ProductDocuments/DataSheets/PIC32CX-BZ2-and-WBZ45-Family-Data-Sheet-DS70005504.pdf>`_
 - `mikroBUS Click Boards <https://www.mikroe.com/click>`_
