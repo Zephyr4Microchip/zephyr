@@ -42,10 +42,6 @@ Hardware
 * **USB Connectivity**: Micro-B USB connector for programming, debugging, and UART.
 * **Other Peripherals**: Temperature sensor, QSPI serial flash, 32.768 kHz crystal oscillator.
 
-**Design Files:**  
-`WBZ451HPE Curiosity Board Product Page <https://ww1.microchip.com/downloads/aemDocuments/documents/WSG/ProductDocuments/BoardDesignFiles/WBZ451H-Curiosity-Board-Hardware-Design-Documentation.zip>`_
-
-
 Supported Features
 ==================
 
@@ -178,7 +174,7 @@ For detailed schematics, pin assignments, and signal descriptions, see the  `WBZ
 
 
 Programming and Debugging
-*************************
+-------------------------
 
 This section describes how to flash and debug applications on the Microchip Wireless WBZ451HPE Curiosity using Zephyr.
 
@@ -223,7 +219,7 @@ Follow the steps below to build and flash your application:
 
 3. After a successful build, connect the WBZ451HPE device to your machine.
 
-4. Flash the device using the `west flash` command:
+4. Flash the device using the west flash command:
 
    .. code-block:: console
 
@@ -237,11 +233,11 @@ Debugging
 To debug the WBZ451HPE application using Visual Studio Code:
 
 1. Ensure the application is built for the HPE board.
-2. Install the `cortex-debug` extension in Visual Studio Code.
+2. Install the cortex-debug extension in Visual Studio Code.
 3. Open the workspace and click the **Run and Debug** icon on the left sidebar.
-4. If `launch.json` and `tasks.json` files are already present, VS Code will automatically start the debug session.
-5. If prompted to create a new `launch.json`, select the **Cortex Debug** debugger option.
-6. Replace the contents of `launch.json` with:
+4. If launch.json and tasks.json files are already present, VS Code will automatically start the debug session.
+5. If prompted to create a new launch.json, select the **Cortex Debug** debugger option.
+6. Replace the contents of launch.json with:
 
    .. code-block:: json
 
@@ -272,7 +268,7 @@ To debug the WBZ451HPE application using Visual Studio Code:
         ]
       }
 
-7. Create `tasks.json` inside `.vscode` with:
+7. Create tasks.json inside .vscode with:
 
    .. code-block:: json
 
@@ -301,7 +297,7 @@ To debug the WBZ451HPE application using Visual Studio Code:
 
 8. Connect the WBZ451HPE Curiosity board.
 9. Click the **Run and Debug** icon again and select the WBZ451HPE debug option.
-10. Confirm that the debugger hits the breakpoint in `main.c`. Press **Continue** to proceed.
+10. Confirm that the debugger hits the breakpoint in main.c. Press **Continue** to proceed.
 
 References
 ==========
