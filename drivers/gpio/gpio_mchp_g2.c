@@ -146,14 +146,24 @@ static int gpio_mchp_config(const struct device *dev, gpio_pin_t pin, gpio_flags
 			} else if ((flags & GPIO_OUTPUT_INIT_HIGH) != 0) {
 				regs->GPIO_LATSET = mask;
 			}
+
+			regs->GPIO_CNPUCLR = mask;
+			regs->GPIO_CNPDCLR = mask;
+
 			regs->GPIO_TRISCLR = mask;
 		} else {
 
 			/* Configure pull-up or pull-down if requested */
 			if ((flags & GPIO_PULL_UP) != 0) {
 				regs->GPIO_CNPUSET = mask;
-			} else if ((flags & GPIO_PULL_DOWN) != 0) {
+			} else {
+				regs->GPIO_CNPUCLR = mask;
+			}
+
+			if ((flags & GPIO_PULL_DOWN) != 0) {
 				regs->GPIO_CNPDSET = mask;
+			} else {
+				regs->GPIO_CNPDCLR = mask;
 			}
 
 			regs->GPIO_LATCLR = mask;
@@ -392,10 +402,14 @@ static int gpio_mchp_pin_interrupt_configure(const struct device *dev, gpio_pin_
 	const struct gpio_mchp_config *config = dev->config;
 	gpio_registers_t *regs = config->regs;
 	uint32_t mask;
+	uint32_t key;
 
 	LOG_DBG("mode = 0x%x trig = 0x%x\n", mode, trig);
 
 	mask = BIT(pin);
+
+	/* Lock interrupts to ensure atomic operation */
+	key = irq_lock();
 
 	/*
 	 * Handle GPIO interrupt configuration based on the trigger mode.
@@ -437,14 +451,25 @@ static int gpio_mchp_pin_interrupt_configure(const struct device *dev, gpio_pin_
 	}
 
 	if (ret_val != -ENOTSUP) {
-		if (mode == GPIO_INT_MODE_EDGE) {
-			regs->GPIO_CNCONSET = GPIO_CNCON_ON_Msk | GPIO_CNCON_EDGEDETECT_Msk;
-		} else {
+		switch (mode) {
+		case GPIO_INT_MODE_DISABLED:
+			if (regs->GPIO_CNEN == 0 && regs->GPIO_CNNE == 0) {
+				//regs->GPIO_CNCONCLR = GPIO_CNCON_ON_Msk;
+			}
+			break;
+		case GPIO_INT_MODE_LEVEL:
+			regs->GPIO_CNCONCLR = GPIO_CNCON_EDGEDETECT_Msk;
 			regs->GPIO_CNCONSET = GPIO_CNCON_ON_Msk;
 			/* read PORT to clear mismatch condition to detect next pin change */
 			regs->GPIO_PORT;
+			break;
+		case GPIO_INT_MODE_EDGE:
+			regs->GPIO_CNCONSET = GPIO_CNCON_ON_Msk | GPIO_CNCON_EDGEDETECT_Msk;
+			break;
 		}
 	}
+
+	irq_unlock(key);
 
 	LOG_DBG("retval = %d", ret_val);
 	return ret_val;
