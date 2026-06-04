@@ -3,16 +3,16 @@
 
 config SOC_FAMILY_MICROCHIP_PIC32CX_BZ2
 	select ARM
+	select MICROCHIP_PIC32C
 	select CPU_CORTEX_M4
 	select CPU_CORTEX_M_HAS_DWT
 	select CPU_HAS_ARM_MPU
 	select CPU_HAS_FPU
 	select SOC_EARLY_INIT_HOOK
+	select SOC_LATE_INIT_HOOK
 	select HAS_CMSIS_CORE
 	select HAS_SEGGER_RTT if ZEPHYR_SEGGER_MODULE
 	select ARM_ON_ENTER_CPU_IDLE_PREPARE_HOOK if BT
+	select HAS_PM
 
 	select CLOCK_CONTROL
-
-config DEVICE_SUPPORT_REQUIRED
-	bool "Device support library is required"

@@ -14,11 +14,13 @@
 #include <zephyr/sys/__assert.h>
 #include <soc.h>
 #include <zephyr/drivers/uart.h>
+#if CONFIG_UART_MCHP_ASYNC
 #include <zephyr/drivers/dma.h>
+#include <mchp_dt_helper.h>
+#endif
 #include <zephyr/drivers/pinctrl.h>
 #include <zephyr/drivers/clock_control.h>
 #include <zephyr/irq.h>
-#include <mchp_dt_helper.h>
 #include <zephyr/drivers/clock_control/mchp_clock_control.h>
 #include <string.h>
 
@@ -85,6 +87,7 @@
  * peripheral.
  */
 #if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2) ||                                            \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ3) ||                                        \
 	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
 
 typedef struct mchp_uart_clock {
@@ -111,6 +114,18 @@ typedef struct mchp_uart_clock {
 #define UART_MCHP_ENABLE_MODULE(regs)                                                              \
 	if (regs == SERCOM0_REGS) {                                                                \
 		CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_SER1MD_Msk;                                        \
+	}
+#elif defined(CONFIG_SOC_SERIES_PIC32CX_BZ3)
+#define UART_MCHP_ENABLE_MODULE(regs)                                                              \
+	if (regs == SERCOM0_REGS) {                                                                \
+		CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_SER0MD_Msk;                                        \
+	} else if (regs == SERCOM1_REGS) {                                                         \
+		CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_SER1MD_Msk;                                        \
+	}
+#elif defined(CONFIG_SOC_SERIES_PIC32CX_BZ36)
+#define UART_MCHP_ENABLE_MODULE(regs)                                                              \
+	if (regs == SERCOM0_REGS) {                                                                \
+		CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_SER0MD_Msk;                                        \
 	}
 #elif defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
 #define UART_MCHP_ENABLE_MODULE(regs)                                                              \
@@ -1335,6 +1350,7 @@ static int uart_mchp_init(const struct device *dev)
 
 	do {
 #if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2) ||                                            \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ3) ||                                        \
 	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
 		/* Enable the GCLK and Peripheral Module */
 		clock_control_on(cfg->uart_clock.clock_dev, cfg->uart_clock.gclk_sys);
@@ -1536,10 +1552,9 @@ static int uart_mchp_configure(const struct device *dev, const struct uart_confi
 			break;
 		}
 		dev_data->config_cache.baudrate = new_cfg->baudrate;
-
-		uart_enable(regs, clock_external, (cfg->run_in_standby_en == 1) ? true : false,
-			    true);
 	} while (0);
+
+	uart_enable(regs, clock_external, (cfg->run_in_standby_en == 1) ? true : false, true);
 
 	return retval;
 }

@@ -11,18 +11,22 @@ toolchain:
 flash: 1024
 ram: 128
 supported:
+  - adc
   - ble
+  - comparator
   - dma
+  - eic
   - flash
   - gpio
   - i2c
+  - mspi
   - pinctrl
   - pwm
-  - reset
   - rtc
   - spi
   - trng
   - uart
+  - watchdog
   - ieee802154
   - netif:openthread
 vendor: microchip

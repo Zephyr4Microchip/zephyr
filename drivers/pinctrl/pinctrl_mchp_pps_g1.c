@@ -37,6 +37,38 @@
 
 #define PINCTRL_REG_POS 2
 
+/**
+ * @brief Array of port addresses for the MCHP G1 series pps peripheral.
+ *
+ * This array contains the register addresses of the ports (PORTA and PORTB)
+ * for the MCHP G1 series pps peripheral. The addresses are obtained using the
+ * MCHP_PORT_ADDR_OR_NONE macro, which ensures that only existing ports are included.
+ * This can be updated for other devices using conditional compilation directives
+ */
+static const uint32_t mchp_port_addrs[] = {
+	MCHP_PORT_ADDR_OR_NONE(porta),
+	MCHP_PORT_ADDR_OR_NONE(portb),
+	MCHP_PORT_ADDR_OR_NONE(pinctrl),
+};
+#elif defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ3)
+
+/* Pins which supports Analog pins */
+#define AIN_PIN_MASK_PORTA 0x0008
+#define AIN_PIN_MASK_PORTB 0x00FF
+
+/* Pins which overlaps JTAG pins (PB4 to PB7)*/
+#define JTAG_PIN_MASK      0xF0
+
+#define PINCTRL_REG_POS 2
+
+/**
+ * @brief Array of port addresses for the MCHP G1 series pps peripheral.
+ *
+ * This array contains the register addresses of the ports (PORTA and PORTB)
+ * for the MCHP G1 series pps peripheral. The addresses are obtained using the
+ * MCHP_PORT_ADDR_OR_NONE macro, which ensures that only existing ports are included.
+ * This can be updated for other devices using conditional compilation directives
+ */
 static const uint32_t mchp_port_addrs[] = {
 	MCHP_PORT_ADDR_OR_NONE(porta),
 	MCHP_PORT_ADDR_OR_NONE(portb),
@@ -49,16 +81,19 @@ static const uint16_t mchp_ain_pin_mask[] = {0x4008, 0xCCFF, 0x0080, 0x00FC, 0x0
 
 #define PINCTRL_REG_POS 5
 
-/* clang-format off */
+/**
+ * @brief Array of port addresses for the MCHP G1 series pps peripheral.
+ *
+ * This array contains the register addresses of the ports (PORTA, PORTB, PORTC, PORTD, and PORTE)
+ * for the MCHP G1 series pps peripheral. The addresses are obtained using the
+ * MCHP_PORT_ADDR_OR_NONE macro, which ensures that only existing ports are included.
+ * This can be updated for other devices using conditional compilation directives
+ */
 static const uint32_t mchp_port_addrs[] = {
-	MCHP_PORT_ADDR_OR_NONE(porta),
-	MCHP_PORT_ADDR_OR_NONE(portb),
-	MCHP_PORT_ADDR_OR_NONE(portc),
-	MCHP_PORT_ADDR_OR_NONE(portd),
-	MCHP_PORT_ADDR_OR_NONE(porte),
-	MCHP_PORT_ADDR_OR_NONE(pinctrl),
+	MCHP_PORT_ADDR_OR_NONE(porta), MCHP_PORT_ADDR_OR_NONE(portb),
+	MCHP_PORT_ADDR_OR_NONE(portc), MCHP_PORT_ADDR_OR_NONE(portd),
+	MCHP_PORT_ADDR_OR_NONE(porte), MCHP_PORT_ADDR_OR_NONE(pinctrl),
 };
-/* clang-format on */
 
 #endif
 
@@ -104,6 +139,17 @@ static void pinctrl_set_flags(const pinctrl_soc_pin_t *pin)
 			/* Digital Mode Enable */
 			pRegister->GPIO_ANSELCLR = pin_mask & AIN_PIN_MASK;
 
+			if ((pin_mask & JTAG_PIN_MASK) != 0) {
+				/* If any JTAG pins are being repurposed, disable JTAG globally */
+				CFG_REGS->CFG_CFGCON0CLR = CFG_CFGCON0_JTAGEN_Msk;
+			}
+		}
+#elif defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ3)
+		/* Digital Mode Enable */
+		if (port_id == MCHP_PINMUX_PORT_a) {
+			pRegister->GPIO_ANSELCLR = pin_mask & AIN_PIN_MASK_PORTA;
+		} else if (port_id == MCHP_PINMUX_PORT_b) {
+			pRegister->GPIO_ANSELCLR = pin_mask & AIN_PIN_MASK_PORTB;
 			if ((pin_mask & JTAG_PIN_MASK) != 0) {
 				/* If any JTAG pins are being repurposed, disable JTAG globally */
 				CFG_REGS->CFG_CFGCON0CLR = CFG_CFGCON0_JTAGEN_Msk;

@@ -28,6 +28,15 @@ LOG_MODULE_REGISTER(gpio_mchp_g2, CONFIG_GPIO_LOG_LEVEL);
 /* Pins which overlaps JTAG pins (PB4 to PB7)*/
 #define JTAG_PIN_MASK 0xF0
 
+#elif defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ3)
+
+/* Pins which supports Analog pins */
+#define AIN_PIN_MASK_PORTA 0x0008
+#define AIN_PIN_MASK_PORTB 0x00FF
+
+/* Pins which overlaps JTAG pins (PB4 to PB7)*/
+#define JTAG_PIN_MASK      0xF0
+
 #elif defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
 
 /* Pins which supports Analog pins */
@@ -80,19 +89,27 @@ static int gpio_mchp_config(const struct device *dev, gpio_pin_t pin, gpio_flags
 	int ret = 0;
 	uint32_t mask, io_flags;
 
-	mask = BIT(pin & PINS_MASK);
-
-	do {
-		io_flags = flags & (GPIO_INPUT | GPIO_OUTPUT);
-		if ((io_flags == GPIO_DISCONNECTED) || (io_flags == (GPIO_INPUT | GPIO_OUTPUT))) {
-			ret = -ENOTSUP;
-			break;
-		}
+	io_flags = flags & (GPIO_INPUT | GPIO_OUTPUT);
+	if ((io_flags == GPIO_DISCONNECTED) || (io_flags == (GPIO_INPUT | GPIO_OUTPUT))) {
+		ret = -ENOTSUP;
+	} else {
+		mask = BIT(pin & PINS_MASK);
 
 #if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2)
 		if (regs == GPIOB_REGS) {
 			/* Digital Mode Enable */
 			regs->GPIO_ANSELCLR = mask & AIN_PIN_MASK;
+			if ((mask & JTAG_PIN_MASK) != 0) {
+				/* If any JTAG pins are being repurposed, disable JTAG globally */
+				CFG_REGS->CFG_CFGCON0CLR = CFG_CFGCON0_JTAGEN_Msk;
+			}
+		}
+#elif defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ3)
+		/* Digital Mode Enable */
+		if (regs == GPIOA_REGS) {
+			regs->GPIO_ANSELCLR = mask & AIN_PIN_MASK_PORTA;
+		} else if (regs == GPIOB_REGS) {
+			regs->GPIO_ANSELCLR = mask & AIN_PIN_MASK_PORTB;
 			if ((mask & JTAG_PIN_MASK) != 0) {
 				/* If any JTAG pins are being repurposed, disable JTAG globally */
 				CFG_REGS->CFG_CFGCON0CLR = CFG_CFGCON0_JTAGEN_Msk;
@@ -144,7 +161,7 @@ static int gpio_mchp_config(const struct device *dev, gpio_pin_t pin, gpio_flags
 			/* input configuration*/
 			regs->GPIO_TRISSET = mask;
 		}
-	} while (0);
+	}
 
 	return ret;
 }

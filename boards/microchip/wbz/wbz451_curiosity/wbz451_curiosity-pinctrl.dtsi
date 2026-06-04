@@ -35,12 +35,6 @@
 		};
 	};
 
-	pb4_default: pb4_default{
-		group1 {
-			pinmux = <PB4_EXTINT0_IN>;
-		};
-	};
-
 	tcc0_pwm_default: tcc0_pwm_default {
 		group1 {
 			pinmux = <PB3_TCC0WO1_OUT>;
@@ -82,7 +76,6 @@
 			pinmux = <PB5_TC3WO1_OUT>;
 		};
 	};
-
 
 	tc3_pwm_16bit: tc3_pwm_16bit {
 		group1 {

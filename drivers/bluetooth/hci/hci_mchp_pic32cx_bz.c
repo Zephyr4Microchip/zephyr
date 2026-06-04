@@ -9,6 +9,10 @@
 #include <zephyr/drivers/bluetooth.h>
 #include <zephyr/bluetooth/hci.h>
 #include <zephyr/bluetooth/hci_types.h>
+#ifdef CONFIG_PM
+#include <zephyr/pm/device.h>
+#include <zephyr/drivers/counter.h>
+#endif
 #include <bt_sys.h>
 #include <rf_system.h>
 #include <info_block.h>
@@ -46,6 +50,8 @@ static struct k_sem mchp_hci_sem;
 
 #if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2)
 #define EXT_COMMON_MEMORY_SIZE (28 * 1024)
+#elif defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ3)
+#define EXT_COMMON_MEMORY_SIZE (31 * 1024)
 #elif defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
 #define EXT_COMMON_MEMORY_SIZE (31 * 1024)
 #endif
@@ -54,11 +60,16 @@ static struct k_sem mchp_hci_sem;
 #define __mchp_bt_section Z_GENERIC_SECTION(.mchp_bt)
 static uint8_t __mchp_bt_section s_btMem[EXT_COMMON_MEMORY_SIZE];
 
-#elif defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
+#elif defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ3) ||                                          \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
 static uint8_t *s_btMem;
 
 #else
 #error "NOT supported SOC family or series"
+#endif
+
+#if defined(CONFIG_CORTEX_M_SYSTICK_LPM_TIMER_COUNTER)
+static const struct device *idle_timer = DEVICE_DT_GET(DT_CHOSEN(zephyr_cortex_m_idle_timer));
 #endif
 
 typedef enum {
@@ -181,6 +192,56 @@ static void mchp_recv_thread_func(void *p1, void *p2, void *p3)
 	}
 }
 
+#if defined(CONFIG_PM)
+static int mchp_hci_pm_action(const struct device *dev, enum pm_device_action action)
+{
+	int result = 0;
+
+	switch (action) {
+	case PM_DEVICE_ACTION_RESUME:
+#if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2)
+		CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_AESMD_Msk;
+#endif
+		break;
+	case PM_DEVICE_ACTION_SUSPEND: {
+#if defined(CONFIG_CORTEX_M_SYSTICK_LPM_TIMER_COUNTER)
+		uint32_t idle_timer_count;
+		uint32_t idle_timer_freq;
+
+		if (counter_get_value(idle_timer, &idle_timer_count) != 0) {
+			result = -EINVAL;
+			break;
+		}
+		idle_timer_freq = counter_get_frequency(idle_timer);
+
+		/*
+		 * Request BT to enter sleep mode, BLE stack will check if it can enter or not.
+		 * BT_SYS_EnterSleepMode() return true means that BT enters sleep mode.
+		 * mchp_hci_pm_action() Returning an error code other than ENOSYS, ENOTSUP,
+		 * or EALREADY will cause pm_suspend_devices() to reject the system from going
+		 * into idle.
+		 * If BT does not enter sleep mode successfully, system cannot go into sleep.
+		 */
+		if ((BT_SYS_GetSleepMode() != true) &&
+		    (BT_SYS_EnterSleepMode(idle_timer_freq, idle_timer_count) != true)) {
+			result = -EBUSY;
+		} else {
+#if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2)
+			CFG_REGS->CFG_PMD3 |= CFG_PMD3_AESMD_Msk;
+#endif
+		}
+#else
+		result = -ECANCELED;
+#endif
+	} break;
+	default:
+		return -ECANCELED;
+	}
+
+	return result;
+}
+#endif
+
 static int mchp_hci_drv_send(const struct device *dev, struct net_buf *buf)
 {
 	int ret = 0;
@@ -272,7 +333,8 @@ static int mchp_hci_drv_init(const struct device *dev)
 	if (!IB_GetAntennaGain(&btSysCfg.antennaGain)) {
 		btSysCfg.antennaGain = CONFIG_CUSTOM_ANTENNA_GAIN;
 	}
-#ifdef CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6
+#if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ3) ||                                            \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
 	btSysCfg.adcTimingValid = IB_GetAdcTiming(&btSysCfg.adcTiming08, &btSysCfg.adcTiming51);
 #endif
 
@@ -280,7 +342,8 @@ static int mchp_hci_drv_init(const struct device *dev)
 	osalAPIList.osal_sem_post = osal_sem_post;
 	osalAPIList.osal_sem_postISR = osal_sem_post;
 
-#ifdef CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6
+#if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ3) ||                                            \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
 	s_btMem = k_malloc(EXT_COMMON_MEMORY_SIZE);
 	if (s_btMem == NULL) {
 		LOG_ERR("EXT_COMMON_MEMORY k_malloc fail\n");
@@ -293,12 +356,17 @@ static int mchp_hci_drv_init(const struct device *dev)
 	btOption.hciMode = true;
 	btOption.cmnMemSize = EXT_COMMON_MEMORY_SIZE;
 	btOption.p_cmnMemAddr = s_btMem;
+#if defined(CONFIG_PM)
+	btOption.deFeatMask = (BT_SYS_FEAT_CHC);
+#else
 	btOption.deFeatMask = 0;
+#endif
 
 	/* Initialize BLE Stack */
 	BT_SYS_Init(&mchp_hci_sem, &osalAPIList, &btOption, &btSysCfg);
 
-#ifdef CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2
+#if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2) ||                                            \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ3)
 	BT_SYS_UpgradeBleVersion(BT_SYS_BLE_VER_6_0);
 #endif
 
@@ -327,10 +395,19 @@ static const struct bt_hci_driver_api drv = {
 	.close = mchp_hci_drv_close,
 };
 
+#if defined(CONFIG_PM)
+#define HCI_DEVICE_INIT(inst)                                                                      \
+	static struct hci_driver_data hci_data_##inst = {};                                        \
+	PM_DEVICE_DT_INST_DEFINE(inst, mchp_hci_pm_action);                                        \
+	DEVICE_DT_INST_DEFINE(inst, mchp_hci_drv_init, PM_DEVICE_DT_INST_GET(inst),                \
+			      &hci_data_##inst, NULL, POST_KERNEL,                                 \
+			      CONFIG_KERNEL_INIT_PRIORITY_DEVICE, &drv)
+#else
 #define HCI_DEVICE_INIT(inst)                                                                      \
 	static struct hci_driver_data hci_data_##inst = {};                                        \
 	DEVICE_DT_INST_DEFINE(inst, mchp_hci_drv_init, NULL, &hci_data_##inst, NULL, POST_KERNEL,  \
 			      CONFIG_KERNEL_INIT_PRIORITY_DEVICE, &drv)
+#endif
 
 /* Only one instance supported right now */
 HCI_DEVICE_INIT(0)

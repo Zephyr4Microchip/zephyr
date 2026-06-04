@@ -1,0 +1,23 @@
+# Copyright (c) 2025 Microchip Technology Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+config SOC_SERIES_PIC32CX_BZ36
+	bool
+	select SOC_FAMILY_MICROCHIP_PIC32CX_BZ3
+	help
+	  Enable support for Microchip PIC32CX_BZ3 Cortex-M4F microcontrollers.
+
+config SOC_SERIES
+	default "bz36" if SOC_SERIES_PIC32CX_BZ36
+
+config SOC_PIC32CX5109BZ36048
+	bool
+	select SOC_SERIES_PIC32CX_BZ36
+
+config SOC_PIC32CX5109BZ36032
+	bool
+	select SOC_SERIES_PIC32CX_BZ36
+
+config SOC
+	default "pic32cx5109bz36048" if SOC_PIC32CX5109BZ36048
+	default "pic32cx5109bz36032" if SOC_PIC32CX5109BZ36032

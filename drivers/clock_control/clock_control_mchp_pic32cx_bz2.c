@@ -13,7 +13,7 @@
 #include <string.h>
 #include <zephyr/drivers/pinctrl.h>
 
-#include <zephyr/drivers/clock_control/mchp_clock_pic32cx_bz2.h>
+#include <zephyr/drivers/clock_control/mchp_clock_control.h>
 
 /******************************************************************************
  * @brief Macro definitions
@@ -228,7 +228,7 @@ void clock_pbclk_config(cru_registers_t *cru_regs, uint32_t subsys_val, uint8_t 
  * @brief configure REFCLK generator.
  */
 void clock_refclk_config(cru_registers_t *cru_regs, uint32_t subsys_val,
-			 clock_mchp_subsys_refclk_config_t *refclk_config)
+			 struct clock_mchp_subsys_refclk_config *refclk_config)
 {
 	clock_mchp_subsys_t subsys;
 	__IO uint32_t *reg;
@@ -1132,59 +1132,59 @@ static int clock_mchp_configure(const struct device *dev, clock_control_subsys_t
 
 		switch (subsys.bits.type) {
 		case SUBSYS_TYPE_SYSCLK:
-			clock_mchp_subsys_sysclk_config_t *sysclk_config =
-				(clock_mchp_subsys_sysclk_config_t *)req_config;
+			struct clock_mchp_subsys_sysclk_config *sysclk_config =
+				(struct clock_mchp_subsys_sysclk_config *)req_config;
 			clock_sysclk_config(cru_regs, sysclk_config->frc_div,
 					    sysclk_config->new_osc);
 			break;
 		case SUBSYS_TYPE_SPLL1:
-			clock_mchp_subsys_spll1_config_t *spll1_config =
-				(clock_mchp_subsys_spll1_config_t *)req_config;
+			struct clock_mchp_subsys_spll1_config *spll1_config =
+				(struct clock_mchp_subsys_spll1_config *)req_config;
 			clock_spll1_config(cru_regs, spll1_config->post_div);
 			break;
 		case SUBSYS_TYPE_SPLL2:
-			clock_mchp_subsys_spll2_config_t *spll2_config =
-				(clock_mchp_subsys_spll2_config_t *)req_config;
+			struct clock_mchp_subsys_spll2_config *spll2_config =
+				(struct clock_mchp_subsys_spll2_config *)req_config;
 			clock_spll2_config(cru_regs, spll2_config->src, spll2_config->post_div);
 			break;
 		case SUBSYS_TYPE_PBCLK:
-			clock_mchp_subsys_pbclk_config_t *pbclk_config =
-				(clock_mchp_subsys_pbclk_config_t *)req_config;
+			struct clock_mchp_subsys_pbclk_config *pbclk_config =
+				(struct clock_mchp_subsys_pbclk_config *)req_config;
 			clock_pbclk_config(cru_regs, (uint32_t)sys, pbclk_config->div);
 			break;
 		case SUBSYS_TYPE_REFCLK:
 			clock_refclk_config(cru_regs, (uint32_t)sys,
-					    (clock_mchp_subsys_refclk_config_t *)req_config);
+					    (struct clock_mchp_subsys_refclk_config *)req_config);
 			break;
 		case SUBSYS_TYPE_GCLKPERIPH:
-			clock_mchp_subsys_gclkperiph_config_t *gclkperiph_config =
-				(clock_mchp_subsys_gclkperiph_config_t *)req_config;
+			struct clock_mchp_subsys_gclkperiph_config *gclkperiph_config =
+				(struct clock_mchp_subsys_gclkperiph_config *)req_config;
 			clock_gclkperiph_config(cfg_regs, (uint32_t)sys,
 						gclkperiph_config->src_sel);
 			break;
 		case SUBSYS_TYPE_WDTCLK:
-			clock_mchp_subsys_wdtclk_config_t *wdtclk_config =
-				(clock_mchp_subsys_wdtclk_config_t *)req_config;
+			struct clock_mchp_subsys_wdtclk_config *wdtclk_config =
+				(struct clock_mchp_subsys_wdtclk_config *)req_config;
 			clock_wdtclk_config(cfg_regs, wdtclk_config->run_mode_clock_sel);
 			break;
 		case SUBSYS_TYPE_VBKPCLK:
-			clock_mchp_subsys_vbkpclk_config_t *vbkpclk_config =
-				(clock_mchp_subsys_vbkpclk_config_t *)req_config;
+			struct clock_mchp_subsys_vbkpclk_config *vbkpclk_config =
+				(struct clock_mchp_subsys_vbkpclk_config *)req_config;
 			clock_vbkpclk_config(cfg_regs, vbkpclk_config->src_sel);
 			break;
 		case SUBSYS_TYPE_DSWDTCLK:
-			clock_mchp_subsys_dswdtclk_config_t *dswdtclk_config =
-				(clock_mchp_subsys_dswdtclk_config_t *)req_config;
+			struct clock_mchp_subsys_dswdtclk_config *dswdtclk_config =
+				(struct clock_mchp_subsys_dswdtclk_config *)req_config;
 			clock_dswdtclk_config(cfg_regs, dswdtclk_config->src_sel);
 			break;
 		case SUBSYS_TYPE_LPCLK:
-			clock_mchp_subsys_lpclk_config_t *lpclk_config =
-				(clock_mchp_subsys_lpclk_config_t *)req_config;
+			struct clock_mchp_subsys_lpclk_config *lpclk_config =
+				(struct clock_mchp_subsys_lpclk_config *)req_config;
 			clock_lpclk_config(cfg_regs, lpclk_config->div_modifier);
 			break;
 		case SUBSYS_TYPE_RTCCLK:
-			clock_mchp_subsys_rtcclk_config_t *rtcclk_config =
-				(clock_mchp_subsys_rtcclk_config_t *)req_config;
+			struct clock_mchp_subsys_rtcclk_config *rtcclk_config =
+				(struct clock_mchp_subsys_rtcclk_config *)req_config;
 			clock_rtcclk_config(cfg_regs, rtcclk_config->counter_mode_sel,
 					    rtcclk_config->vbkp_div_sel,
 					    rtcclk_config->vbkp_1k_32k_sel);
@@ -1285,7 +1285,7 @@ static int clock_mchp_init(const struct device *dev)
 	const clock_mchp_config_t *config = dev->config;
 	cru_registers_t *cru_regs = config->cru_regs;
 	cfg_registers_t *cfg_regs = config->cfg_regs;
-	clock_mchp_subsys_refclk_config_t refclk_config;
+	struct clock_mchp_subsys_refclk_config refclk_config;
 
 	clock_posc_on_off(cfg_regs, cru_regs, DT_PROP(DT_NODELABEL(posc), posc_en));
 	clock_sosc_on_off(cru_regs, DT_PROP(DT_NODELABEL(sosc), sosc_en));

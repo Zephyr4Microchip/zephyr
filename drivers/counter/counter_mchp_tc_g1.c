@@ -52,6 +52,24 @@ LOG_MODULE_REGISTER(counter_mchp_tc_g1, CONFIG_COUNTER_LOG_LEVEL);
  * This structure contains the clock configuration parameters for the Counter
  * peripheral.
  */
+#if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2) ||                                            \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ3) ||                                        \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
+
+typedef struct mchp_counter_clock {
+	/* Clock driver */
+	const struct device *clock_dev;
+
+	/* Generic clock subsystem. */
+	clock_control_subsys_t host_gclk;
+
+	/* Generic clock subsystem. */
+	clock_control_subsys_t client_gclk;
+
+} counter_mchp_clock_t;
+
+#else
+
 typedef struct mchp_counter_clock {
 	/* Clock driver */
 	const struct device *clock_dev;
@@ -64,6 +82,8 @@ typedef struct mchp_counter_clock {
 	clock_control_subsys_t host_gclk;
 
 } counter_mchp_clock_t;
+
+#endif
 
 /*
  * @brief Structure to hold channel-specific data for the counter.
@@ -212,6 +232,27 @@ static void tc_counter_wait_sync(const volatile uint32_t *sync_reg_addr, uint32_
 	}
 }
 
+#if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2) ||                                            \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ3) ||                                        \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
+static void tc_counter_run_standby(const void *tc_regs, const uint32_t max_bit_width)
+{
+	if (max_bit_width == COUNTER_BIT_MODE_8) {
+		tc_count8_registers_t *const p_regs = &(((tc_registers_t *)tc_regs)->COUNT8);
+
+		p_regs->TC_CTRLA |= TC_CTRLA_RUNSTDBY_Msk;
+	} else if (max_bit_width == COUNTER_BIT_MODE_16) {
+		tc_count16_registers_t *const p_regs = &(((tc_registers_t *)tc_regs)->COUNT16);
+
+		p_regs->TC_CTRLA |= TC_CTRLA_RUNSTDBY_Msk;
+	} else if (max_bit_width == COUNTER_BIT_MODE_32) {
+		tc_count32_registers_t *const p_regs = &(((tc_registers_t *)tc_regs)->COUNT32);
+
+		p_regs->TC_CTRLA |= TC_CTRLA_RUNSTDBY_Msk;
+	}
+}
+#endif
+
 /*
  * @brief Initialize the TC counter peripheral with the specified settings.
  *
@@ -318,6 +359,12 @@ static int32_t tc_counter_init(const void *tc_regs, uint32_t prescaler,
 		return_value = COUNTER_RET_FAILED;
 		break;
 	}
+
+#if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2) ||                                            \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ3) ||                                        \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
+	tc_counter_run_standby(tc_regs, max_bit_width);
+#endif
 
 	return return_value;
 }
@@ -1215,6 +1262,123 @@ static uint32_t tc_counter_ticks_diff(uint32_t cntr_val_1, uint32_t cntr_val_2, 
 	return (diff < wrap_diff) ? diff : wrap_diff;
 }
 
+#if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2)
+static int tc_counter_enable_module(const struct device *dev, bool enable_32bit_mode)
+{
+	int ret_val = COUNTER_RET_PASSED;
+	const counter_mchp_dev_cfg_t *const counter_cfg = dev->config;
+
+	if ((tc_registers_t *)counter_cfg->regs == TC0_REGS) {
+		CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_TC0MD_Msk;
+		if (enable_32bit_mode) {
+			CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_TC1MD_Msk;
+		}
+	} else if ((tc_registers_t *)counter_cfg->regs == TC1_REGS) {
+		CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_TC1MD_Msk;
+	} else if ((tc_registers_t *)counter_cfg->regs == TC2_REGS) {
+		CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_TC2MD_Msk;
+		if (enable_32bit_mode) {
+			CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_TC3MD_Msk;
+		}
+	} else if ((tc_registers_t *)counter_cfg->regs == TC3_REGS) {
+		CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_TC3MD_Msk;
+	} else {
+		ret_val = COUNTER_RET_FAILED;
+	}
+
+	return ret_val;
+}
+
+#elif defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ3)
+static int tc_counter_enable_module(const struct device *dev, bool enable_32bit_mode)
+{
+	int ret_val = COUNTER_RET_PASSED;
+	const counter_mchp_dev_cfg_t *const counter_cfg = dev->config;
+
+	if ((tc_registers_t *)counter_cfg->regs == TC0_REGS) {
+		CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_TC0MD_Msk;
+		if (enable_32bit_mode) {
+			CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_TC1MD_Msk;
+		}
+	} else if ((tc_registers_t *)counter_cfg->regs == TC1_REGS) {
+		CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_TC1MD_Msk;
+	} else if ((tc_registers_t *)counter_cfg->regs == TC2_REGS) {
+		CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_TC2MD_Msk;
+		if (enable_32bit_mode) {
+			CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_TC3MD_Msk;
+		}
+	} else if ((tc_registers_t *)counter_cfg->regs == TC3_REGS) {
+		CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_TC3MD_Msk;
+	} else if ((tc_registers_t *)counter_cfg->regs == TC4_REGS) {
+		CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_TC4MD_Msk;
+		if (enable_32bit_mode) {
+			CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_TC5MD_Msk;
+		}
+	} else if ((tc_registers_t *)counter_cfg->regs == TC5_REGS) {
+		CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_TC5MD_Msk;
+	} else if ((tc_registers_t *)counter_cfg->regs == TC6_REGS) {
+		CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_TC6MD_Msk;
+		if (enable_32bit_mode) {
+			CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_TC7MD_Msk;
+		}
+	} else if ((tc_registers_t *)counter_cfg->regs == TC7_REGS) {
+		CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_TC7MD_Msk;
+	} else {
+		ret_val = COUNTER_RET_FAILED;
+	}
+
+	return ret_val;
+}
+
+#elif defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
+static int tc_counter_enable_module(const struct device *dev, bool enable_32bit_mode)
+{
+	int ret_val = COUNTER_RET_PASSED;
+	const counter_mchp_dev_cfg_t *const counter_cfg = dev->config;
+
+	if ((tc_registers_t *)counter_cfg->regs == TC0_REGS) {
+		CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_TC0MD_Msk;
+		if (enable_32bit_mode) {
+			CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_TC1MD_Msk;
+		}
+	} else if ((tc_registers_t *)counter_cfg->regs == TC1_REGS) {
+		CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_TC1MD_Msk;
+	} else if ((tc_registers_t *)counter_cfg->regs == TC2_REGS) {
+		CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_TC2MD_Msk;
+		if (enable_32bit_mode) {
+			CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_TC3MD_Msk;
+		}
+	} else if ((tc_registers_t *)counter_cfg->regs == TC3_REGS) {
+		CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_TC3MD_Msk;
+	} else if ((tc_registers_t *)counter_cfg->regs == TC4_REGS) {
+		CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_TC4MD_Msk;
+		if (enable_32bit_mode) {
+			CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_TC5MD_Msk;
+		}
+	} else if ((tc_registers_t *)counter_cfg->regs == TC5_REGS) {
+		CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_TC5MD_Msk;
+	} else if ((tc_registers_t *)counter_cfg->regs == TC6_REGS) {
+		CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_TC6MD_Msk;
+		if (enable_32bit_mode) {
+			CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_TC7MD_Msk;
+		}
+	} else if ((tc_registers_t *)counter_cfg->regs == TC7_REGS) {
+		CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_TC7MD_Msk;
+	} else if ((tc_registers_t *)counter_cfg->regs == TC8_REGS) {
+		CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_TC8MD_Msk;
+		if (enable_32bit_mode) {
+			CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_TC9MD_Msk;
+		}
+	} else if ((tc_registers_t *)counter_cfg->regs == TC9_REGS) {
+		CFG_REGS->CFG_PMD3 &= ~CFG_PMD3_TC9MD_Msk;
+	} else {
+		ret_val = COUNTER_RET_FAILED;
+	}
+
+	return ret_val;
+}
+#endif
+
 /*****************************************************************************
  * Zephyr APIS
  *****************************************************************************/
@@ -1757,12 +1921,26 @@ static DEVICE_API(counter, counter_mchp_api) = {
  *		 and peripheral asynchronous clock configurations based on the presence
  *		 of relevant device tree properties.
  */
+#if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2) ||                                            \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ3) ||                                        \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
+#define GET_THE_CLIENT_GCLOCK_IF_AVAILABLE(n)						\
+	COND_CODE_1(DT_INST_CLOCKS_HAS_NAME(n, client_gclk),                \
+	((void *)(DT_INST_CLOCKS_CELL_BY_NAME(n, client_gclk, subsystem))),     \
+	NULL)
 
+#define COUNTER_MCHP_CLOCK_ASSIGN(n)								\
+	.counter_clock.clock_dev = DEVICE_DT_GET(DT_NODELABEL(clock)),              \
+	.counter_clock.host_gclk = (void *)DT_INST_CLOCKS_CELL_BY_NAME(n, gclk, subsystem),	\
+	.counter_clock.client_gclk = GET_THE_CLIENT_GCLOCK_IF_AVAILABLE(n)
+#else
 #define COUNTER_MCHP_CLOCK_ASSIGN(n)								\
 	.counter_clock.clock_dev = DEVICE_DT_GET(DT_NODELABEL(clock)),				\
 	.counter_clock.host_mclk = (void *)(DT_INST_CLOCKS_CELL_BY_NAME(n, mclk, subsystem)),	\
 	.counter_clock.host_gclk = (void *)DT_INST_CLOCKS_CELL_BY_NAME(n, gclk, subsystem),	\
 	.counter_clock.client_mclk = GET_THE_CLIENT_MCLOCK_IF_AVAILABLE(n)
+#endif
+
 /* clang-format on */
 static int32_t counter_mchp_init(const struct device *dev)
 {
@@ -1773,6 +1951,40 @@ static int32_t counter_mchp_init(const struct device *dev)
 	const counter_mchp_dev_cfg_t *cfg = (const counter_mchp_dev_cfg_t *)(dev->config);
 	counter_mchp_clock_t *const clk = (counter_mchp_clock_t *const)&cfg->counter_clock;
 
+#if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2) ||                                            \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ3) ||                                        \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
+	ret_status = tc_counter_enable_module(dev, (cfg->max_bit_width == 32));
+	if (ret_status < 0) {
+		LOG_ERR("%s : module enable failed", __func__);
+		ret_status = COUNTER_RET_FAILED;
+	}
+
+	if (ret_status != COUNTER_RET_FAILED) { /* Enable peripheral asynchronous clock */
+		ret_status = clock_control_on(clk->clock_dev, clk->host_gclk);
+		if ((ret_status < 0) && (ret_status != -EALREADY)) {
+			LOG_ERR("%s : Unable to initialize peripheral clock", __func__);
+			ret_status = COUNTER_RET_FAILED;
+		}
+	}
+
+	/* Conditionally enable client synchronous core clock */
+	if (ret_status != COUNTER_RET_FAILED) {
+		if (cfg->max_bit_width == 32) {
+			if (clk->client_gclk != NULL) {
+				ret_status = clock_control_on(clk->clock_dev, clk->client_gclk);
+				if ((ret_status < 0) && (ret_status != -EALREADY)) {
+					LOG_ERR("%s : Unable to initialize client clock", __func__);
+					ret_status = COUNTER_RET_FAILED;
+				}
+			} else {
+				LOG_ERR("Peripheral does not support 32 bit mode");
+				ret_status = COUNTER_RET_FAILED;
+			}
+		}
+	}
+
+#else
 	/* Enable host synchronous core clock */
 	ret_status = clock_control_on(clk->clock_dev, clk->host_mclk);
 	if ((ret_status < 0) && (ret_status != -EALREADY)) {
@@ -1803,6 +2015,8 @@ static int32_t counter_mchp_init(const struct device *dev)
 			ret_status = COUNTER_RET_FAILED;
 		}
 	}
+#endif
+
 	if (ret_status != COUNTER_RET_FAILED) {
 		ret_status = counter_init(dev);
 	} else {

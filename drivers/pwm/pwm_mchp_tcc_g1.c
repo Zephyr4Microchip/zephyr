@@ -122,6 +122,7 @@ typedef struct {
 } pwm_mchp_data_t;
 
 #if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2) ||                                            \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ3) ||                                        \
 	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
 typedef struct mchp_counter_clock {
 	/* Clock driver */
@@ -254,6 +255,7 @@ void tcc_init(void *pwm_reg, uint32_t prescaler)
 	tcc_sync_wait(pwm_reg);
 	PWM_REG(pwm_reg)->TCC_CTRLA |= prescaler;
 #if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2) ||                                            \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ3) ||                                        \
 	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
 	PWM_REG(pwm_reg)->TCC_CTRLA |= TCC_CTRLA_RUNSTDBY_Msk;
 #endif
@@ -300,7 +302,8 @@ static int tcc_enable_module(const struct device *pwm_dev)
 	return 0;
 }
 
-#elif defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
+#elif defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ3) ||                                          \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
 static int tcc_enable_module(const struct device *pwm_dev)
 {
 	const pwm_mchp_config_t *const mchp_pwm_cfg = pwm_dev->config;
@@ -460,6 +463,7 @@ static int pwm_mchp_init(const struct device *pwm_dev)
 			break;
 		}
 #if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2) ||                                            \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ3) ||                                        \
 	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
 		ret_val = tcc_enable_module(pwm_dev);
 		if (ret_val < 0) {
@@ -510,6 +514,7 @@ static int pwm_mchp_init(const struct device *pwm_dev)
  */
 /* clang-format off */
 #if defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ2) ||                                            \
+	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ3) ||                                        \
 	defined(CONFIG_SOC_FAMILY_MICROCHIP_PIC32CX_BZ6)
 #define PWM_MCHP_CLOCK_ASSIGN(n)                                         \
 	.pwm_clock.clock_dev = DEVICE_DT_GET(DT_NODELABEL(clock)),           \
