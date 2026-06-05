@@ -10,7 +10,7 @@
 #endif
 #include <zephyr/kernel.h>
 
-#ifdef CONFIG_BT
+#if defined(CONFIG_BT) || defined(CONFIG_IEEE802154)
 #include <rf_system.h>
 #endif
 
@@ -53,7 +53,7 @@ void z_arm_on_enter_cpu_idle_prepare(void)
 
 void soc_early_init_hook(void)
 {
-#ifdef CONFIG_BT
+#if defined(CONFIG_BT) || defined(CONFIG_IEEE802154)
 	SYS_ClkGen_Config();
 #endif
 
