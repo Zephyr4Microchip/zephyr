@@ -70,10 +70,9 @@ static int entropy_g2_trng_get_entropy(const struct device *dev, uint8_t *buffer
 	if (error == TRNG_NO_ERROR) {
 		LOG_DBG("TRNG read %u bytes successfully", length);
 		return 0;
-	} else {
-		LOG_ERR("TRNG read failed with error code: %d", error);
-		return error;
 	}
+	LOG_ERR("TRNG read failed with error code: %d", error);
+	return error;
 }
 
 /* API implementation: get_entropy_isr */
