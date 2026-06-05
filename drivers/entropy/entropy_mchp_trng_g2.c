@@ -104,10 +104,9 @@ static int entropy_g2_trng_get_entropy_isr(const struct device *dev, uint8_t *bu
 	if (error == TRNG_NO_ERROR) {
 		LOG_DBG("TRNG ISR read %u bytes successfully", length);
 		return length;
-	} else {
-		LOG_ERR("TRNG ISR read failed with error code: %d", error);
-		return error;
 	}
+	LOG_ERR("TRNG ISR read failed with error code: %d", error);
+	return error;
 }
 
 /* Entropy driver APIs structure */
