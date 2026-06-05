@@ -12,6 +12,7 @@
 / {
 	chosen {
 		zephyr,flash-controller = &nvmctrl;
+		zephyr,entropy = &trng;
 	};
 
 	cpus {
@@ -451,10 +452,27 @@
 			max-timeout-window-mode = <786432>; /**< milliseconds */
 			min-window-limit = <1>;/**< milliseconds */
 		};
+
+		trng:trng@43000000 {
+			compatible = "microchip,trng-g2-entropy";
+			status = "disabled";
+			reg = <0x43000000 0x1FFFC>;
+			interrupts = <27 6>;
+		};
+
+		crypto: crypto {
+			compatible = "microchip,crypto-g2";
+			status = "disabled";
+			interrupts = <28 6>;
+		};
 	};
 
 	bt_hci_microchip: bt_hci_microchip {
 		compatible = "microchip,pic32cx-bz-bt-hci";
+		status = "disabled";
+	};
+	ieee802154: ieee802154 {
+		compatible = "microchip,pic32cx-bz-ieee802154";
 		status = "disabled";
 	};
 };

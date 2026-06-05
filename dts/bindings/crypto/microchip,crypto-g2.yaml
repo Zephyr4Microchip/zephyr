@@ -1,0 +1,14 @@
+# Copyright (c) 2025 Microchip Technology Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+description: |
+  Microchip G2 AES crypto driver binding.
+
+  This binding represents the Crypto Accelerator Module (CAM) hardware
+  present on PIC32CX-BZ6 family devices.  The peripheral
+  is managed entirely by the pre-built libcam05354-pic32wm.a library; no
+  memory-mapped register access is performed directly by the Zephyr driver.
+
+compatible: "microchip,crypto-g2"
+
+include: base.yaml
