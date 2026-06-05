@@ -1,12 +1,2 @@
 # Copyright (c) 2025 Microchip Technology Inc.
 # SPDX-License-Identifier: Apache-2.0
-
-if IEEE802154
-
-config FPU
-	default y
-
-config MAIN_STACK_SIZE
-	default 4096
-
-endif # IEEE802154
