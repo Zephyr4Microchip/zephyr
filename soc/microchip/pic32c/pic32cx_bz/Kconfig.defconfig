@@ -6,7 +6,7 @@ config DEVICE_SUPPORT_REQUIRED
 	default y if (BT || HPA_SUPPORTED || ENABLE_PMU_BUCK_MODE || IEEE802154)
 
 config FPU
-	default y if (BT || PM)
+	default y if (BT || PM || CRYPTO || ENTROPY_GENERATOR || IEEE802154)
 
 config IDLE_STACK_SIZE
 	default 1024 if PM
@@ -14,6 +14,7 @@ config IDLE_STACK_SIZE
 
 config MAIN_STACK_SIZE
 	default 3072 if BT
+	default 4096 if IEEE802154
 
 config SYSTEM_WORKQUEUE_STACK_SIZE
 	default 4096 if BT
