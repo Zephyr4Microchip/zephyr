@@ -121,7 +121,7 @@ Example building CoAP Server for the Microchip pic32cx_bz6204_curiosity board:
    :west-args: -T sample.net.openthread.ftd.coap.server
    :gen-args: "-DEXTRA_CONF_FILE=boards/pic32wm_bz6204_curiosity.conf"
    :goals: build
-   :compact: 
+   :compact:
 
 Example building CoAP client for the Microchip wbz451 curiosity board:
 

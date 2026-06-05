@@ -13,10 +13,6 @@
 	};
 };
 
-&sercom0{                   
+&sercom0{
 	status = "okay";
 };
-
-//&uart1 {
-//	status = "okay";
-//};
