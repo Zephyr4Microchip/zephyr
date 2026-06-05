@@ -73,6 +73,106 @@ Example building CoAP client for the cc1352p7 launchpad:
    :goals: build flash
    :compact:
 
+Example building CoAP Server for the Microchip wbz451 curiosity board:
+
+.. zephyr-app-commands::
+   :zephyr-app: samples/net/openthread/coap
+   :board: <board to use>
+   :west-args: -T sample.net.openthread.ftd.coap.server
+   :gen-args: "-DEXTRA_CONF_FILE=boards/wbz451_curisity_board.conf"
+   :goals: build
+   :compact:
+
+Example building CoAP Server for the Microchip wbz450 curiosity board:
+
+.. zephyr-app-commands::
+   :zephyr-app: samples/net/openthread/coap
+   :board: <board to use>
+   :west-args: -T sample.net.openthread.ftd.coap.server
+   :gen-args: "-DEXTRA_CONF_FILE=boards/wbz450_curisity_board.conf"
+   :goals: build
+   :compact:
+
+Example building CoAP Server for the Microchip wbz451hpe curiosity board:
+
+.. zephyr-app-commands::
+   :zephyr-app: samples/net/openthread/coap
+   :board: <board to use>
+   :west-args: -T sample.net.openthread.ftd.coap.server
+   :gen-args: "-DEXTRA_CONF_FILE=boards/wbz451hpe_curisity_board.conf"
+   :goals: build
+   :compact:
+
+Example building CoAP Server for the Microchip wbz351 curiosity board:
+
+.. zephyr-app-commands::
+   :zephyr-app: samples/net/openthread/coap
+   :board: <board to use>
+   :west-args: -T sample.net.openthread.ftd.coap.server
+   :gen-args: "-DEXTRA_CONF_FILE=boards/wbz351_curisity_board.conf"
+   :goals: build
+   :compact:
+
+Example building CoAP Server for the Microchip pic32cx_bz6204_curiosity board:
+
+.. zephyr-app-commands::
+   :zephyr-app: samples/net/openthread/coap
+   :board: <board to use>
+   :west-args: -T sample.net.openthread.ftd.coap.server
+   :gen-args: "-DEXTRA_CONF_FILE=boards/pic32wm_bz6204_curiosity.conf"
+   :goals: build
+   :compact:
+
+Example building CoAP client for the Microchip wbz451 curiosity board:
+
+.. zephyr-app-commands::
+   :zephyr-app: samples/net/openthread/coap
+   :board: <board to use>
+   :west-args: -T sample.net.openthread.ftd.coap.client
+   :gen-args: "-DEXTRA_CONF_FILE=boards/wbz451_curisity_board.conf"
+   :goals: build
+   :compact:
+
+Example building CoAP client for the Microchip wbz450 curiosity board:
+
+.. zephyr-app-commands::
+   :zephyr-app: samples/net/openthread/coap
+   :board: <board to use>
+   :west-args: -T sample.net.openthread.ftd.coap.client
+   :gen-args: "-DEXTRA_CONF_FILE=boards/wbz450_curisity_board.conf"
+   :goals: build
+   :compact:
+
+Example building CoAP client for the Microchip wbz451hpe curiosity board:
+
+.. zephyr-app-commands::
+   :zephyr-app: samples/net/openthread/coap
+   :board: <board to use>
+   :west-args: -T sample.net.openthread.ftd.coap.client
+   :gen-args: "-DEXTRA_CONF_FILE=boards/wbz451hpe_curisity_board.conf"
+   :goals: build
+   :compact:
+
+Example building CoAP client for the Microchip wbz351 curiosity board:
+
+.. zephyr-app-commands::
+   :zephyr-app: samples/net/openthread/coap
+   :board: <board to use>
+   :west-args: -T sample.net.openthread.ftd.coap.client
+   :gen-args: "-DEXTRA_CONF_FILE=boards/wbz351_curisity_board.conf"
+   :goals: build
+   :compact:
+
+Example building CoAP client for the Microchip pic32cx_bz6204_curiosity board:
+
+.. zephyr-app-commands::
+   :zephyr-app: samples/net/openthread/coap
+   :board: <board to use>
+   :west-args: -T sample.net.openthread.ftd.coap.client
+   :gen-args: "-DEXTRA_CONF_FILE=boards/pic32wm_bz6204_curiosity.conf"
+   :goals: build
+   :compact:
+
 Checking Thread network state
 *****************************
 
