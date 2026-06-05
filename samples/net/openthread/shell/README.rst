@@ -50,7 +50,7 @@ Example building for NXP's RW612 FRDM (RCP host).
    :goals: build
    :compact:
 
-Example building for Microchip's wbz450/wbz451/wbz451hpe curiosity boards.
+Example building for Microchip's wbz450/wbz451/wbz451hpe/wbz351 curiosity boards.
 
 .. zephyr-app-commands::
    :zephyr-app: samples/net/openthread/shell
