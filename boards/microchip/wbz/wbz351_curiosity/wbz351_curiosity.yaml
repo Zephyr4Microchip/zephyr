@@ -13,16 +13,20 @@ ram: 96
 supported:
   - adc
   - comparator
+  - crypto
   - dma
   - eic
   - flash
   - gpio
   - i2c
+  - ieee802154
   - mspi
+  - netif:openthread
   - pinctrl
   - pwm
   - rtc
   - spi
+  - trng
   - uart
   - watchdog
 vendor: microchip
