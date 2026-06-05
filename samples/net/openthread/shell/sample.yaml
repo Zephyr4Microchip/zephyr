@@ -17,6 +17,7 @@ tests:
       - wbz451_curiosity
       - wbz451hpe_curosity
       - pic32wm_bz6204_curiosity
+      - wbz351_curiosity
     integration_platforms:
       - nrf52840dk/nrf52840
   sample.net.openthread.shell.rw612_openthread_rcp_host:
