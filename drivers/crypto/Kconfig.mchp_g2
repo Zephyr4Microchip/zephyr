@@ -1,0 +1,19 @@
+# Copyright (c) 2022 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+
+config CRYPTO_MCHP_G2
+	bool "Microchip AES Engine driver for Group 2 devices"
+	default y
+	depends on DT_HAS_MICROCHIP_CRYPTO_G2_ENABLED
+	help
+	  Enable Microchip G2 crypto (AES) driver.
+	  Symmetric crypto provides a single hardware interface
+	  to AES.
+
+config CRYPTO_MCHP_G2_INIT_PRIORITY
+	int "Crypto device initialization priority"
+	default 50
+	help
+	  Set the initialization priority number. Do not mess with it unless
+	  you know what you are doing. It has to start before the net stack.
