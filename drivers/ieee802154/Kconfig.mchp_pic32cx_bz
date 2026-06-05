@@ -29,7 +29,7 @@ config IEEE802154_PIC32CX_BZ_INIT_PRIO
 
 config IEEE802154_PIC32CX_BZ_CRYPTO
 	bool "Radio Interface layer cyptography"
-	default n
+	default y
 	help
 	  This helps encryption of Enhanced ACK frame
 

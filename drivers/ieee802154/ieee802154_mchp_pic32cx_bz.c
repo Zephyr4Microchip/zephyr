@@ -1164,9 +1164,16 @@ static int pic32cx_bz_init(const struct device *dev)
 
 	k_thread_name_set(&ctx->trx_thread, "pic32cx_bz_trx");
 
-	LOG_DBG("nRF5 802154 radio initialized");
+	LOG_DBG("MCHP 802154 radio initialized");
 #if defined(CONFIG_IEEE802154_PIC32CX_BZ_CRYPTO)
-	SAL_AesInit(&aes);
+	{
+		int sal_ret = SAL_AesInit(&aes);
+
+		if (sal_ret != 0) {
+			LOG_ERR("SAL AES init failed (%d) - HW crypto unavailable", sal_ret);
+			return sal_ret;
+		}
+	}
 #endif
 
 	k_work_queue_start(&iface_work_q, ieee802154_radio_stack,
