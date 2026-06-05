@@ -23,6 +23,9 @@
 		zephyr,bt-hci = &bt_hci_microchip;
 		zephyr,bt-c2h-uart = &sercom0;
 		zephyr,cortex-m-idle-timer = &rtc;
+		zephyr,entropy = &trng;
+		zephyr,crypto = &crypto;
+		zephyr,ieee802154 = &ieee802154;
 	};
 
 	leds {
@@ -138,6 +141,10 @@
 };
 
 &bt_hci_microchip {
+	status = "okay";
+};
+
+&ieee802154 {
 	status = "okay";
 };
 
@@ -380,6 +387,14 @@
 };
 
 &wdog {
+	status = "okay";
+};
+
+&crypto {
+	status = "okay";
+};
+
+&trng {
 	status = "okay";
 };
 
