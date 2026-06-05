@@ -18,12 +18,12 @@ supported:
   - eic
   - flash
   - gpio
+  - ieee802154
+  - netif:openthread
   - pinctrl
   - pwm
   - rtc
   - trng
   - uart
   - watchdog
-  - ieee802154
-  - netif:openthread
 vendor: microchip
