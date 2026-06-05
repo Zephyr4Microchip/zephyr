@@ -24,6 +24,8 @@
 		zephyr,bt-c2h-uart = &sercom0;
 		zephyr,ieee802154 = &ieee802154;
 		zephyr,cortex-m-idle-timer = &rtc;
+		zephyr,entropy = &trng;
+		zephyr,crypto = &crypto;
 	};
 
 	leds {
@@ -184,6 +186,13 @@
 	status = "okay";
 };
 
+&trng {
+	status = "okay";
+};
+
+&crypto {
+	status = "okay";
+};
 
 &flash0 {
 	partitions {
