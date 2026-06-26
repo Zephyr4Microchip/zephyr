@@ -1,0 +1,26 @@
+# SPDX-License-Identifier: Apache-2.0
+
+if BOARD_PYKIT_EXPLORER
+
+config BOARD
+	default "pykit_explorer"
+
+config SYS_CLOCK_HW_CYCLES_PER_SEC
+	default 120000000
+
+if USB_DEVICE_DRIVER
+
+config USB_DEVICE_MANUFACTURER
+	default "Microchip Technology"
+
+config USB_DEVICE_PRODUCT
+	default "PyKit Explorer"
+
+# Match the CircuitPython mpconfigboard.mk USB PID if known;
+# replace with your assigned PID if different.
+config USB_DEVICE_PID
+	default 0x006E
+
+endif # USB_DEVICE_DRIVER
+
+endif # BOARD_PYKIT_EXPLORER

@@ -1,0 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
+
+config BOARD_PYKIT_EXPLORER
+	select SOC_ATSAME51J20A
