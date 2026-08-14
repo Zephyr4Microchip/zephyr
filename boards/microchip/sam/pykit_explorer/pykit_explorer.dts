@@ -1,0 +1,102 @@
+/*
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * PyKit Explorer — Board Device Tree (MINIMAL for initial bring-up)
+ * SoC: ATSAME51J20A — Cortex-M4F @ 120 MHz, 1 MB Flash, 256 KB SRAM
+ */
+
+/dts-v1/;
+#include <microchip/sam/sam_d5x_e5x/atsame51/atsame51j20a.dtsi>
+#include "pykit_explorer-pinctrl.dtsi"
+#include <zephyr/dt-bindings/clock/mchp_sam_d5x_e5x_clock.h>
+
+/ {
+	model = "Microchip PyKit Explorer";
+	compatible = "microchip,pykit-explorer", "microchip,atsame51j20a", "microchip,same51";
+
+	chosen {
+		zephyr,console = &sercom3;
+		zephyr,shell-uart = &sercom3;
+		zephyr,sram = &sram0;
+		zephyr,flash = &flash0;
+	};
+
+	aliases {
+		led0 = &led0;
+	};
+
+	leds {
+		compatible = "gpio-leds";
+		led0: led_0 {
+			gpios = <&portb 23 GPIO_ACTIVE_LOW>;
+			label = "LED0";
+		};
+	};
+};
+
+&cpu0 {
+	clock-frequency = <48000000>;
+};
+
+&flash0 {
+	partitions {
+		compatible = "fixed-partitions";
+		#address-cells = <1>;
+		#size-cells = <1>;
+
+		/* Reserve last 16KB for storage if needed */
+		storage_partition: partition@fc000 {
+			label = "storage";
+			reg = <0x000fc000 0x00004000>;
+		};
+	};
+};
+
+/* ======================================================================== */
+/* Debug UART — SERCOM3                                                     */
+/* DEBUG_TX = PA22, DEBUG_RX = PA23                                         */
+/* ======================================================================== */
+&sercom3 {
+	status = "okay";
+	compatible = "microchip,sercom-g1-uart";
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	current-speed = <115200>;
+	data-bits = <8>;
+	parity = "none";
+	stop-bits = "1";
+
+	rxpo = <1>;
+	txpo = <0>;
+
+	pinctrl-0 = <&sercom3_uart_default>;
+	pinctrl-names = "default";
+};
+
+/* ======================================================================== */
+/* Additional peripherals - uncomment as needed after basic bringup        */
+/* ======================================================================== */
+
+/*
+&sercom2 {
+	status = "okay";
+	compatible = "microchip,sercom-g1-uart";
+	current-speed = <115200>;
+	rxpo = <1>;
+	txpo = <0>;
+	pinctrl-0 = <&sercom2_uart_default>;
+	pinctrl-names = "default";
+};
+
+&sercom5 {
+	status = "okay";
+	compatible = "microchip,sercom-g1-spi";
+	dipo = <2>;
+	dopo = <0>;
+	#address-cells = <1>;
+	#size-cells = <0>;
+	pinctrl-0 = <&sercom5_spi_default>;
+	pinctrl-names = "default";
+};
+*/

@@ -1,0 +1,145 @@
+/*
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * PyKit Explorer — Pinctrl DTSI
+ * Verified against CircuitPython board definition:
+ *   mpconfigboard.h + pins.c (microchip_curiosity_circuitpython)
+ *
+ * SAME51 SERCOM allocation:
+ *   SERCOM0  — LCD SPI      (PA04/PA05, MUX D, write-only)
+ *   SERCOM1  — SD SPI       (PA16/PA17/PA18, MUX C)
+ *   SERCOM2  — BLE UART     (PA12/PA13, MUX C)
+ *   SERCOM3  — Debug UART   (PA22/PA23, MUX C)  ← console
+ *   SERCOM5  — Main SPI     (PB02/PB03/PB00, MUX D)
+ *   CAN1     — CAN bus      (PB12/PB13, MUX H)
+ *
+ * PMUX letter → MUX index:
+ *   A=0  B=1  C=2  D=3  E=4  F=5  G=6  H=7  I=8
+ */
+
+#include <dt-bindings/sam/sam_d5x_e5x/atsame51/atsame51j20a-pinctrl.h>
+
+&pinctrl {
+
+	/* ------------------------------------------------------------------ */
+	/* Debug UART — SERCOM3 (DEBUG_TX=PA22, DEBUG_RX=PA23)               */
+	/* PA22: MUX C → SERCOM3/PAD[0] (TX)                                 */
+	/* PA23: MUX C → SERCOM3/PAD[1] (RX)                                 */
+	/* ------------------------------------------------------------------ */
+	sercom3_uart_default: sercom3_uart_default {
+		group1 {
+			pinmux = <PA22C_SERCOM3_PAD0>,   /* TX */
+				 <PA23C_SERCOM3_PAD1>;   /* RX */
+		};
+	};
+
+	/* ------------------------------------------------------------------ */
+	/* BLE UART — SERCOM2 (BLE_TX=PA12, BLE_RX=PA13)                     */
+	/* PA12: MUX C → SERCOM2/PAD[0] (TX)                                 */
+	/* PA13: MUX C → SERCOM2/PAD[1] (RX)                                 */
+	/* ------------------------------------------------------------------ */
+	sercom2_uart_default: sercom2_uart_default {
+		group1 {
+			pinmux = <PA12C_SERCOM2_PAD0>,   /* TX */
+				 <PA13C_SERCOM2_PAD1>;   /* RX */
+		};
+	};
+
+	/* ------------------------------------------------------------------ */
+	/* I2C — DISABLED (SERCOM7 doesn't exist on J package)              */
+	/* TODO: Determine correct SERCOM/pins for I2C                       */
+	/* ------------------------------------------------------------------ */
+
+	/* ------------------------------------------------------------------ */
+	/* Main SPI — SERCOM5 (MOSI=PB02, SCK=PB03, MISO=PB00)              */
+	/* PB02: MUX D → SERCOM5/PAD[0] (MOSI)  dopo=0                      */
+	/* PB03: MUX D → SERCOM5/PAD[1] (SCK)   dopo=0                      */
+	/* PB00: MUX D → SERCOM5/PAD[2] (MISO)  dipo=2                      */
+	/* ------------------------------------------------------------------ */
+	sercom5_spi_default: sercom5_spi_default {
+		group1 {
+			pinmux = <PB2D_SERCOM5_PAD0>,    /* MOSI */
+				 <PB3D_SERCOM5_PAD1>,    /* SCK  */
+				 <PB0D_SERCOM5_PAD2>;    /* MISO */
+		};
+	};
+
+	/* ------------------------------------------------------------------ */
+	/* LCD SPI — SERCOM0 (LCD_MOSI=PA04, LCD_SCK=PA05, no MISO)         */
+	/* PA04: MUX D → SERCOM0/PAD[0] (MOSI)  dopo=0                      */
+	/* PA05: MUX D → SERCOM0/PAD[1] (SCK)   dopo=0                      */
+	/* Write-only: LCD is command-driven, no readback needed.            */
+	/* ------------------------------------------------------------------ */
+	sercom0_spi_default: sercom0_spi_default {
+		group1 {
+			pinmux = <PA4D_SERCOM0_PAD0>,    /* MOSI */
+				 <PA5D_SERCOM0_PAD1>;    /* SCK  */
+		};
+	};
+
+	/* ------------------------------------------------------------------ */
+	/* SD SPI — SERCOM1 (SD_MOSI=PA16, SD_SCK=PA17, SD_MISO=PA18)       */
+	/* PA16: MUX C → SERCOM1/PAD[0] (MOSI)  dopo=0                      */
+	/* PA17: MUX C → SERCOM1/PAD[1] (SCK)   dopo=0                      */
+	/* PA18: MUX C → SERCOM1/PAD[2] (MISO)  dipo=2                      */
+	/* ------------------------------------------------------------------ */
+	sercom1_spi_default: sercom1_spi_default {
+		group1 {
+			pinmux = <PA16C_SERCOM1_PAD0>,   /* MOSI */
+				 <PA17C_SERCOM1_PAD1>,   /* SCK  */
+				 <PA18C_SERCOM1_PAD2>;   /* MISO */
+		};
+	};
+
+	/* ------------------------------------------------------------------ */
+	/* CAN1 (CAN_TX=PB12, CAN_RX=PB13)                                   */
+	/* PB12: MUX H (index 7) → CAN1 TX                                   */
+	/* PB13: MUX H (index 7) → CAN1 RX                                   */
+	/* ------------------------------------------------------------------ */
+	can1_default: can1_default {
+		group1 {
+			pinmux = <PB12H_CAN1_TX>,
+				 <PB13H_CAN1_RX>;
+		};
+	};
+
+	/* ------------------------------------------------------------------ */
+	/* USB — PA24/PA25 are fixed silicon pins (no PMUX needed)            */
+	/* Marked IGNORE_PIN_PA24/PA25 in CircuitPython — Zephyr still needs  */
+	/* the pinctrl entry for the USB driver.                              */
+	/* ------------------------------------------------------------------ */
+	usb_dc_default: usb_dc_default {
+		group1 {
+			pinmux = <PA24H_USB_DM>,
+				 <PA25H_USB_DP>;
+		};
+	};
+
+	/* ------------------------------------------------------------------ */
+	/* ADC1 — analog inputs A0-A5 (PB04-PB09, MUX B)                    */
+	/* PB04 → ADC1/AIN6   PB05 → ADC1/AIN7                              */
+	/* PB06 → ADC1/AIN8   PB07 → ADC1/AIN9                              */
+	/* PB08 → ADC1/AIN0   PB09 → ADC1/AIN1                              */
+	/* Note: verify channel numbers against Table 45-3 in DS60001507.    */
+	/* ------------------------------------------------------------------ */
+	adc1_default: adc1_default {
+		group1 {
+			pinmux = <PB4B_ADC1_AIN6>,
+				 <PB5B_ADC1_AIN7>,
+				 <PB6B_ADC1_AIN8>,
+				 <PB7B_ADC1_AIN9>,
+				 <PB8B_ADC1_AIN0>,
+				 <PB9B_ADC1_AIN1>;
+		};
+	};
+
+	/* ------------------------------------------------------------------ */
+	/* DAC — PA02 (DAC/VOUT0, MUX B)                                     */
+	/* ------------------------------------------------------------------ */
+	dac_default: dac_default {
+		group1 {
+			pinmux = <PA2B_DAC_VOUT0>;
+		};
+	};
+
+};
