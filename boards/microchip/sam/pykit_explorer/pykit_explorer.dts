@@ -8,6 +8,7 @@
 /dts-v1/;
 #include <microchip/sam/sam_d5x_e5x/atsame51/atsame51j20a.dtsi>
 #include "pykit_explorer-pinctrl.dtsi"
+#include <zephyr/dt-bindings/clock/mchp_sam_d5x_e5x_clock.h>
 
 / {
 	model = "Microchip PyKit Explorer";
@@ -34,7 +35,7 @@
 };
 
 &cpu0 {
-	clock-frequency = <120000000>;
+	clock-frequency = <48000000>;
 };
 
 &flash0 {
