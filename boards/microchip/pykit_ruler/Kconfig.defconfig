@@ -1,0 +1,9 @@
+# Copyright (c) 2026 Microchip Technology Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+if BOARD_PYKIT_RULER
+
+config EEPROM
+	default y if NVMEM
+
+endif # BOARD_PYKIT_RULER
