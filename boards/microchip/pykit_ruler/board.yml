@@ -1,0 +1,9 @@
+# Copyright (c) 2026 Microchip Technology Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+board:
+  name: pykit_ruler
+  full_name: PyKIT Ruler
+  vendor: microchip
+  socs:
+    - name: atsame51j20a

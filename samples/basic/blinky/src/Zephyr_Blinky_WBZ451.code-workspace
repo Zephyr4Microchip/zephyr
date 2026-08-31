@@ -1,0 +1,29 @@
+{
+	"folders": [
+		{
+			"path": "../../../../../../../Users/c52467/OneDrive - Microchip Technology Inc/Academic_Group/Blog_Posts"
+		},
+		{
+			"name": "zephyrproject_wsg_new",
+			"path": "../../../../../../zephyrproject_wsg_new"
+		},
+		{
+			"name": "blinky",
+			"path": "../../../../../../zephyrproject_wsg_new/zephyr/samples/basic/blinky"
+		},
+		{
+			"name": "zephyrproject_wsg",
+			"path": "../../../../.."
+		},
+		{
+			"name": "blinky",
+			"path": ".."
+		}
+	],
+	"settings": {
+		"cmake.ignoreCMakeListsMissing": true,
+		"cmake.configureOnOpen": false,
+		"cmake.enableAutomaticKitScan": false,
+		"cmake.sourceDirectory": "${workspaceFolder}/nonexistent"
+	}
+}

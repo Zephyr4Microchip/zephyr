@@ -1,0 +1,97 @@
+/*
+ * Copyright (c) 2026 Microchip Technology Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/dts-v1/;
+#include <microchip/sam/sam_d5x_e5x/atsame51/atsame51j20a.dtsi>
+#include "pykit_ruler-pinctrl.dtsi"
+#include <zephyr/dt-bindings/input/input-event-codes.h>
+#include <zephyr/dt-bindings/clock/mchp_sam_d5x_e5x_clock.h>
+
+/ {
+	model = "PyKIT Ruler";
+	compatible = "pykit,ruler", "microchip,atsame51j20a", "microchip,same51";
+
+	chosen {
+		zephyr,console = &sercom5;
+		zephyr,shell-uart = &sercom5;
+		zephyr,sram = &sram0;
+		zephyr,flash = &flash0;
+	};
+
+	aliases {
+		led0 = &led0;
+		sw0 = &user_btn;
+	};
+
+	leds {
+		compatible = "gpio-leds";
+
+		led0: led_0 {
+			gpios = <&portb 23 GPIO_ACTIVE_LOW>;
+			label = "LED_D6";
+		};
+	};
+
+	buttons {
+		compatible = "gpio-keys";
+
+		user_btn: user-btn {
+			gpios = <&porta 27 (GPIO_ACTIVE_LOW)>;
+			label = "USER_SW";
+			zephyr,code = <INPUT_KEY_0>;
+		};
+	};
+};
+
+&cpu0 {
+	clock-frequency = <48000000>;
+};
+
+&flash0 {
+	partitions {
+		compatible = "fixed-partitions";
+		#address-cells = <1>;
+		#size-cells = <1>;
+
+		storage_partition: partition@fc000 {
+			label = "storage";
+			reg = <0x000fc000 0x00004000>;
+		};
+	};
+};
+
+&gclkperiph {
+	sercom5 {
+		subsystem = <CLOCK_MCHP_GCLKPERIPH_ID_SERCOM5_CORE>;
+		gclkperiph-src = "gclk0";
+		gclkperiph-en = <1>;
+	};
+};
+
+&mclkperiph {
+	sercom5 {
+		subsystem = <CLOCK_MCHP_MCLKPERIPH_ID_APBD_SERCOM5>;
+		mclk-en = <1>;
+	};
+};
+
+&sercom5 {
+	status = "okay";
+	compatible = "microchip,sercom-g1-uart";
+	current-speed = <115200>;
+	rxpo = <1>;
+	txpo = <0>;
+	pinctrl-0 = <&sercom5_uart_default>;
+	pinctrl-names = "default";
+};
+
+&porta {
+	status = "okay";
+};
+
+&portb {
+	status = "okay";
+};
