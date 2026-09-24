@@ -26,6 +26,7 @@
 		zephyr,cortex-m-idle-timer = &rtc;
 		zephyr,entropy = &trng;
 		zephyr,crypto = &crypto;
+		zephyr,canbus = &can1;
 	};
 
 	leds {
@@ -60,6 +61,7 @@
 		sw0 = &button0;
 		rtc = &rtc;
 		watchdog0 = &wdog;
+		can0 = &can1;
 	};
 };
 
@@ -216,6 +218,29 @@
 			reg = <0x1FC000 0x00004000>;
 		};
 	};
+};
+
+/*
+ * CAN1 configuration for PIC32WM BZ6204 Curiosity board.
+ *
+ * CAN0 (base 0x46002000) has no accessible I/O pins on the 128-pin BZ62132
+ * package variant used on this board.  CAN1 (base 0x46002400) exposes TX/RX
+ * on PORTA pins via the PPS system.
+ *
+ * Board-level message RAM: 8 standard + 8 extended filters, 64-entry RX
+ * FIFO0, 4 TX buffers — adequate for typical embedded CAN applications.
+ * Adjust bosch,mram-cfg if more buffers or FD data payloads are required.
+ *
+ * Physical connection required:
+ *   PA3 → CAN transceiver TXD
+ *   PA2 → CAN transceiver RXD
+ *   External 120 Ω termination on CAN bus
+ */
+&can1 {
+	status = "okay";
+	pinctrl-0 = <&can1_default>;
+	pinctrl-names = "default";
+	bosch,mram-cfg = <0x0 8 8 64 0 0 4 4>;
 };
 
 &porta {

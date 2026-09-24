@@ -157,12 +157,30 @@
 					subsystem = <CLOCK_MCHP_GCLKPERIPH_ID_GCLK_TC8>;
 					gclkperiph-src-sel = "refclk_1";
 				};
-				gclkperiph_tc9 {
+			gclkperiph_tc9 {
 					subsystem = <CLOCK_MCHP_GCLKPERIPH_ID_GCLK_TC9>;
 					gclkperiph-src-sel = "refclk_1";
 				};
 				gclkperiph_ac {
 					subsystem = <CLOCK_MCHP_GCLKPERIPH_ID_GCLK_AC>;
+					gclkperiph-src-sel = "refclk_1";
+				};
+				/*
+				 * CAN0/CAN1 peripheral clocks: CFG_CFGPCLKGEN4
+				 * CAN0 bits [26:24], CAN1 bits [30:28].
+				 * Source: refclk_1 (driven by SPLL1, 128 MHz).
+				 * Evidence: component/cfg.h
+				 *   CFG_CFGPCLKGEN4_CAN_0_CSEL_Pos=24
+				 *   CFG_CFGPCLKGEN4_CAN_1_CSEL_Pos=28
+				 * instance/can0.h: CAN0_GCLK_ID=28
+				 * instance/can1.h: CAN1_GCLK_ID=29
+				 */
+				gclkperiph_can0 {
+					subsystem = <CLOCK_MCHP_GCLKPERIPH_ID_GCLK_CAN0>;
+					gclkperiph-src-sel = "refclk_1";
+				};
+				gclkperiph_can1 {
+					subsystem = <CLOCK_MCHP_GCLKPERIPH_ID_GCLK_CAN1>;
 					gclkperiph-src-sel = "refclk_1";
 				};
 			};
@@ -560,6 +578,85 @@
 			max-timeout-window = <1048576>;	/**< milliseconds */
 			max-timeout-window-mode = <786432>; /**< milliseconds */
 			min-window-limit = <1>;/**< milliseconds */
+		};
+
+		/*
+		 * CAN0 controller (Bosch M_CAN v3.2.3 IP)
+		 * Base address: 0x46002000 — Evidence: pic32cx2051bz62132.h CAN0_REGS
+		 * IRQ: 51               — Evidence: pic32cx2051bz62132.h CAN0_IRQn=51
+		 * Clock: GCLKPERIPH CAN0 (CFG_CFGPCLKGEN4 bits [26:24])
+		 * Message RAM: allocated in SRAM by MCAN driver
+		 * status disabled by default; enable at board level.
+		 */
+		can0: can@46002000 {
+			/*
+			 * Unified Microchip M_CAN G1 binding.
+			 * Hardware: Bosch M_CAN v3.2.3 (CAN_CREL=0x32300000).
+			 * Evidence: component/can.h, instance/can0.h,
+			 *           pic32cx2051bz62132.h CAN0_IRQn=51
+			 */
+			compatible = "microchip,mcan-g1";
+			reg = <0x46002000 0x400>;
+			interrupts = <51 1>;
+			clocks = <&gclkperiph CLOCK_MCHP_GCLKPERIPH_ID_GCLK_CAN0>;
+			clock-names = "gclk";
+			/*
+			 * BZ6: CFG_CFGCON1_CAN0_PIN_EN_Pos = 2
+			 * Evidence: component/cfg.h
+			 */
+			microchip,pin-enable-bit = <2>;
+			/*
+			 * BZ6: CFG_PMD3.CAN0MD = bit 26
+			 * soc_early_init_hook sets PMD3=0x0F73FFFF disabling CAN0.
+			 * Evidence: FRM Section 24.5.3, component/cfg.h
+			 */
+			microchip,pmd-bit = <26>;
+			/*
+			 * bosch,mram-cfg: <offset std ext rx_fifo0 rx_fifo1 rx_buf tx_ev_fifo tx_buf>
+			 * tx_event_fifo=4 required: TEFN fires on TX complete so
+			 * can_send(NULL callback) unblocks correctly.
+			 */
+			bosch,mram-cfg = <0x0 8 8 64 0 0 4 4>;
+			/* pinctrl-0/pinctrl-names must be set at board level.
+			 * CAN0 has no accessible I/O pins on BZ62132 128-pin.
+			 */
+			status = "disabled";
+		};
+
+		/*
+		 * CAN1 controller (Bosch M_CAN v3.2.3 IP)
+		 * Base address: 0x46002400 — Evidence: pic32cx2051bz62132.h CAN1_REGS
+		 * IRQ: 52               — Evidence: pic32cx2051bz62132.h CAN1_IRQn=52
+		 * Clock: GCLKPERIPH CAN1 (CFG_CFGPCLKGEN4 bits [30:28])
+		 * Note: CAN1 has external IO pins available on the BZ62132 package
+		 *       (CAN1RX_IN, CAN1TX_OUT on multiple PORTA pins).
+		 * pinctrl-0 and pinctrl-names must be supplied by the board overlay.
+		 * status disabled by default; enable at board level.
+		 */
+		can1: can@46002400 {
+			/*
+			 * Unified Microchip M_CAN G1 binding.
+			 * Hardware: Bosch M_CAN v3.2.3.
+			 * Evidence: component/can.h, instance/can1.h,
+			 *           pic32cx2051bz62132.h CAN1_IRQn=52
+			 */
+			compatible = "microchip,mcan-g1";
+			reg = <0x46002400 0x400>;
+			interrupts = <52 1>;
+			clocks = <&gclkperiph CLOCK_MCHP_GCLKPERIPH_ID_GCLK_CAN1>;
+			clock-names = "gclk";
+			/*
+			 * BZ6: CFG_CFGCON1_CAN1_PIN_EN_Pos = 31
+			 * Evidence: component/cfg.h
+			 */
+			microchip,pin-enable-bit = <31>;
+			/*
+			 * BZ6: CFG_PMD3.CAN1MD = bit 27
+			 * Evidence: FRM Section 24.5.3, component/cfg.h
+			 */
+			microchip,pmd-bit = <27>;
+			bosch,mram-cfg = <0x0 8 8 64 0 0 4 4>;
+			status = "disabled";
 		};
 
 		trng:trng@43000000 {

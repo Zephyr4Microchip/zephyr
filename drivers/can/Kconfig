@@ -110,6 +110,7 @@ config CAN_QEMU_IFACE_NAME
 	  the "-object can-host-socketcan" qemu command line option. The CAN interface must be
 	  configured before starting QEMU.
 
+source "drivers/can/Kconfig.mchp"
 source "drivers/can/Kconfig.sam"
 source "drivers/can/Kconfig.sam0"
 source "drivers/can/Kconfig.stm32"

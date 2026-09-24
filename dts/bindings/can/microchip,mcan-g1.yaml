@@ -1,0 +1,84 @@
+# Copyright (c) 2026 Microchip Technology Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+description: |
+  Microchip M_CAN FD Controller — Group 1 unified binding.
+
+  Covers all Microchip MCU families whose CAN peripheral uses the
+  Bosch M_CAN IP core (ISO 11898-1:2015, CAN 2.0 part A/B, CAN FD).
+
+  Supported families
+  ------------------
+  - PIC32CK SG/GC series
+      Two clocks required: "mclk" (AHB bus) and "gclk" (CAN core).
+
+  - PIC32CX BZ6 series (CAN0 @ 0x46002000, CAN1 @ 0x46002400)
+      One clock required: "gclk" only (no AHB bus clock needed).
+      Two BZ6-specific optional properties activate the peripheral:
+        microchip,pmd-bit      — clears CFG_PMD3 CAN module-disable bit
+        microchip,pin-enable-bit — sets CFG_CFGCON1 CAN pin-route bit
+
+  Hardware evidence (BZ6)
+  -----------------------
+  - component/can.h:  CAN_CREL reset = 0x32300000 → M_CAN v3.2.3
+  - component/cfg.h:  CFG_PMD3 CAN0MD=bit26, CAN1MD=bit27
+                      CFG_CFGCON1 CAN0_PIN_EN=bit2, CAN1_PIN_EN=bit31
+  - instance/can0.h:  CAN0_GCLK_ID=28, base=0x46002000, IRQ=51
+  - instance/can1.h:  CAN1_GCLK_ID=29, base=0x46002400, IRQ=52
+
+compatible: "microchip,mcan-g1"
+
+include:
+  - name: bosch,m_can-base.yaml
+  - name: pinctrl-device.yaml
+
+properties:
+  reg:
+    required: true
+
+  interrupts:
+    required: true
+
+  clocks:
+    required: true
+    description: |
+      Phandles to the clock controller(s).
+
+      PIC32CK: two clocks — "mclk" (AHB bus) and "gclk" (CAN core).
+      PIC32BZ6: one clock — "gclk" only.
+
+  clock-names:
+    required: true
+    description: |
+      Clock names for the CAN peripheral.
+        PIC32CK:  must include "mclk" and "gclk".
+        PIC32BZ6: must include "gclk" only.
+
+  microchip,pin-enable-bit:
+    type: int
+    description: |
+      Bit position within CFG_CFGCON1 that enables CAN signal routing to
+      the PPS (Peripheral Pin Select) matrix.  Setting this bit is required
+      before the CAN controller can communicate via any I/O pin.
+
+      PIC32CX BZ6 values (component/cfg.h):
+        CAN0: 2  (CFG_CFGCON1_CAN0_PIN_EN_Pos)
+        CAN1: 31 (CFG_CFGCON1_CAN1_PIN_EN_Pos)
+
+      Omit this property for MCUs that do not require the CFG_CFGCON1
+      pin-enable mechanism (e.g. PIC32CK).
+
+  microchip,pmd-bit:
+    type: int
+    description: |
+      Bit position within CFG_PMD3 whose CAN module-disable bit must be
+      cleared at driver init.  The Zephyr BZ6 soc_early_init_hook writes
+      CFG_PMD3 = 0x0F73FFFF which disables CAN0 (bit 26) and CAN1 (bit 27).
+      The driver clears this bit before enabling the GCLKPERIPH clock.
+
+      PIC32CX BZ6 values (FRM Section 24.5.3):
+        CAN0: 26 (CFG_PMD3.CAN0MD)
+        CAN1: 27 (CFG_PMD3.CAN1MD)
+
+      Omit this property for MCUs that do not use the CFG_PMD3 mechanism
+      (e.g. PIC32CK).

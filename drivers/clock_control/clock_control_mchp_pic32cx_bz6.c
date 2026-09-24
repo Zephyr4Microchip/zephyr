@@ -70,7 +70,10 @@
 #define CLOCK_MCHP_SPLL2_ID_MAX      (0)
 #define CLOCK_MCHP_PBCLK_ID_MAX      (5)
 #define CLOCK_MCHP_REFCLK_ID_MAX     (5)
-#define CLOCK_MCHP_GCLKPERIPH_ID_MAX (37)
+/* Updated from 37 to 39 to include CAN0 (inst=38) and CAN1 (inst=39).
+ * Evidence: component/cfg.h CFG_CFGPCLKGEN4_CAN_0_CSEL_Pos=24, CAN_1_CSEL_Pos=28
+ */
+#define CLOCK_MCHP_GCLKPERIPH_ID_MAX (39)
 
 #define CLOCK_MCHP_PBCLK_OFFSET_MAX      (0x1B0)
 #define CLOCK_MCHP_REFCLK_OFFSET_MAX     (0x140)

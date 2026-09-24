@@ -7,6 +7,33 @@
 #include <dt-bindings/pic32c/pic32cx_bz/bz62/pic32cx2051bz62132-pinctrl.h>
 
 &pinctrl {
+	/*
+	 * CAN1 default pin assignment for the PIC32WM BZ6204 Curiosity board.
+	 *
+	 * CAN1 RX: PA2 (PA2_CAN1RX_IN)
+	 * CAN1 TX: PA3 (PA3_CAN1_TX_OUT)
+	 *
+	 * These pins are unassigned in the default board configuration.
+	 * An external CAN transceiver (e.g. MCP2561FD) must be connected
+	 * between these pins and the CAN bus.
+	 *
+	 * Evidence: modules/hal/microchip/include/dt-bindings/pic32c/
+	 *           pic32cx_bz/bz62/pic32cx2051bz62132-pinctrl.h
+	 *   PA2_CAN1RX_IN  : MCHP_PINMUX(a, 2, 0x190, 1, periph)
+	 *   PA3_CAN1_TX_OUT: MCHP_PINMUX(a, 3, 0x234, 38, periph)
+	 *
+	 * Physical requirements:
+	 *   - Connect CAN transceiver CANH/CANL to the bus with 120 Ω termination
+	 *   - Transceiver VIO should match the 3.3 V logic level of BZ6204
+	 *   - Transceiver standby/enable pin (if present) must be driven low
+	 *     by application firmware or an additional GPIO
+	 */
+	can1_default: can1_default {
+		group1 {
+			pinmux = <PA3_CAN1_TX_OUT>,
+				 <PA2_CAN1RX_IN>;
+		};
+	};
 	sercom0_uart_default: sercom0_uart_default {
 		group1 {
 			pinmux = <PA5_SCOM0P0_OUT>,

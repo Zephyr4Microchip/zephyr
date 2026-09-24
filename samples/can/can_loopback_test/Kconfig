@@ -1,0 +1,19 @@
+mainmenu "CAN Loopback Test"
+
+source "Kconfig.zephyr"
+
+config CAN_WIRE_TEST
+	bool "Use external wire loopback instead of internal loopback"
+	default n
+	help
+	  When enabled the test uses M_CAN External Loopback mode
+	  (CCCR.TEST=1, TEST.LBCK=0).  The CAN TX signal is driven on the
+	  physical TX pin and received via the physical RX pin.  A wire must
+	  be connected between TX and RX on the board for the test to pass.
+
+	  When disabled (default) the test uses M_CAN Internal Loopback mode
+	  (CCCR.TEST=1, TEST.LBCK=1).  No external wire is needed.
+
+	  For pic32wm_bz6204_curiosity:
+	    CAN1 wire test: connect PA3 (TX) -> PA2 (RX)
+	    CAN0 wire test: connect PA8 (TX) -> PA9 (RX)

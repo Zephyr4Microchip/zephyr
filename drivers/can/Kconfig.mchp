@@ -1,0 +1,19 @@
+# Microchip unified M_CAN CAN driver configuration
+# Copyright (c) 2026 Microchip Technology Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+config CAN_MCHP_MCAN_G1
+	bool "Microchip M_CAN G1 unified CAN driver"
+	default y
+	depends on DT_HAS_MICROCHIP_MCAN_G1_ENABLED
+	select CAN_MCAN
+	select PINCTRL
+	select CLOCK_CONTROL_MCHP_GET_RATE
+	help
+	  Enable the unified CAN driver for Microchip MCUs using the
+	  Bosch M_CAN IP core (ISO 11898-1:2015, CAN 2.0 A/B, CAN FD).
+
+	  Supported families:
+	    - PIC32CK SG/GC series (two clocks: mclk + gclk)
+	    - PIC32CX BZ6 series   (one clock: gclk only;
+	                            PMD3 module enable + CFG_CFGCON1 pin route)
