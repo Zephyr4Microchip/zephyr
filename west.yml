@@ -197,7 +197,7 @@ manifest:
       groups:
         - hal
     - name: hal_microchip
-      revision: 9046e9004c72d367ceced8a968f9d3b0e5b0a32d
+      revision: 292958bdb0b94652f98f1e35256e328676803dca
       path: modules/hal/microchip
       remote: mchpz4m
       repo-path: hal_microchip.git
