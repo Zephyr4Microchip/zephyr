@@ -1,0 +1,80 @@
+# Copyright (c) 2025 Microchip Technology Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+menuconfig BT_TRS
+	bool "GATT Microchip Transparent Service (TRS)"
+	depends on BT
+	help
+	  Enable the Microchip Transparent Service (TRS) GATT service.
+	  Registers the TX, RX, and Control Point characteristics in the
+	  GATT database and provides a callback-based API for raw BLE
+	  write and notification operations.
+
+if BT_TRS
+
+config BT_TRS_SERVER
+	bool "Transparent Service Server profile layer (TRS Server)"
+	select NET_BUF
+	help
+	  Enable the Transparent Service Server profile layer on top of
+	  BT_TRS. Provides per-connection state management, Credit Based
+	  Flow Control (CBFC), a receive packet queue, MTU tracking, and
+	  a named-event dispatch API for the application.
+
+if BT_TRS_SERVER
+
+config TRS_SERVER_CREDIT
+	int "Initial CBFC credit value"
+	default 16
+	help
+	  Number of credits granted to the peer at CBFC initialisation.
+	  Also controls the depth of the per-connection receive queue
+	  (one queue slot per credit).
+
+config TRS_SERVER_MAX_CONN_NBR
+	int "Maximum number of concurrent TRS connections"
+	default BT_MAX_CONN
+	help
+	  Size of the static connection-list array in trs_server.c.
+	  Defaults to the global BT_MAX_CONN value.
+
+config TRS_SERVER_BUF_POOL_SIZE
+	int "Receive buffer pool size"
+	default 16
+	help
+	  Total number of net_buf entries in the TRS server receive pool.
+	  Should be >= TRS_SERVER_CREDIT * BT_MAX_CONN to avoid pool
+	  exhaustion under maximum load.
+
+config TRS_SERVER_BUF_DATA_SIZE
+	int "Receive buffer payload size (bytes)"
+	default 244
+	help
+	  Maximum payload size of each receive buffer.
+	  Should be >= (ATT MTU - ATT header overhead).
+
+config TRS_SERVER_OPCODE_CBFC_ENABLED
+	hex "CBFC enabled opcode"
+	default 0x14
+	help
+	  Control-point opcode sent by the Central to signal that CBFC
+	  is enabled and to request the initial credit grant from the server.
+
+config TRS_SERVER_OPCODE_CBFC_GIVE_CREDIT
+	hex "CBFC give-credit opcode"
+	default 0x15
+	help
+	  Control-point opcode sent by the Central to grant additional
+	  TX credits to the server.
+
+config TRS_SERVER_VENDOR_OPCODE_MIN
+	hex "Minimum vendor-specific opcode"
+	default 0x20
+	help
+	  Control-point opcodes >= this value are treated as vendor-defined
+	  commands and forwarded to the application via
+	  TRS_SERVER_EVT_VENDOR_CMD.
+
+endif # BT_TRS_SERVER
+
+endif # BT_TRS

@@ -22,4 +22,6 @@ rsource "ots/Kconfig"
 
 rsource "bas/Kconfig.bas"
 
+rsource "trs/Kconfig.trs"
+
 endmenu
