@@ -126,6 +126,7 @@ APIs needed
      - Gets a ref-counted pointer to the active connection. Must call
        ``bt_conn_unref(conn)`` after use.
 
+
 Event to watch
 ==============
 
