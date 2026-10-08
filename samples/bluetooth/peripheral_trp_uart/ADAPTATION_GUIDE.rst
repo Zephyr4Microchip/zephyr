@@ -1,7 +1,7 @@
 Adapting the Transparent UART Sample for Your Application
 ##################################################
 
-**Target audience:** developers who want to use this BLE peripheral
+Developers who want to use this BLE peripheral
 sample as a base for their own application — for example, sending sensor readings
 or receiving motor control parameters over BLE.
 
