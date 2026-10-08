@@ -1,0 +1,11 @@
+sample:
+  name: Peripheral Transparent Uart
+  description: This application enables users to send data back and forth over UART between two connected BLE devices.
+  tags: bluetooth
+tests:
+  build:
+    platform_allow::
+      - wbz451_curiosity/pic32cx1012bz25048
+      - wbz351_curiosity/pic32cx5109bz31048
+      - pic32wm_bz6204_curiosity/pic32cx2051bz62132
+    tags: bluetooth
