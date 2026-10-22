@@ -22,6 +22,11 @@
 #include <zephyr/drivers/pinctrl.h>
 #include <zephyr/drivers/clock_control/mchp_clock_control.h>
 
+/* The PIC32CX-BZ6 device pack does not define the IDLE bus state value. */
+#ifndef SERCOM_I2CM_STATUS_BUSSTATE_IDLE_Val
+#define SERCOM_I2CM_STATUS_BUSSTATE_IDLE_Val 0x1U
+#endif
+
 /*******************************************
  * @brief Devicetree definitions
  ********************************************/
