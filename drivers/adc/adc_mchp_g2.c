@@ -189,10 +189,18 @@ static inline void adc_controller_enable(adchs_registers_t *adc_reg, bool enable
 	}
 }
 
-/* Trigger an ADC conversion. */
-static inline void adc_trigger_conversion(adchs_registers_t *adc_reg)
+/*
+ * Request a conversion of one input. The global software trigger (GSWTRG)
+ * converts only inputs with a trigger source, and on the BZ6 TRGSRC6/7 are
+ * not implemented (they read back 0): AN6 and AN7 were never converted and a
+ * read of them waited for ever. An individual request (ADINSEL, RQCNVRT), as
+ * Microchip's plib_adchs ChannelConversionStart does, works for every input.
+ */
+static inline void adc_trigger_conversion(adchs_registers_t *adc_reg, uint8_t channel)
 {
-	adc_reg->ADCHS_ADCCON3 |= ADCHS_ADCCON3_GSWTRG_Msk;
+	uint32_t con3 = adc_reg->ADCHS_ADCCON3 & ~ADCHS_ADCCON3_ADINSEL_Msk;
+
+	adc_reg->ADCHS_ADCCON3 = con3 | ADCHS_ADCCON3_ADINSEL(channel) | ADCHS_ADCCON3_RQCNVRT_Msk;
 }
 
 /* Read the result of the ADC conversion. */
@@ -499,7 +507,7 @@ static void adc_start_channel(const struct device *dev)
 	adc_select_channels(dev, &channel_config->channel_cfg);
 
 	/* Start the ADC conversion */
-	adc_trigger_conversion(ADC_REGS);
+	adc_trigger_conversion(ADC_REGS, dev_data->channel_id);
 }
 
 /**
