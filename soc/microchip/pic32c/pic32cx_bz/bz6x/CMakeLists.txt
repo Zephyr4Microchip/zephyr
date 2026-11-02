@@ -5,6 +5,10 @@ zephyr_include_directories(common)
 
 add_subdirectory(${SOC_SERIES})
 
+# Only an image the ROM boots carries ROM metadata; MCUboot signs the images
+# it boots.
+if(NOT CONFIG_BOOTLOADER_MCUBOOT)
+
 set(SIGNED_SCRIPT ${CMAKE_CURRENT_LIST_DIR}/gen_signed_hex.py)
 set(INPUT_HEX ${CMAKE_BINARY_DIR}/zephyr/${CONFIG_KERNEL_BIN_NAME}.hex)
 set(INPUT_BIN ${CMAKE_BINARY_DIR}/zephyr/${CONFIG_KERNEL_BIN_NAME}.bin)
@@ -56,3 +60,5 @@ add_custom_target(
     add_metadata ALL
     DEPENDS ${OUTPUT_HEX} ${IMAGE_BIN}
 )
+
+endif()

@@ -3,7 +3,11 @@
 
 zephyr_include_directories(.)
 
-zephyr_library_sources(system_config.c)
+# The device configuration words in boot flash belong to the image the ROM
+# boots. An image booted by MCUboot must not carry them.
+if(NOT CONFIG_BOOTLOADER_MCUBOOT)
+  zephyr_library_sources(system_config.c)
+endif()
 
 zephyr_library_sources(soc.c)
 
