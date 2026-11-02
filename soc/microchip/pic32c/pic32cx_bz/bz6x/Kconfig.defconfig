@@ -12,7 +12,9 @@ config ROM_START_OFFSET
 config SYS_CLOCK_HW_CYCLES_PER_SEC
 	default $(dt_node_int_prop_int,/cpus/cpu@0,clock-frequency)
 
+# The ROM metadata header occupies the first 0x200 bytes of a ROM-booted
+# image. An image booted by MCUboot takes its offset from its code partition.
 config FLASH_LOAD_OFFSET
-	default 0x200
+	default 0x200 if !BOOTLOADER_MCUBOOT
 
 endif # SOC_FAMILY_MICROCHIP_PIC32CX_BZ6
