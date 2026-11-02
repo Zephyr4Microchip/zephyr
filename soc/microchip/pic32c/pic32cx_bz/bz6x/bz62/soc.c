@@ -65,6 +65,29 @@ void soc_early_init_hook(void)
 	CFG_REGS->CFG_MISCSTAT |= 0x8000;
 }
 
+/*
+ * A reset by the core's SYSRESETREQ, which the generic sys_arch_reboot() asks
+ * for, leaves no flag in RCON, so a reset made with sys_reboot() reads back
+ * as no cause at all (hwinfo reports nothing). The RCON software reset sets
+ * RCON.SWR: unlock with CFG_SYSKEY, set RSWRST, then read it to trigger, as
+ * Microchip's plib_rcon (RCON 03100) does. sys_reboot() has locked
+ * interrupts, which the unlock sequence needs.
+ */
+void sys_arch_reboot(int type)
+{
+	ARG_UNUSED(type);
+
+	CFG_REGS->CFG_SYSKEY = 0x00000000U;
+	CFG_REGS->CFG_SYSKEY = 0xAA996655U;
+	CFG_REGS->CFG_SYSKEY = 0x556699AAU;
+
+	RCON_REGS->RCON_RSWRSTSET = RCON_RSWRST_SWRST_Msk;
+	(void)RCON_REGS->RCON_RSWRST;
+
+	for (;;) {
+	}
+}
+
 void soc_late_init_hook(void)
 {
 #ifdef CONFIG_ENABLE_PMU_BUCK_MODE
